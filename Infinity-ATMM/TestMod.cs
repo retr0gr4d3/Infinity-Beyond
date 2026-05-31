@@ -1,17 +1,16 @@
 using MelonLoader;
+using System.Reflection;
 using UnityEngine;
-using HarmonyLib;
+using Infinity_TestMod.Patches;
 
-[assembly: MelonInfo(typeof(Infinity_TestMod.TestMod), "Alpha Testing Mod Menu", "0.0.1", "Retr0gr4d3")]
-[assembly: MelonGame("Artix Entertainment, LLC", "AdventureQuest Worlds: Infinity")]
 
 namespace Infinity_TestMod
 {
     public class TestMod : MelonMod
     {
         public static bool showWindow = false;
-        public static Rect windowRect = new Rect(20, 100, 300, 550);
-        public static readonly Rect ToggleButtonRect = new Rect(10, 20, 64, 64);
+        public static Rect windowRect = new(20, 100, 300, 550);
+        public static readonly Rect ToggleButtonRect = new(10, 20, 64, 64);
 
         public static bool forceMergeShop = false;
         private static string shopIdInput = "";
@@ -19,17 +18,17 @@ namespace Infinity_TestMod
 
         public static bool autoskillsActive = false;
         public static bool showConfigWindow = false;
-        public static Rect configWindowRect = new Rect(330, 100, 320, 300);
+        public static Rect configWindowRect = new(330, 100, 320, 300);
 
         public static bool showInterceptorWindow = false;
-        public static Rect interceptorWindowRect = new Rect(660, 100, 500, 365);
+        public static Rect interceptorWindowRect = new(660, 100, 500, 365);
         public static bool showSnifferWindow = false;
-        public static Rect snifferWindowRect = new Rect(660, 480, 500, 520);
+        public static Rect snifferWindowRect = new(660, 480, 500, 520);
         public static bool showSenderWindow = false;
-        public static Rect senderWindowRect = new Rect(660, 865, 500, 165);
+        public static Rect senderWindowRect = new(660, 865, 500, 165);
         private static string senderCmdInput = "tfer";
         private static string senderParamsInput = "<charname>,lair,0,Enter,Spawn";
-        public static System.Collections.Generic.List<string> interceptedPacketsLog = new System.Collections.Generic.List<string>();
+        public static System.Collections.Generic.List<string> interceptedPacketsLog = new();
         private static Vector2 interceptorScrollPosition = Vector2.zero;
 
         public struct SniffEntry
@@ -40,7 +39,7 @@ namespace Infinity_TestMod
 
         public static bool snifferServerActive = false;
         public static bool snifferClientActive = false;
-        public static System.Collections.Generic.List<SniffEntry> snifferLog = new System.Collections.Generic.List<SniffEntry>();
+        public static System.Collections.Generic.List<SniffEntry> snifferLog = new();
         public static Vector2 snifferScrollPosition = Vector2.zero;
         public static int selectedSniffIndex = -1;
         public static string selectedPacketJson = "";
@@ -49,8 +48,8 @@ namespace Infinity_TestMod
         private static GUIStyle rowButtonStyle;
         private static GUIStyle previewTextStyle;
 
-        private static System.Collections.Generic.List<int> skillOrder = new System.Collections.Generic.List<int> { 0, 1, 2, 3, 4 };
-        private static System.Collections.Generic.Dictionary<int, float> skillDelays = new System.Collections.Generic.Dictionary<int, float>
+        private static System.Collections.Generic.List<int> skillOrder = new() { 0, 1, 2, 3, 4 };
+        private static System.Collections.Generic.Dictionary<int, float> skillDelays = new()
         {
             { 0, 1f }, { 1, 1f }, { 2, 1f }, { 3, 1f }, { 4, 1f }
         };
@@ -79,6 +78,9 @@ namespace Infinity_TestMod
         public override void OnInitializeMelon()
         {
             LoggerInstance.Msg("Alpha Testing Mod Menu Initialized successfully!");
+            var harmony = new HarmonyLib.Harmony(nameof(TestMod));
+            harmony.PatchAll();
+            LoggerInstance.Msg("Harmony patches applied!");
             GenerateTextures();
         }
 
@@ -86,13 +88,13 @@ namespace Infinity_TestMod
         {
             try
             {
-                var field = typeof(SkillSlotButton).GetField("disabled", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                FieldInfo field = typeof(SkillSlotButton).GetField("disabled", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 if (field != null)
                 {
                     return (bool)field.GetValue(button);
                 }
             }
-            catch {}
+            catch { }
             return false;
         }
 
@@ -107,7 +109,7 @@ namespace Infinity_TestMod
                     {
                         playerExists = (Entity.mainPlayer != null);
                     }
-                    catch {}
+                    catch { }
 
                     if (playerExists)
                     {
@@ -136,7 +138,7 @@ namespace Infinity_TestMod
                                 {
                                     if (UISkillSlots.Instance != null)
                                     {
-                                        var slotBtn = UISkillSlots.Instance.GetSlot(targetSkillSlot);
+                                        SkillSlotButton slotBtn = UISkillSlots.Instance.GetSlot(targetSkillSlot);
                                         if (slotBtn != null && !IsSkillSlotButtonDisabled(slotBtn))
                                         {
                                             slotBtn.UseSkill(true);
@@ -181,7 +183,7 @@ namespace Infinity_TestMod
         {
             try
             {
-                Color defaultBorder = new Color(0.08f, 0.08f, 0.08f, 1f);
+                Color defaultBorder = new(0.08f, 0.08f, 0.08f, 1f);
                 Color hoverBorder = Color.white;
 
                 buttonTexture = CreateThemedButtonTexture(defaultBorder);
@@ -309,11 +311,11 @@ namespace Infinity_TestMod
             {
                 if (windowStyle != null)
                 {
-                    windowRect = GUI.Window(9999, windowRect, (GUI.WindowFunction)DrawWindow, "Mod Menu", windowStyle);
+                    windowRect = GUI.Window(9999, windowRect, DrawWindow, "Mod Menu", windowStyle);
                 }
                 else
                 {
-                    windowRect = GUI.Window(9999, windowRect, (GUI.WindowFunction)DrawWindow, "Mod Menu");
+                    windowRect = GUI.Window(9999, windowRect, DrawWindow, "Mod Menu");
                 }
             }
 
@@ -321,11 +323,11 @@ namespace Infinity_TestMod
             {
                 if (windowStyle != null)
                 {
-                    configWindowRect = GUI.Window(9998, configWindowRect, (GUI.WindowFunction)DrawConfigWindow, "Autoskills Config", windowStyle);
+                    configWindowRect = GUI.Window(9998, configWindowRect, DrawConfigWindow, "Autoskills Config", windowStyle);
                 }
                 else
                 {
-                    configWindowRect = GUI.Window(9998, configWindowRect, (GUI.WindowFunction)DrawConfigWindow, "Autoskills Config");
+                    configWindowRect = GUI.Window(9998, configWindowRect, DrawConfigWindow, "Autoskills Config");
                 }
             }
 
@@ -333,11 +335,11 @@ namespace Infinity_TestMod
             {
                 if (windowStyle != null)
                 {
-                    interceptorWindowRect = GUI.Window(9997, interceptorWindowRect, (GUI.WindowFunction)DrawInterceptorWindow, "Packet Interceptor", windowStyle);
+                    interceptorWindowRect = GUI.Window(9997, interceptorWindowRect, DrawInterceptorWindow, "Packet Interceptor", windowStyle);
                 }
                 else
                 {
-                    interceptorWindowRect = GUI.Window(9997, interceptorWindowRect, (GUI.WindowFunction)DrawInterceptorWindow, "Packet Interceptor");
+                    interceptorWindowRect = GUI.Window(9997, interceptorWindowRect, DrawInterceptorWindow, "Packet Interceptor");
                 }
             }
 
@@ -345,11 +347,11 @@ namespace Infinity_TestMod
             {
                 if (windowStyle != null)
                 {
-                    snifferWindowRect = GUI.Window(9996, snifferWindowRect, (GUI.WindowFunction)DrawSnifferWindow, "Packet Sniffer", windowStyle);
+                    snifferWindowRect = GUI.Window(9996, snifferWindowRect, DrawSnifferWindow, "Packet Sniffer", windowStyle);
                 }
                 else
                 {
-                    snifferWindowRect = GUI.Window(9996, snifferWindowRect, (GUI.WindowFunction)DrawSnifferWindow, "Packet Sniffer");
+                    snifferWindowRect = GUI.Window(9996, snifferWindowRect, DrawSnifferWindow, "Packet Sniffer");
                 }
             }
 
@@ -357,11 +359,11 @@ namespace Infinity_TestMod
             {
                 if (windowStyle != null)
                 {
-                    senderWindowRect = GUI.Window(9995, senderWindowRect, (GUI.WindowFunction)DrawSenderWindow, "Packet Sender", windowStyle);
+                    senderWindowRect = GUI.Window(9995, senderWindowRect, DrawSenderWindow, "Packet Sender", windowStyle);
                 }
                 else
                 {
-                    senderWindowRect = GUI.Window(9995, senderWindowRect, (GUI.WindowFunction)DrawSenderWindow, "Packet Sender");
+                    senderWindowRect = GUI.Window(9995, senderWindowRect, DrawSenderWindow, "Packet Sender");
                 }
             }
         }
@@ -453,8 +455,7 @@ namespace Infinity_TestMod
             {
                 if (GUI.Button(new Rect(20, 120, 120, 35), "Load Shop", closeButtonStyle))
                 {
-                    int shopId;
-                    if (int.TryParse(shopIdInput, out shopId))
+                    if (int.TryParse(shopIdInput, out int shopId))
                     {
                         try
                         {
@@ -485,8 +486,7 @@ namespace Infinity_TestMod
             {
                 if (GUI.Button(new Rect(20, 160, 120, 35), "Load Merge", closeButtonStyle))
                 {
-                    int shopId;
-                    if (int.TryParse(shopIdInput, out shopId))
+                    if (int.TryParse(shopIdInput, out int shopId))
                     {
                         try
                         {
@@ -524,8 +524,7 @@ namespace Infinity_TestMod
             {
                 if (GUI.Button(new Rect(20, 220, 120, 35), "Load Quest", closeButtonStyle))
                 {
-                    int questId;
-                    if (int.TryParse(questIdInput, out questId))
+                    if (int.TryParse(questIdInput, out int questId))
                     {
                         try
                         {
@@ -555,8 +554,7 @@ namespace Infinity_TestMod
             {
                 if (GUI.Button(new Rect(20, 260, 120, 35), "Abandon", closeButtonStyle))
                 {
-                    int questId;
-                    if (int.TryParse(questIdInput, out questId))
+                    if (int.TryParse(questIdInput, out int questId))
                     {
                         try
                         {
@@ -638,7 +636,7 @@ namespace Infinity_TestMod
             {
                 showSenderWindow = !showSenderWindow;
             }
-            
+
             if (closeButtonStyle != null)
             {
                 if (GUI.Button(new Rect(20, 490, 260, 35), "Close", closeButtonStyle))
@@ -684,8 +682,7 @@ namespace Infinity_TestMod
                 if (newDelayStr != delayStr)
                 {
                     delayInputs[slot] = newDelayStr;
-                    float ms;
-                    if (float.TryParse(newDelayStr, out ms))
+                    if (float.TryParse(newDelayStr, out float ms))
                     {
                         skillDelays[slot] = ms / 1000f;
                     }
@@ -695,9 +692,7 @@ namespace Infinity_TestMod
                 {
                     if (GUI.Button(new Rect(190, currentY, 32, 25), "▲", closeButtonStyle))
                     {
-                        int temp = skillOrder[i];
-                        skillOrder[i] = skillOrder[i - 1];
-                        skillOrder[i - 1] = temp;
+                        (skillOrder[i - 1], skillOrder[i]) = (skillOrder[i], skillOrder[i - 1]);
                     }
                 }
 
@@ -705,9 +700,7 @@ namespace Infinity_TestMod
                 {
                     if (GUI.Button(new Rect(228, currentY, 32, 25), "▼", closeButtonStyle))
                     {
-                        int temp = skillOrder[i];
-                        skillOrder[i] = skillOrder[i + 1];
-                        skillOrder[i + 1] = temp;
+                        (skillOrder[i + 1], skillOrder[i]) = (skillOrder[i], skillOrder[i + 1]);
                     }
                 }
 
@@ -942,7 +935,7 @@ namespace Infinity_TestMod
                 string cmd = senderCmdInput.Trim();
                 string paramsRaw = senderParamsInput;
 
-                System.Collections.Generic.List<string> paramsList = new System.Collections.Generic.List<string>();
+                System.Collections.Generic.List<string> paramsList = new();
                 if (!string.IsNullOrEmpty(paramsRaw))
                 {
                     string[] parts = paramsRaw.Split(',');
@@ -965,7 +958,7 @@ namespace Infinity_TestMod
                                 paramsList[i] = Entity.mainPlayer.Name;
                             }
                         }
-                        catch {}
+                        catch { }
                     }
                 }
 
@@ -999,7 +992,7 @@ namespace Infinity_TestMod
         {
             float mouseX = Input.mousePosition.x;
             float mouseY = Screen.height - Input.mousePosition.y;
-            Vector2 imguiMousePos = new Vector2(mouseX, mouseY);
+            Vector2 imguiMousePos = new(mouseX, mouseY);
 
             if (ToggleButtonRect.Contains(imguiMousePos))
             {
@@ -1035,7 +1028,7 @@ namespace Infinity_TestMod
         private static Texture2D CreateThemedButtonTexture(Color borderColor)
         {
             int size = 128;
-            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Texture2D tex = new(size, size, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[size * size];
 
             for (int y = 0; y < size; y++)
@@ -1043,11 +1036,11 @@ namespace Infinity_TestMod
                 for (int x = 0; x < size; x++)
                 {
                     int index = y * size + x;
-                    
+
                     float px = x - 64f;
                     float py = y - 64f;
 
-                    Vector2 pBox = new Vector2(Mathf.Abs(px) - 56f + 18f, Mathf.Abs(py) - 56f + 18f);
+                    Vector2 pBox = new(Mathf.Abs(px) - 56f + 18f, Mathf.Abs(py) - 56f + 18f);
                     float boxDist = Mathf.Min(Mathf.Max(pBox.x, pBox.y), 0.0f) + new Vector2(Mathf.Max(pBox.x, 0.0f), Mathf.Max(pBox.y, 0.0f)).magnitude - 18f;
 
                     if (boxDist > 0f)
@@ -1065,8 +1058,8 @@ namespace Infinity_TestMod
                     else
                     {
                         float tBg = (y - 8f) / 112f;
-                        Color topBg = new Color(0.35f, 0.35f, 0.35f, 1f);
-                        Color bottomBg = new Color(0.12f, 0.12f, 0.12f, 1f);
+                        Color topBg = new(0.35f, 0.35f, 0.35f, 1f);
+                        Color bottomBg = new(0.12f, 0.12f, 0.12f, 1f);
                         c = Color.Lerp(bottomBg, topBg, tBg);
 
                         float angle = (x - 64f) * Mathf.PI / 112f;
@@ -1080,8 +1073,7 @@ namespace Infinity_TestMod
                     float hx = x;
                     float hy = y;
 
-                    float exclDist;
-                    bool inExcl = IsInExclamationMark(hx, hy, out exclDist);
+                    bool inExcl = IsInExclamationMark(hx, hy, out float exclDist);
 
                     if (inExcl)
                     {
@@ -1091,10 +1083,10 @@ namespace Infinity_TestMod
                         }
                         else
                         {
-                            
+
                             float tExcl = Mathf.Clamp01((hy - 30f) / 60f);
-                            Color orangeSide = new Color(1.0f, 0.40f, 0.05f, 1f);
-                            Color yellowSide = new Color(1.0f, 0.95f, 0.15f, 1f);
+                            Color orangeSide = new(1.0f, 0.40f, 0.05f, 1f);
+                            Color yellowSide = new(1.0f, 0.95f, 0.15f, 1f);
                             Color exclCol = Color.Lerp(orangeSide, yellowSide, tExcl);
 
                             if (hy >= 54f && hy <= 86f && hx >= 60f && hx < 64f && exclDist < -2.5f)
@@ -1134,7 +1126,7 @@ namespace Infinity_TestMod
         private static Texture2D CreateThemedWindowTexture()
         {
             int size = 128;
-            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Texture2D tex = new(size, size, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[size * size];
 
             for (int y = 0; y < size; y++)
@@ -1142,11 +1134,11 @@ namespace Infinity_TestMod
                 for (int x = 0; x < size; x++)
                 {
                     int index = y * size + x;
-                    
+
                     float px = x - 64f;
                     float py = y - 64f;
 
-                    Vector2 pBox = new Vector2(Mathf.Abs(px) - 58f + 18f, Mathf.Abs(py) - 58f + 18f);
+                    Vector2 pBox = new(Mathf.Abs(px) - 58f + 18f, Mathf.Abs(py) - 58f + 18f);
                     float boxDist = Mathf.Min(Mathf.Max(pBox.x, pBox.y), 0.0f) + new Vector2(Mathf.Max(pBox.x, 0.0f), Mathf.Max(pBox.y, 0.0f)).magnitude - 18f;
 
                     if (boxDist > 0f)
@@ -1164,8 +1156,8 @@ namespace Infinity_TestMod
                     else
                     {
                         float tBg = (y - 4f) / 120f;
-                        Color topBg = new Color(0.35f, 0.35f, 0.35f, 1f);
-                        Color bottomBg = new Color(0.12f, 0.12f, 0.12f, 1f);
+                        Color topBg = new(0.35f, 0.35f, 0.35f, 1f);
+                        Color bottomBg = new(0.12f, 0.12f, 0.12f, 1f);
                         c = Color.Lerp(bottomBg, topBg, tBg);
 
                         if (y > 96)
@@ -1186,19 +1178,19 @@ namespace Infinity_TestMod
         private static Texture2D CreateThemedButtonBgTexture(Color borderColor)
         {
             int size = 64;
-            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Texture2D tex = new(size, size, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[size * size];
 
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    int index = y * size + x;
-                    
+                    int index = (y * size) + x;
+
                     float px = x - 32f;
                     float py = y - 32f;
 
-                    Vector2 pBox = new Vector2(Mathf.Abs(px) - 28f + 10f, Mathf.Abs(py) - 28f + 10f);
+                    Vector2 pBox = new(Mathf.Abs(px) - 28f + 10f, Mathf.Abs(py) - 28f + 10f);
                     float boxDist = Mathf.Min(Mathf.Max(pBox.x, pBox.y), 0.0f) + new Vector2(Mathf.Max(pBox.x, 0.0f), Mathf.Max(pBox.y, 0.0f)).magnitude - 10f;
 
                     if (boxDist > 0f)
@@ -1216,8 +1208,8 @@ namespace Infinity_TestMod
                     else
                     {
                         float tBg = (y - 2f) / 60f;
-                        Color topBg = new Color(0.35f, 0.35f, 0.35f, 1f);
-                        Color bottomBg = new Color(0.12f, 0.12f, 0.12f, 1f);
+                        Color topBg = new(0.35f, 0.35f, 0.35f, 1f);
+                        Color bottomBg = new(0.12f, 0.12f, 0.12f, 1f);
                         c = Color.Lerp(bottomBg, topBg, tBg);
 
                         if (y > 48)
@@ -1252,211 +1244,6 @@ namespace Infinity_TestMod
 
             distance = Mathf.Min(dBar, dDot);
             return distance <= 0f;
-        }
-    }
-
-    [HarmonyPatch(typeof(Input), nameof(Input.GetMouseButton))]
-    public static class Patch_GetMouseButton
-    {
-        public static bool Prefix(int button, ref bool __result)
-        {
-            if (TestMod.IsMouseOverUI())
-            {
-                __result = false;
-                return false;
-            }
-            return true;
-        }
-    }
-
-    [HarmonyPatch(typeof(Input), nameof(Input.GetMouseButtonDown))]
-    public static class Patch_GetMouseButtonDown
-    {
-        public static bool Prefix(int button, ref bool __result)
-        {
-            if (TestMod.IsMouseOverUI())
-            {
-                __result = false;
-                return false;
-            }
-            return true;
-        }
-    }
-
-    [HarmonyPatch(typeof(Input), nameof(Input.GetMouseButtonUp))]
-    public static class Patch_GetMouseButtonUp
-    {
-        public static bool Prefix(int button, ref bool __result)
-        {
-            if (TestMod.IsMouseOverUI())
-            {
-                __result = false;
-                return false;
-            }
-            return true;
-        }
-    }
-
-    [HarmonyPatch(typeof(ResponseLoadShop), nameof(ResponseLoadShop.Execute))]
-    public static class Patch_ResponseLoadShop_Execute
-    {
-        public static void Prefix(ResponseLoadShop __instance)
-        {
-            if (TestMod.forceMergeShop && __instance.shop != null)
-            {
-                __instance.shop.mergeShop = true;
-                TestMod.forceMergeShop = false;
-                MelonLogger.Msg("Intercepted ResponseLoadShop: Forced mergeShop = true");
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(AEC), "GetResponse")]
-    public static class Patch_AEC_GetResponse
-    {
-        public static void Postfix(ref Response __result)
-        {
-            if (__result != null)
-            {
-                string cmd = "unknown";
-                try
-                {
-                    cmd = __result.GetCommand();
-                }
-                catch {}
-
-                string typeName = __result.GetType().Name;
-                TestMod.lastPacketInfo = $"{typeName} ({cmd})";
-
-                bool shouldLog = TestMod.interceptActive || TestMod.interceptorLoggingActive;
-                if (shouldLog)
-                {
-                    string logEntry = TestMod.interceptActive 
-                        ? $"[<color=red>BLOCKED</color>] {typeName} ({cmd})" 
-                        : $"[<color=green>ALLOWED</color>] {typeName} ({cmd})";
-
-                    lock (TestMod.interceptedPacketsLog)
-                    {
-                        TestMod.interceptedPacketsLog.Insert(0, logEntry);
-                        if (TestMod.interceptedPacketsLog.Count > 100)
-                        {
-                            TestMod.interceptedPacketsLog.RemoveAt(TestMod.interceptedPacketsLog.Count - 1);
-                        }
-                    }
-                }
-
-                if (TestMod.interceptActive)
-                {
-                    __result = null;
-                }
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(AEC), "WrapAndQueueResponse")]
-    public static class Patch_AEC_WrapAndQueueResponse
-    {
-        public static void Prefix(byte[] data)
-        {
-            if (data != null && TestMod.snifferServerActive)
-            {
-                try
-                {
-                    string rawJson = System.Text.Encoding.UTF8.GetString(data);
-                    string cmd = Util.extractValueFromJsonString("Cmd", rawJson) ?? "unknown";
-                    
-                    string typeName = "Response";
-                    System.Type t = ResponseTypes.Get(cmd);
-                    if (t != null)
-                    {
-                        typeName = t.Name;
-                    }
-
-                    string display = $"<color=cyan>[SERVER]</color> {typeName} ({cmd})";
-                    lock (TestMod.snifferLog)
-                    {
-                        TestMod.snifferLog.Insert(0, new TestMod.SniffEntry { DisplayText = display, RawJson = rawJson });
-                        if (TestMod.selectedSniffIndex >= 0)
-                        {
-                            TestMod.selectedSniffIndex++;
-                        }
-                        if (TestMod.snifferLog.Count > 200)
-                        {
-                            TestMod.snifferLog.RemoveAt(TestMod.snifferLog.Count - 1);
-                            if (TestMod.selectedSniffIndex >= 200)
-                            {
-                                TestMod.selectedSniffIndex = -1;
-                            }
-                        }
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    MelonLogger.Error("Sniffer failed to parse incoming server packet data: " + ex.Message);
-                }
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(AEC), nameof(AEC.sendRequest))]
-    public static class Patch_AEC_sendRequest
-    {
-        private static System.Reflection.MethodInfo _serializeMethod;
-
-        public static void Prefix(Request r)
-        {
-            if (r != null && TestMod.snifferClientActive)
-            {
-                string cmd = r.Cmd ?? "unknown";
-                string typeName = r.GetType().Name;
-
-                string rawData = "";
-                try
-                {
-                    if (_serializeMethod == null)
-                    {
-                        _serializeMethod = typeof(AEC).GetMethod("Serialize", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                    }
-
-                    if (_serializeMethod != null && AEC.Instance != null)
-                    {
-                        rawData = (string)_serializeMethod.Invoke(AEC.Instance, new object[] { r });
-                    }
-                    else
-                    {
-                        rawData = Newtonsoft.Json.JsonConvert.SerializeObject(r);
-                    }
-                }
-                catch
-                {
-                    try
-                    {
-                        rawData = Newtonsoft.Json.JsonConvert.SerializeObject(r);
-                    }
-                    catch
-                    {
-                        rawData = "(serialization failed)";
-                    }
-                }
-
-                string display = $"<color=orange>[CLIENT]</color> {typeName} ({cmd})";
-                lock (TestMod.snifferLog)
-                {
-                    TestMod.snifferLog.Insert(0, new TestMod.SniffEntry { DisplayText = display, RawJson = rawData });
-                    if (TestMod.selectedSniffIndex >= 0)
-                    {
-                        TestMod.selectedSniffIndex++;
-                    }
-                    if (TestMod.snifferLog.Count > 200)
-                    {
-                        TestMod.snifferLog.RemoveAt(TestMod.snifferLog.Count - 1);
-                        if (TestMod.selectedSniffIndex >= 200)
-                        {
-                            TestMod.selectedSniffIndex = -1;
-                        }
-                    }
-                }
-            }
         }
     }
 }
