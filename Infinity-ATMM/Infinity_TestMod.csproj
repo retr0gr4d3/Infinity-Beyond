@@ -11,12 +11,36 @@
   <PropertyGroup>
     <!-- Dynamic installation path detection -->
     <AQWPath Condition="'$(AQWPath)' == ''">$(AQW_PATH)</AQWPath>
-    <AQWPath Condition="'$(AQWPath)' == ''">$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 2094530', 'InstallLocation', null, RegistryView.Registry64, RegistryView.Registry32))</AQWPath>
-    <AQWPath Condition="'$(AQWPath)' == ''">$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 1979810', 'InstallLocation', null, RegistryView.Registry64, RegistryView.Registry32))</AQWPath>
     
-    <SteamPath Condition="'$(SteamPath)' == ''">$([MSBuild]::GetRegistryValueFromView('HKEY_CURRENT_USER\Software\Valve\Steam', 'SteamPath', null, RegistryView.Registry64, RegistryView.Registry32))</SteamPath>
-    <AQWPath Condition="'$(AQWPath)' == '' and '$(SteamPath)' != ''">$(SteamPath)\steamapps\common\AdventureQuest Worlds Unity Playtest</AQWPath>
+    <!-- Registry path checks (with validation that target files exist) -->
+    <AQWPathReg1>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 2094530', 'InstallLocation', null, RegistryView.Registry64, RegistryView.Registry32))</AQWPathReg1>
+    <AQWPath Condition="'$(AQWPath)' == '' and '$(AQWPathReg1)' != '' and Exists('$(AQWPathReg1)\MelonLoader\net6\MelonLoader.dll')">$(AQWPathReg1)</AQWPath>
+
+    <AQWPathReg2>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 1979810', 'InstallLocation', null, RegistryView.Registry64, RegistryView.Registry32))</AQWPathReg2>
+    <AQWPath Condition="'$(AQWPath)' == '' and '$(AQWPathReg2)' != '' and Exists('$(AQWPathReg2)\MelonLoader\net6\MelonLoader.dll')">$(AQWPathReg2)</AQWPath>
+
+    <!-- Parse Steam library configuration file (libraryfolders.vdf) -->
+    <SteamPathReg>$([MSBuild]::GetRegistryValueFromView('HKEY_CURRENT_USER\Software\Valve\Steam', 'SteamPath', null, RegistryView.Registry64, RegistryView.Registry32))</SteamPathReg>
+    <VdfPath>$(SteamPathReg)\steamapps\libraryfolders.vdf</VdfPath>
+    <VdfContent Condition="Exists('$(VdfPath)')">$([System.IO.File]::ReadAllText('$(VdfPath)'))</VdfContent>
+    <VdfContent Condition="'$(VdfContent)' != ''">$(VdfContent.Replace('\\', '/'))</VdfContent>
     
+    <PathsOnly Condition="'$(VdfContent)' != ''">$([System.Text.RegularExpressions.Regex]::Replace('$(VdfContent)', '(?m)^(?!\s*"path"\s+).*$\r?\n?', ''))</PathsOnly>
+    <LibraryPaths Condition="'$(PathsOnly)' != ''">$([System.Text.RegularExpressions.Regex]::Replace('$(PathsOnly)', '\s*"path"\s+"([^"]+)"\r?\n?', '$1;'))</LibraryPaths>
+
+    <!-- Split library paths (up to 4 Steam libraries) -->
+    <Lib0 Condition="'$(LibraryPaths)' != ''">$([System.String]::Copy('$(LibraryPaths)').Split('%3B')[0])</Lib0>
+    <Lib1 Condition="'$(LibraryPaths)' != '' and '$(LibraryPaths.Split(%27%3B%27).Length)' &gt; 1">$([System.String]::Copy('$(LibraryPaths)').Split('%3B')[1])</Lib1>
+    <Lib2 Condition="'$(LibraryPaths)' != '' and '$(LibraryPaths.Split(%27%3B%27).Length)' &gt; 2">$([System.String]::Copy('$(LibraryPaths)').Split('%3B')[2])</Lib2>
+    <Lib3 Condition="'$(LibraryPaths)' != '' and '$(LibraryPaths.Split(%27%3B%27).Length)' &gt; 3">$([System.String]::Copy('$(LibraryPaths)').Split('%3B')[3])</Lib3>
+
+    <!-- Check each Steam library folder for the game -->
+    <AQWPath Condition="'$(AQWPath)' == '' and '$(Lib0)' != '' and Exists('$(Lib0)\steamapps\common\AdventureQuest Worlds Unity Playtest\MelonLoader\net6\MelonLoader.dll')">$(Lib0)\steamapps\common\AdventureQuest Worlds Unity Playtest</AQWPath>
+    <AQWPath Condition="'$(AQWPath)' == '' and '$(Lib1)' != '' and Exists('$(Lib1)\steamapps\common\AdventureQuest Worlds Unity Playtest\MelonLoader\net6\MelonLoader.dll')">$(Lib1)\steamapps\common\AdventureQuest Worlds Unity Playtest</AQWPath>
+    <AQWPath Condition="'$(AQWPath)' == '' and '$(Lib2)' != '' and Exists('$(Lib2)\steamapps\common\AdventureQuest Worlds Unity Playtest\MelonLoader\net6\MelonLoader.dll')">$(Lib2)\steamapps\common\AdventureQuest Worlds Unity Playtest</AQWPath>
+    <AQWPath Condition="'$(AQWPath)' == '' and '$(Lib3)' != '' and Exists('$(Lib3)\steamapps\common\AdventureQuest Worlds Unity Playtest\MelonLoader\net6\MelonLoader.dll')">$(Lib3)\steamapps\common\AdventureQuest Worlds Unity Playtest</AQWPath>
+
+    <!-- Default Fallback -->
     <AQWPath Condition="'$(AQWPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\AdventureQuest Worlds Unity Playtest</AQWPath>
     <AQWPath>$([System.IO.Path]::GetFullPath('$(AQWPath)'))</AQWPath>
   </PropertyGroup>
