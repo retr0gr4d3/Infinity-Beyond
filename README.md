@@ -1,5 +1,6 @@
 # Alpha Testing Tools / Mod Menu
-<b> Uses MelonLoader (Mono). Precompiled versions are unavailable at this time, please compile using VS.
+<b> Uses MelonLoader (Mono). Precompiled versions are unavailable at this time, please compile using VS.</b>
+
 Features:
 
 - [X] Client-side FakeDev
