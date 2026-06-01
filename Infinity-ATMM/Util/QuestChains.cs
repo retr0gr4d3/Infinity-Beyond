@@ -20,12 +20,18 @@ namespace Infinity_TestMod.Util
         public class Entry
         {
             public int qid;
-            public string frame = "";
+            public string area = "";   // "" = stay in current area (no tfer)
+            public string frame = "";  // "" = stay in current frame (no moveToCell)
             public string pad = "Spawn";
             public int iters = 1;
 
-            public override string ToString() =>
-                $"q{qid}" + (string.IsNullOrEmpty(frame) ? "" : $" @ {frame}/{pad}") + (iters > 1 ? $" ×{iters}" : "");
+            public override string ToString()
+            {
+                string loc = "";
+                if (!string.IsNullOrEmpty(area)) loc = $" @ {area}/{frame}/{pad}";
+                else if (!string.IsNullOrEmpty(frame)) loc = $" @ {frame}/{pad}";
+                return $"q{qid}{loc}" + (iters > 1 ? $" ×{iters}" : "");
+            }
         }
 
         // Insertion-order map so the dropdown lists them in a stable order.
@@ -89,6 +95,7 @@ namespace Infinity_TestMod.Util
                     entries.Add(new Entry
                     {
                         qid = qid,
+                        area = (string)e["area"] ?? "",
                         frame = (string)e["frame"] ?? "",
                         pad = string.IsNullOrEmpty((string)e["pad"]) ? "Spawn" : (string)e["pad"],
                         iters = Math.Max(1, (int?)e["iters"] ?? 1),

@@ -58,7 +58,9 @@ namespace Infinity_TestMod
         public static Rect questRunnerWindowRect = new(20, 660, 640, 480);
         private static string questRunnerIdInput = "1";
         private static string questRunnerItersInput = "10";
-        // Optional cell-hop before hunting. Empty Frame = no hop (stay where you are).
+        // Optional auto-travel before hunting. Empty Area = stay in current area
+        // (no tfer); empty Frame = stay in current cell (no moveToCell).
+        private static string questRunnerAreaInput = "";
         private static string questRunnerFrameInput = "";
         private static string questRunnerPadInput = "Spawn";
         public static System.Collections.Generic.List<string> questRunnerLog = new();
@@ -1475,7 +1477,9 @@ namespace Infinity_TestMod
                             if (questRunnerLog.Count > 200) questRunnerLog.RemoveAt(0);
                         }
                     };
-                    questRunner.Start(qid, iters, questRunnerFrameInput?.Trim() ?? "",
+                    questRunner.Start(qid, iters,
+                                                  questRunnerAreaInput?.Trim() ?? "",
+                                                  questRunnerFrameInput?.Trim() ?? "",
                                                   string.IsNullOrWhiteSpace(questRunnerPadInput) ? "Spawn" : questRunnerPadInput.Trim());
                 }
                 else
@@ -1483,16 +1487,19 @@ namespace Infinity_TestMod
                     LoggerInstance.Error("[QuestRunner] qid and iters must be integers");
                 }
             }
-            // Second input row: optional in-zone hop. Leave Frame empty to
-            // stay where you are. Current frame is shown on the right so the
-            // user can copy it for next-quest test entries.
-            GUI.Label(new Rect(pad, 80 + 5, 70, 25), "Frame:", labelStyle);
-            questRunnerFrameInput = GUI.TextField(new Rect(pad + 50, 80, 90, 35), questRunnerFrameInput, textFieldStyle);
-            GUI.Label(new Rect(pad + 150, 80 + 5, 40, 25), "Pad:", labelStyle);
-            questRunnerPadInput = GUI.TextField(new Rect(pad + 190, 80, 80, 35), questRunnerPadInput, textFieldStyle);
-            string hereFrame = "?";
-            try { hereFrame = Entity.mainPlayer?.Frame ?? "?"; } catch { }
-            GUI.Label(new Rect(pad + 280, 80 + 5, 200, 25), $"  here: {hereFrame}", logTextStyle);
+            // Second input row: optional auto-travel. Leave Area empty to
+            // stay in the current zone (no tfer); leave Frame empty to stay
+            // in the current cell (no moveToCell). Live "here: area/frame"
+            // shows current location so the user can copy for next entries.
+            GUI.Label(new Rect(pad, 80 + 5, 50, 25), "Area:", labelStyle);
+            questRunnerAreaInput = GUI.TextField(new Rect(pad + 45, 80, 75, 35), questRunnerAreaInput, textFieldStyle);
+            GUI.Label(new Rect(pad + 128, 80 + 5, 50, 25), "Frame:", labelStyle);
+            questRunnerFrameInput = GUI.TextField(new Rect(pad + 175, 80, 75, 35), questRunnerFrameInput, textFieldStyle);
+            GUI.Label(new Rect(pad + 258, 80 + 5, 40, 25), "Pad:", labelStyle);
+            questRunnerPadInput = GUI.TextField(new Rect(pad + 295, 80, 65, 35), questRunnerPadInput, textFieldStyle);
+            string hereArea = "?", hereFrame = "?";
+            try { hereArea = Area.currentArea?.Name ?? "?"; hereFrame = Entity.mainPlayer?.Frame ?? "?"; } catch { }
+            GUI.Label(new Rect(pad + 370, 80 + 5, 220, 25), $"  here: {hereArea}/{hereFrame}", logTextStyle);
             GUI.enabled = true;
 
             GUI.enabled = isRunning;
@@ -1508,11 +1515,16 @@ namespace Infinity_TestMod
             GUI.Label(new Rect(pad, 125, innerW, 20), stateStr, labelStyle);
             GUI.Label(new Rect(pad, 147, innerW, 20), $"<b>Status:</b> {questRunner.StatusLine}", labelStyle);
 
-            // Row 4: per-objective progress (read live from in-process state)
+            // Row 4: per-objective progress (read live from in-process state).
+            // When the runner is mid-flight (especially chain mode) show its
+            // actual current quest, not the stale input field.
             float yObj = 175;
             try
             {
-                if (int.TryParse(questRunnerIdInput, out int qid))
+                int qid = questRunner.IsRunning && questRunner.QuestID > 0
+                    ? questRunner.QuestID
+                    : (int.TryParse(questRunnerIdInput, out int parsedQid) ? parsedQid : 0);
+                if (qid > 0)
                 {
                     Quest q = Quest.Get(qid);
                     if (q != null && q.Turnins != null)
