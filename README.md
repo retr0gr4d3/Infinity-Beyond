@@ -1,5 +1,6 @@
 # Alpha Testing Tools / Mod Menu
-<b> Uses MelonLoader (Mono). Precompiled versions are unavailable at this time, please compile using VS.</b>
+<b>Uses MelonLoader (Mono).</b><br>
+Precompiled versions are available in the releases, or you can compile it yourself from source using Visual Studio.
 
 Features:
 
