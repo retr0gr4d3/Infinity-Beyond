@@ -22,5 +22,5 @@ Feel free to open pull requests and contribute.
 > [!CAUTION]
 > I am not responsible for the actions you take with this tool. It is unclear whether Infinity will end up with an anticheat, or whether standard actions such as these are logged server side. While this works today, it could stop working tomorrow. Execute caution and be responsible for your own actions.
 
-# Credits
-Thanks to [@SharpTheNightmare](https://github.com/SharpTheNightmare) (SKUA Dev) for some cleanup and guidance
+# Credits & Contributions
+Thanks to [@SharpTheNightmare](https://github.com/SharpTheNightmare) (SKUA Dev) for some cleanup and guidance.
