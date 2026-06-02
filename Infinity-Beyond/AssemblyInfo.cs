@@ -18,6 +18,6 @@ using System.Runtime.InteropServices;
 
 [assembly: Guid("98a36aa5-bc60-461d-b871-6eedbf5187af")]
 
-[assembly: MelonInfo(typeof(TestMod), "Alpha Testing Mod Menu", "0.0.3", "Retr0gr4d3")]
+[assembly: MelonInfo(typeof(TestMod), "Beyond", "0.0.4", "Retr0gr4d3")]
 [assembly: MelonGame("Artix Entertainment, LLC", "AdventureQuest Worlds: Infinity")]
 [assembly: MelonGame("Artix Entertainment, LLC", "AdventureQuest Worlds Infinity")]

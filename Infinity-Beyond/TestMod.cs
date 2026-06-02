@@ -971,7 +971,7 @@ namespace Infinity_TestMod
             GUI.Label(new Rect(20, curY, 260, 20), "<b>Retro Tests</b>", labelStyle);
             curY += 22f;
 
-            string retroTestsBtnText = showRetroTestsWindow ? "Hide Retro" : "Open";
+            string retroTestsBtnText = showRetroTestsWindow ? "Hide" : "Open";
             if (GUI.Button(new Rect(20, curY, 260, 35), retroTestsBtnText, closeButtonStyle))
             {
                 showRetroTestsWindow = !showRetroTestsWindow;
