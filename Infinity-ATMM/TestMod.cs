@@ -22,10 +22,49 @@ namespace Infinity_TestMod
         public static Rect configWindowRect = new(330, 100, 320, 360);
 
         public static bool showFakeDevWindow = false;
-        public static Rect fakeDevWindowRect = new(330, 410, 320, 270);
+        public static Rect fakeDevWindowRect = new(330, 410, 320, 280);
         private static bool defaultsCaptured = false;
         private static int defaultUpgradeDays = 0;
         private static int defaultAccessLevel = 0;
+        private static string defaultPlayerName = "";
+        private static string nameSpoofInput = "";
+        public static bool nameSpoofActive = false;
+        public static string spoofedName = "";
+
+        // "Fun" window — home for visual/local spoofers (name, gear, future).
+        // Sized to fit Name Spoof + Armor Spoof rows + armor catalog picker.
+        public static bool showFunWindow = false;
+        public static Rect funWindowRect = new(330, 410, 360, 560);
+
+        // Gear Spoof — one entry per visual slot (Helm, Armor, Back/Cape).
+        // Each holds the active spoof bundle Filename. Version metadata is
+        // borrowed at load time from the real equipped item so CDN URLs
+        // resolve. Cleared by user via the Clear button.
+        public static bool helmSpoofActive = false;
+        public static string helmSpoofBundle = "";
+        private static string helmSpoofInput = "";
+
+        public static bool armorSpoofActive = false;
+        public static string armorSpoofBundle = "";
+        private static string armorSpoofInput = "";
+
+        public static bool backSpoofActive = false;
+        public static string backSpoofBundle = "";
+        private static string backSpoofInput = "";
+
+        // Gender flip — mutates Entity.mainPlayer.Gender (enum field) while
+        // active so every gender consumer (avatar rig prefab, pronouns,
+        // hair option matchers) sees the flipped value uniformly. Original
+        // is stashed in `genderSpoofOriginal` and restored on toggle off.
+        public static bool genderSpoofActive = false;
+        private static Player.genders genderSpoofOriginal = Player.genders.Male;
+
+        // Shared catalog dropdown: only one slot's picker is expanded at a
+        // time (0=none, 1=Helm, 2=Armor, 3=Back). Filter+scroll persist
+        // across openings so a search isn't lost when switching slots.
+        private static int catalogOpenSlot = 0;
+        private static string catalogFilter = "";
+        private static Vector2 catalogScroll = Vector2.zero;
 
         public static bool showShopLoaderWindow = false;
         public static Rect shopLoaderWindowRect = new(330, 100, 280, 205);
@@ -125,6 +164,7 @@ namespace Infinity_TestMod
             LoggerInstance.Msg("Alpha Testing Mod Menu Initialized successfully!");
             PacketLog.Init();
             Directory.Init();
+            ItemCatalog.Init();
             QuestChains.Init();
             var harmony = new HarmonyLib.Harmony(nameof(TestMod));
             harmony.PatchAll();
@@ -135,6 +175,7 @@ namespace Infinity_TestMod
         public override void OnApplicationQuit()
         {
             Directory.Save();
+            ItemCatalog.Save();
             PacketLog.Close();
         }
 
@@ -483,6 +524,18 @@ namespace Infinity_TestMod
                     questRunnerWindowRect = GUI.Window(9993, questRunnerWindowRect, DrawQuestRunnerWindow, "Quest Runner");
                 }
             }
+
+            if (showWindow && showFunWindow)
+            {
+                if (windowStyle != null)
+                {
+                    funWindowRect = GUI.Window(9989, funWindowRect, DrawFunWindow, "Fun", windowStyle);
+                }
+                else
+                {
+                    funWindowRect = GUI.Window(9989, funWindowRect, DrawFunWindow, "Fun");
+                }
+            }
         }
 
         private void DrawWindow(int windowID)
@@ -500,8 +553,10 @@ namespace Infinity_TestMod
                     {
                         defaultUpgradeDays = Entity.mainPlayer.UpgradeDays;
                         defaultAccessLevel = Entity.mainPlayer.AccessLevel;
+                        defaultPlayerName = Entity.mainPlayer.Name ?? "";
+                        nameSpoofInput = defaultPlayerName;
                         defaultsCaptured = true;
-                        LoggerInstance.Msg($"Captured player default privileges: UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
+                        LoggerInstance.Msg($"Captured player defaults: Name={defaultPlayerName}, UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
                     }
                 }
             }
@@ -670,6 +725,28 @@ namespace Infinity_TestMod
             if (GUI.Button(new Rect(20, curY, 260, 35), runnerBtnText, closeButtonStyle))
             {
                 showQuestRunnerWindow = !showQuestRunnerWindow;
+            }
+            curY += 35f;
+
+            if (separatorTexture != null)
+            {
+                curY += 6f;
+                GUI.DrawTexture(new Rect(20, curY, 260, 2), separatorTexture);
+                curY += 2f + 6f;
+            }
+            else
+            {
+                curY += 10f;
+            }
+
+            // Section 6: Spoofers — name, gear, future cosmetic-only tweaks.
+            GUI.Label(new Rect(20, curY, 260, 20), "<b>Spoofers</b>", labelStyle);
+            curY += 22f;
+
+            string funBtnText = showFunWindow ? "Hide Fun" : "Fun";
+            if (GUI.Button(new Rect(20, curY, 260, 35), funBtnText, closeButtonStyle))
+            {
+                showFunWindow = !showFunWindow;
             }
             curY += 35f + 10f;
 
@@ -1211,11 +1288,12 @@ namespace Infinity_TestMod
             DrawFakeDevAccessTier(pad + (btnW + 4)*3, btnW, "60",  60,  currentLevel, playerExists);
             DrawFakeDevAccessTier(pad + (btnW + 4)*4, btnW, "100", 100, currentLevel, playerExists);
 
-            // 3. Actions: Dev UI, Reset, Close
+            // 3. Actions: Dev UI, Reset, Close. Name Spoof moved to the Fun
+            // window; Reset still clears any active name spoof for symmetry.
             float actionBtnW = (innerW - 10) / 2f;
             if (playerExists)
             {
-                if (GUI.Button(new Rect(pad, 170, actionBtnW, 35), "Open Dev UI", closeButtonStyle))
+                if (GUI.Button(new Rect(pad, 180, actionBtnW, 35), "Open Dev UI", closeButtonStyle))
                 {
                     try
                     {
@@ -1228,7 +1306,7 @@ namespace Infinity_TestMod
                     }
                 }
 
-                if (GUI.Button(new Rect(pad + actionBtnW + 10, 170, actionBtnW, 35), "Reset to Default", closeButtonStyle))
+                if (GUI.Button(new Rect(pad + actionBtnW + 10, 180, actionBtnW, 35), "Reset to Default", closeButtonStyle))
                 {
                     try
                     {
@@ -1237,7 +1315,8 @@ namespace Infinity_TestMod
                             Entity.mainPlayer.UpgradeDays = defaultUpgradeDays;
                             Entity.mainPlayer.AccessLevel = defaultAccessLevel;
                             Entity.mainPlayer.updateNameColor();
-                            LoggerInstance.Msg($"Reset player privileges to defaults: UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
+                            ClearNameSpoof();
+                            LoggerInstance.Msg($"Reset player defaults: Name={defaultPlayerName}, UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
                         }
                         else
                         {
@@ -1253,17 +1332,279 @@ namespace Infinity_TestMod
             else
             {
                 GUI.enabled = false;
-                GUI.Button(new Rect(pad, 170, actionBtnW, 35), "Open Dev UI", closeButtonStyle);
-                GUI.Button(new Rect(pad + actionBtnW + 10, 170, actionBtnW, 35), "Reset to Default", closeButtonStyle);
+                GUI.Button(new Rect(pad, 180, actionBtnW, 35), "Open Dev UI", closeButtonStyle);
+                GUI.Button(new Rect(pad + actionBtnW + 10, 180, actionBtnW, 35), "Reset to Default", closeButtonStyle);
                 GUI.enabled = true;
             }
 
-            if (GUI.Button(new Rect(pad, 215, innerW, 35), "Close", closeButtonStyle))
+            if (GUI.Button(new Rect(pad, 225, innerW, 35), "Close", closeButtonStyle))
             {
                 showFakeDevWindow = false;
             }
 
             GUI.DragWindow(new Rect(0, 0, winWidth, 30));
+        }
+
+        private void DrawFunWindow(int windowID)
+        {
+            float winWidth = funWindowRect.width;
+            float pad = 20f;
+            float innerW = winWidth - pad * 2;
+
+            bool playerExists = false;
+            try { playerExists = (Entity.mainPlayer != null); } catch { }
+
+            float curY = 35f;
+
+            // 1. Name Spoof — local-only nameplate/HUD/chat substitution.
+            GUI.Label(new Rect(pad, curY, innerW, 20), "Name Spoof:", labelStyle);
+            curY += 20f;
+            nameSpoofInput = GUI.TextField(new Rect(pad, curY, innerW, 30), nameSpoofInput, textFieldStyle);
+            curY += 35f;
+
+            float btnW = (innerW - 10) / 2f;
+            if (playerExists)
+            {
+                if (GUI.Button(new Rect(pad, curY, btnW, 30), nameSpoofActive ? "Update Name" : "Apply Name", closeButtonStyle))
+                    ApplyNameSpoof(nameSpoofInput);
+                if (GUI.Button(new Rect(pad + btnW + 10, curY, btnW, 30), "Clear Name", closeButtonStyle))
+                    ClearNameSpoof();
+            }
+            else
+            {
+                GUI.enabled = false;
+                GUI.Button(new Rect(pad, curY, btnW, 30), "Apply Name", closeButtonStyle);
+                GUI.Button(new Rect(pad + btnW + 10, curY, btnW, 30), "Clear Name", closeButtonStyle);
+                GUI.enabled = true;
+            }
+            curY += 40f;
+
+            // 2. Gender flip — single toggle. Real gender stays for game logic
+            // (pronouns, server-side checks); only the avatar rig flips.
+            string realGender = "?";
+            try { if (Entity.mainPlayer != null) realGender = Entity.mainPlayer.GetGenderString(); } catch { }
+            string genderLabel = genderSpoofActive
+                ? $"Flip Gender: ON (showing {(realGender == "M" ? "F" : (realGender == "F" ? "M" : "?"))})"
+                : $"Flip Gender: OFF (real: {realGender})";
+            if (playerExists)
+            {
+                if (GUI.Button(new Rect(pad, curY, innerW, 30), genderLabel, closeButtonStyle))
+                    ToggleGenderSpoof();
+            }
+            else
+            {
+                GUI.enabled = false;
+                GUI.Button(new Rect(pad, curY, innerW, 30), genderLabel, closeButtonStyle);
+                GUI.enabled = true;
+            }
+            curY += 40f;
+
+            // 3-5. Gear spoof slots. Each row: label, input, three buttons
+            // (Apply / Clear / Browse). Browse is a dropdown toggle — only
+            // one slot's catalog is visible at a time. The picker panel is
+            // drawn after all three slot rows so it can size against the
+            // window's remaining vertical space without overlapping them.
+            curY = DrawGearSpoofSlot(curY, pad, innerW, playerExists,
+                "Helm", 1,
+                ref helmSpoofInput, helmSpoofActive,
+                ApplyHelmSpoof, ClearHelmSpoof);
+
+            curY = DrawGearSpoofSlot(curY, pad, innerW, playerExists,
+                "Armor", 2,
+                ref armorSpoofInput, armorSpoofActive,
+                ApplyArmorSpoof, ClearArmorSpoof);
+
+            curY = DrawGearSpoofSlot(curY, pad, innerW, playerExists,
+                "Cape", 3,
+                ref backSpoofInput, backSpoofActive,
+                ApplyBackSpoof, ClearBackSpoof);
+
+            // 5. Shared catalog panel — only drawn when a slot's Browse is open.
+            if (catalogOpenSlot != 0)
+            {
+                System.Collections.Generic.Dictionary<string, ItemCatalog.ItemEntry> bucket;
+                System.Action<string> onSelect;
+                string slotLabel;
+                switch (catalogOpenSlot)
+                {
+                    case 1: bucket = ItemCatalog.Helms;  onSelect = s => helmSpoofInput  = s; slotLabel = "Helm";  break;
+                    case 2: bucket = ItemCatalog.Armors; onSelect = s => armorSpoofInput = s; slotLabel = "Armor"; break;
+                    case 3: bucket = ItemCatalog.Backs;  onSelect = s => backSpoofInput  = s; slotLabel = "Cape";  break;
+                    default: bucket = null; onSelect = null; slotLabel = ""; break;
+                }
+                if (bucket != null)
+                {
+                    GUI.Label(new Rect(pad, curY, innerW, 20),
+                        $"{slotLabel} Catalog ({bucket.Count}) — filter:", labelStyle);
+                    curY += 22f;
+                    catalogFilter = GUI.TextField(new Rect(pad, curY, innerW, 28), catalogFilter, textFieldStyle);
+                    curY += 32f;
+
+                    string filt = catalogFilter?.ToLowerInvariant() ?? "";
+                    var matches = new System.Collections.Generic.List<ItemCatalog.ItemEntry>();
+                    foreach (var e in bucket.Values)
+                    {
+                        string display = !string.IsNullOrEmpty(e.name) ? e.name : ItemCatalog.ParseFriendlyName(e.bundle);
+                        if (filt.Length == 0
+                            || (display?.ToLowerInvariant().Contains(filt) ?? false)
+                            || (e.bundle?.ToLowerInvariant().Contains(filt) ?? false))
+                            matches.Add(e);
+                    }
+                    matches.Sort((a, b) =>
+                    {
+                        string an = !string.IsNullOrEmpty(a.name) ? a.name : ItemCatalog.ParseFriendlyName(a.bundle);
+                        string bn = !string.IsNullOrEmpty(b.name) ? b.name : ItemCatalog.ParseFriendlyName(b.bundle);
+                        return string.Compare(an, bn, System.StringComparison.OrdinalIgnoreCase);
+                    });
+
+                    float listH = 180f;
+                    GUI.Box(new Rect(pad, curY, innerW, listH), "", GUI.skin.box);
+                    float rowH = 22f;
+                    float contentH = System.Math.Max(listH - 8, matches.Count * rowH + 4);
+                    catalogScroll = GUI.BeginScrollView(
+                        new Rect(pad, curY, innerW, listH),
+                        catalogScroll,
+                        new Rect(0, 0, innerW - 20, contentH));
+                    for (int i = 0; i < matches.Count; i++)
+                    {
+                        var e = matches[i];
+                        string display = !string.IsNullOrEmpty(e.name)
+                            ? e.name
+                            : ItemCatalog.ParseFriendlyName(e.bundle);
+                        if (GUI.Button(new Rect(2, 2 + i * rowH, innerW - 28, rowH - 2), "  " + display, rowButtonStyle))
+                        {
+                            onSelect?.Invoke(e.bundle);
+                            GUI.FocusControl(null);
+                            GUIUtility.keyboardControl = 0;
+                        }
+                    }
+                    GUI.EndScrollView();
+                    curY += listH + 10f;
+                }
+            }
+
+            if (GUI.Button(new Rect(pad, curY, innerW, 32), "Close", closeButtonStyle))
+                showFunWindow = false;
+            curY += 40f;
+
+            // Auto-size window to fit current content (collapsed vs catalog-open).
+            funWindowRect.height = curY + 10f;
+
+            GUI.DragWindow(new Rect(0, 0, winWidth, 30));
+        }
+
+        /// <summary>
+        /// Draws one gear-spoof row: label + input + Apply/Clear/Browse buttons.
+        /// Returns the new curY below the row. Browse toggles the shared
+        /// catalog dropdown for this slot.
+        /// </summary>
+        private static float DrawGearSpoofSlot(float curY, float pad, float innerW, bool playerExists,
+                                              string slotName, int slotKey,
+                                              ref string input, bool active,
+                                              System.Action<string> apply,
+                                              System.Action clear)
+        {
+            GUI.Label(new Rect(pad, curY, innerW, 20), $"{slotName} Spoof:", labelStyle);
+            curY += 20f;
+            input = GUI.TextField(new Rect(pad, curY, innerW, 30), input, textFieldStyle);
+            curY += 35f;
+
+            // Three buttons in a row: Apply / Clear / Browse-toggle.
+            float btnW = (innerW - 20) / 3f;
+            string applyText = active ? $"Update {slotName}" : $"Apply {slotName}";
+            string browseText = (catalogOpenSlot == slotKey) ? "Hide ▲" : "Browse ▼";
+
+            if (playerExists)
+            {
+                if (GUI.Button(new Rect(pad, curY, btnW, 30), applyText, closeButtonStyle))
+                    apply?.Invoke(input);
+                if (GUI.Button(new Rect(pad + btnW + 10, curY, btnW, 30), $"Clear {slotName}", closeButtonStyle))
+                    clear?.Invoke();
+            }
+            else
+            {
+                GUI.enabled = false;
+                GUI.Button(new Rect(pad, curY, btnW, 30), applyText, closeButtonStyle);
+                GUI.Button(new Rect(pad + btnW + 10, curY, btnW, 30), $"Clear {slotName}", closeButtonStyle);
+                GUI.enabled = true;
+            }
+            if (GUI.Button(new Rect(pad + (btnW + 10) * 2, curY, btnW, 30), browseText, closeButtonStyle))
+            {
+                catalogOpenSlot = (catalogOpenSlot == slotKey) ? 0 : slotKey;
+                catalogScroll = Vector2.zero;
+            }
+            curY += 40f;
+            return curY;
+        }
+
+        private static void ToggleGenderSpoof()
+        {
+            if (Entity.mainPlayer == null) return;
+            if (!genderSpoofActive)
+            {
+                // Activate: stash original, flip the enum field. Every
+                // consumer (GetGenderString, pronouns, EquipOptions, etc.)
+                // reads from this field, so they all see the flipped value.
+                genderSpoofOriginal = Entity.mainPlayer.Gender;
+                Entity.mainPlayer.Gender = (genderSpoofOriginal == Player.genders.Male)
+                    ? Player.genders.Female
+                    : Player.genders.Male;
+                genderSpoofActive = true;
+            }
+            else
+            {
+                // Deactivate: restore the stashed value.
+                Entity.mainPlayer.Gender = genderSpoofOriginal;
+                genderSpoofActive = false;
+            }
+            try { Entity.mainPlayer.createAvatar(); } catch { }
+            MelonLogger.Msg($"[GenderSpoof] {(genderSpoofActive ? $"ON (now {Entity.mainPlayer.GetGenderString()})" : "OFF")}");
+        }
+
+        private static void ApplyArmorSpoof(string desiredBundle)
+            => ApplyGearSpoof("Armor", desiredBundle, v => armorSpoofBundle = v, v => armorSpoofActive = v, v => armorSpoofInput = v);
+        private static void ClearArmorSpoof()
+            => ClearGearSpoof("Armor", v => armorSpoofBundle = v, v => armorSpoofActive = v);
+
+        private static void ApplyHelmSpoof(string desiredBundle)
+            => ApplyGearSpoof("Helm", desiredBundle, v => helmSpoofBundle = v, v => helmSpoofActive = v, v => helmSpoofInput = v);
+        private static void ClearHelmSpoof()
+            => ClearGearSpoof("Helm", v => helmSpoofBundle = v, v => helmSpoofActive = v);
+
+        private static void ApplyBackSpoof(string desiredBundle)
+            => ApplyGearSpoof("Cape", desiredBundle, v => backSpoofBundle = v, v => backSpoofActive = v, v => backSpoofInput = v);
+        private static void ClearBackSpoof()
+            => ClearGearSpoof("Cape", v => backSpoofBundle = v, v => backSpoofActive = v);
+
+        private static void ApplyGearSpoof(string label, string desiredBundle,
+                                           System.Action<string> setBundle,
+                                           System.Action<bool> setActive,
+                                           System.Action<string> setInput)
+        {
+            if (Entity.mainPlayer == null) return;
+            desiredBundle = (desiredBundle ?? "").Trim();
+            if (desiredBundle.Length == 0)
+            {
+                ClearGearSpoof(label, setBundle, setActive);
+                return;
+            }
+            setActive(true);
+            setBundle(desiredBundle);
+            setInput(desiredBundle);
+            // Force the avatar to rebuild so the loaders rerun and the
+            // matching spoof postfix kicks in.
+            try { Entity.mainPlayer.createAvatar(); } catch { }
+            MelonLogger.Msg($"[{label}Spoof] applied bundle '{desiredBundle}'.");
+        }
+
+        private static void ClearGearSpoof(string label,
+                                           System.Action<string> setBundle,
+                                           System.Action<bool> setActive)
+        {
+            setActive(false);
+            setBundle("");
+            try { Entity.mainPlayer?.createAvatar(); } catch { }
+            MelonLogger.Msg($"[{label}Spoof] cleared.");
         }
 
         private void DrawFakeDevAccessTier(float x, float width, string label, int level, int currentLevel, bool playerExists)
@@ -1290,6 +1631,40 @@ namespace Infinity_TestMod
                     LoggerInstance.Error($"Error setting access level: {ex}");
                 }
             }
+        }
+
+        private static void ApplyNameSpoof(string desiredName)
+        {
+            if (Entity.mainPlayer == null) return;
+            desiredName = (desiredName ?? "").Trim();
+            if (desiredName.Length == 0)
+            {
+                ClearNameSpoof();
+                return;
+            }
+            if (desiredName.Length > 24) desiredName = desiredName.Substring(0, 24);
+
+            nameSpoofActive = true;
+            spoofedName = desiredName;
+            nameSpoofInput = desiredName;
+            // Trigger a redraw: RefreshNameplate calls ComposeNameplateText
+            // which our Postfix patches to return the spoofed string.
+            // NOTE: do NOT mutate the nameplate GameObject's `name` field —
+            // NameLabelManager.KillNonMainPlayerNames identifies "our"
+            // nameplate by comparing GameObject.name against
+            // Entity.mainPlayer.Name on every ResponseAreaJoin. If they
+            // diverge it destroys our nameplate on the next map change.
+            try { Entity.mainPlayer.RefreshNameplate(); } catch { }
+            MelonLogger.Msg($"Set local nameplate spoof to '{desiredName}' for real character '{Entity.mainPlayer.Name}'.");
+        }
+
+        private static void ClearNameSpoof()
+        {
+            nameSpoofActive = false;
+            spoofedName = "";
+            if (!string.IsNullOrEmpty(defaultPlayerName)) nameSpoofInput = defaultPlayerName;
+            try { Entity.mainPlayer?.RefreshNameplate(); } catch { }
+            MelonLogger.Msg("Cleared local nameplate spoof.");
         }
 
         private void DrawShopLoaderWindow(int windowID)
@@ -1719,6 +2094,11 @@ namespace Infinity_TestMod
             }
 
             if (showWindow && showQuestRunnerWindow && questRunnerWindowRect.Contains(imguiMousePos))
+            {
+                return true;
+            }
+
+            if (showWindow && showFunWindow && funWindowRect.Contains(imguiMousePos))
             {
                 return true;
             }
