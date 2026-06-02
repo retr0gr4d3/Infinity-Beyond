@@ -1,4 +1,4 @@
-# Alpha Testing Tools / Mod Menu
+# Beyond
 ### Adeventure Quest Worlds: Infinity's first mod menu and automation kit.
 <b>Uses MelonLoader (Mono).</b><br>
 Precompiled versions are available in the releases, or you can compile it yourself from source using Visual Studio.
@@ -27,4 +27,4 @@ Feel free to open pull requests and contribute.
 
 # Credits & Team
 - [@SharpTheNightmare](https://github.com/SharpTheNightmare)
-- [@Drathaxie](https://github.com/drathaxie) / Claude
+- [@Drathaxie](https://github.com/drathaxie)
