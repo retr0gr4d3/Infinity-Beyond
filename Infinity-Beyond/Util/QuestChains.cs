@@ -46,6 +46,7 @@ namespace Infinity_TestMod.Util
         {
             try
             {
+                All.Clear();          // wipe stale state so deletes/renames take effect
                 LoadEmbedded();
                 LoadUserOverride();
                 MelonLogger.Msg($"[QuestChains] loaded {All.Count} chain(s): {string.Join(", ", All.Keys)}");

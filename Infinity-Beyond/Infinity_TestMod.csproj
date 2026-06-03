@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <AssemblyName>Beyond_0.0.4_Alpha-0.0.236</AssemblyName>
     <TargetFramework>netstandard2.1</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
@@ -76,9 +77,23 @@
     <AqwiModsDir Condition="'$(AQWI_MODS_DIR)' != ''">$(AQWI_MODS_DIR)</AqwiModsDir>
     <AqwiModsDir Condition="'$(AqwiModsDir)' == ''">$(AqwiGameDir)\Mods</AqwiModsDir>
   </PropertyGroup>
+  <!--
+    Always copy the built DLL into the solution-level build\ folder so
+    anyone who clones the repo and runs build.bat (or builds from VS/Rider)
+    gets a ready-to-distribute artifact without needing the game installed.
+  -->
+  <Target Name="CopyToBuildDir" AfterTargets="Build">
+    <MakeDir Directories="$(MSBuildProjectDirectory)\..\build" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
+          DestinationFolder="$(MSBuildProjectDirectory)\..\build"
+          OverwriteReadOnlyFiles="true" />
+    <Message Importance="high" Text="[Infinity-Beyond] DLL → $(MSBuildProjectDirectory)\..\build\$(AssemblyName).dll" />
+  </Target>
+
+  <!-- Also deploy to game Mods folder when it exists (optional, skipped on CI/clean installs) -->
   <Target Name="PostBuild" AfterTargets="Build" Condition="Exists('$(AqwiModsDir)')">
     <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(AqwiModsDir)" />
-    <Message Importance="high" Text="Copied $(AssemblyName).dll to $(AqwiModsDir)" />
+    <Message Importance="high" Text="[Infinity-Beyond] Deployed to $(AqwiModsDir)" />
   </Target>
 
   <!--
@@ -115,10 +130,6 @@
     </Reference>
     <Reference Include="UnityEngine.AudioModule">
       <HintPath>$(AqwiGameDir)\AdventureQuest Worlds Infinity_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="UnityEngine.DirectorModule">
-      <HintPath>$(AqwiGameDir)\AdventureQuest Worlds Infinity_Data\Managed\UnityEngine.DirectorModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">

@@ -662,23 +662,18 @@ namespace Infinity_TestMod.Util
                 requiredMonId = parsed;
             }
 
-            // Sticky targeting: hold the current target until it's dead or
-            // no longer matches the objective's MonID. We deliberately do NOT
-            // also require Hostile reactionType or Frame equality:
-            //   - Far mobs sometimes report Neutral/Passive until the player
-            //     enters their aggro radius. Requiring Hostile invalidates
-            //     mid-approach and the bot oscillates back to whatever's
-            //     nearest (the "dance between two wyverns" symptom).
-            //   - Multi-cell rooms (Lair) let mobs sit on the far side of a
-            //     frame boundary. Walking toward them changes the player's
-            //     Frame, breaking any equality check against the mob's.
-            // Both relaxations are safe for the kill-X-of-Y contract: if the
-            // user's quest requires a different MonID we still re-pick, and
-            // Dead is checked authoritatively.
+            // Sticky targeting: if our current target is still alive, hostile,
+            // matches the MonID, and is in the player's frame, keep it. Avoids
+            // the bot oscillating between two equally-close mobs when their
+            // positions shift slightly each tick (which broke combat against
+            // the pair of water draconians flanking the player).
+            string playerFrameForStick = Entity.mainPlayer.Frame ?? "";
             if (Entity.mainPlayer.target is Monster current
                 && current != null
                 && current.currentState != Entity.State.Dead
-                && (requiredMonId == null || current.ID == requiredMonId.Value))
+                && current.reactionType == Entity.ReactionType.Hostile
+                && (requiredMonId == null || current.ID == requiredMonId.Value)
+                && string.Equals(current.Frame ?? "", playerFrameForStick, StringComparison.OrdinalIgnoreCase))
             {
                 return current;
             }

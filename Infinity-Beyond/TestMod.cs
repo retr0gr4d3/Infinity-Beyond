@@ -163,6 +163,11 @@ namespace Infinity_TestMod
         private static Vector2 questPickerScroll = Vector2.zero;
         // Chain picker: index into QuestChains.Names + button to run.
         private static int questChainPickerIndex = 0;
+        private static bool _showChainEditor = false;
+        private static bool _showChainDropdown = false;
+        private static Vector2 _chainDropdownScroll = Vector2.zero;
+        private static ChainEditState _chainEditState = null;
+        private static Rect _chainEditorWindowRect = new Rect(680, 200, 540, 460);
         private static string receiverJsonInput = "{\n  \"Cmd\": \"\",\n  \"Params\": {}\n}";
         private static Vector2 receiverScrollPosition = Vector2.zero;
         private static System.Reflection.MethodInfo _wrapAndQueueResponseMethod = null;
@@ -770,6 +775,14 @@ namespace Infinity_TestMod
                 {
                     questRunnerWindowRect = GUI.Window(9993, questRunnerWindowRect, DrawQuestRunnerWindow, "Quest Runner");
                 }
+            }
+
+            if (showWindow && showQuestRunnerWindow && _showChainEditor)
+            {
+                if (windowStyle != null)
+                    _chainEditorWindowRect = GUI.Window(9985, _chainEditorWindowRect, DrawChainEditorWindow, "Chain Editor", windowStyle);
+                else
+                    _chainEditorWindowRect = GUI.Window(9985, _chainEditorWindowRect, DrawChainEditorWindow, "Chain Editor");
             }
 
             if (showWindow && showFunWindow)
@@ -3225,35 +3238,48 @@ namespace Infinity_TestMod
             }
             GUI.EndScrollView();
 
-            // Chain selector row — one click per chain plus a Run button.
-            // The dropdown is a cycle button (clicking advances through chain
-            // names) since IMGUI doesn't have a native combobox. Keeps the
-            // single-quest fields above usable for one-off testing.
+            // ---- Chain selector row with dropdown + New/Edit/Run ----
             var chainNames = new System.Collections.Generic.List<string>(QuestChains.Names);
+            if (questChainPickerIndex >= chainNames.Count) questChainPickerIndex = 0;
             string currentChainName = chainNames.Count == 0
-                ? "(none — edit chains.json)"
-                : chainNames[questChainPickerIndex % chainNames.Count];
+                ? "(no chains)"
+                : chainNames[questChainPickerIndex];
             int currentEntryCount = chainNames.Count == 0 ? 0 : (QuestChains.Get(currentChainName)?.Count ?? 0);
 
-            GUI.Label(new Rect(pad, 380 + 5, 60, 25), "Chain:", labelStyle);
-            if (GUI.Button(new Rect(pad + 60, 380, 180, 35),
-                $"{currentChainName}  ({currentEntryCount} entries)", closeButtonStyle))
+            if (_chainEditState == null) _chainEditState = new ChainEditState();
+
+            // Row: [Chain: v dropdown button] [New] [Edit] [Run Chain] [progress]
+            GUI.Label(new Rect(pad, 382, 48, 22), "Chain:", labelStyle);
+
+            // Dropdown toggle button
+            if (GUI.Button(new Rect(pad + 50, 378, 188, 30),
+                $"{currentChainName}  ({currentEntryCount})  v", closeButtonStyle))
+                _showChainDropdown = !_showChainDropdown;
+
+            if (GUI.Button(new Rect(pad + 244, 378, 44, 30), "New", closeButtonStyle))
             {
-                if (chainNames.Count > 0)
-                    questChainPickerIndex = (questChainPickerIndex + 1) % chainNames.Count;
+                _chainEditState.Open(chainNames, null);
+                _showChainEditor = true;
+                _showChainDropdown = false;
+            }
+            if (GUI.Button(new Rect(pad + 294, 378, 44, 30), "Edit", closeButtonStyle))
+            {
+                _chainEditState.Open(chainNames, chainNames.Count == 0 ? null : currentChainName);
+                _showChainEditor = true;
+                _showChainDropdown = false;
             }
 
-            // In-chain progress readout while running.
             string chainProgress = (questRunner.ChainEntries != null)
-                ? $"  ▶ {questRunner.ChainName} {questRunner.ChainIndex + 1}/{questRunner.ChainEntries.Count}"
+                ? $"▶ {questRunner.ChainName} {questRunner.ChainIndex + 1}/{questRunner.ChainEntries.Count}"
                 : "";
-            GUI.Label(new Rect(pad + 250, 380 + 5, 200, 25), chainProgress, logTextStyle);
+            GUI.Label(new Rect(pad + 344, 382, 140, 22), chainProgress, logTextStyle);
 
             bool isRunningC = questRunner.IsRunning;
             GUI.enabled = !isRunningC && chainNames.Count > 0;
-            if (GUI.Button(new Rect(pad + 460, 380, 120, 35), "Run Chain", closeButtonStyle))
+            if (GUI.Button(new Rect(pad + 460, 378, 120, 30), "Run Chain", closeButtonStyle))
             {
                 questRunnerLog.Clear();
+                _showChainDropdown = false;
                 questRunner.OnLog = line =>
                 {
                     lock (questRunnerLog)
@@ -3265,6 +3291,32 @@ namespace Infinity_TestMod
                 questRunner.StartChain(currentChainName, QuestChains.Get(currentChainName));
             }
             GUI.enabled = true;
+
+            // ---- Dropdown list (drawn on top, last in pass) ----
+            if (_showChainDropdown && chainNames.Count > 0)
+            {
+                float ddX = pad + 50, ddY = 409f;
+                float ddW = 188f, ddRowH = 24f;
+                float ddH = Mathf.Min(chainNames.Count * ddRowH + 4, 200f);
+                GUI.Box(new Rect(ddX - 2, ddY - 2, ddW + 4, ddH + 4), "");
+                _chainDropdownScroll = GUI.BeginScrollView(
+                    new Rect(ddX, ddY, ddW, ddH),
+                    _chainDropdownScroll,
+                    new Rect(0, 0, ddW - 16, chainNames.Count * ddRowH));
+                for (int ci = 0; ci < chainNames.Count; ci++)
+                {
+                    bool selected = ci == questChainPickerIndex;
+                    var style = selected ? labelStyle : rowButtonStyle;
+                    if (GUI.Button(new Rect(0, ci * ddRowH, ddW - 16, ddRowH - 2), chainNames[ci], style))
+                    {
+                        questChainPickerIndex = ci;
+                        _showChainDropdown = false;
+                    }
+                }
+                GUI.EndScrollView();
+            }
+
+            // ---- Chain Editor panel ---- drawn as separate floating window (see OnGUI)
 
             if (GUI.Button(new Rect(pad, 425, innerW, 35), "Close Runner", closeButtonStyle))
             {
@@ -3324,6 +3376,295 @@ namespace Infinity_TestMod
             GUI.DragWindow(new Rect(0, 0, winWidth, 30));
         }
 
+        // ------- Chain Editor logic + GUI (INJECTED) -------
+        private class ChainEditState {
+            public string editingName;
+            public string saveAsName = "";
+            public List<QuestChains.Entry> entries = new List<QuestChains.Entry>();
+            public int editingIdx = -1;
+            public string errorMsg = null;
+            public bool editingExisting = false;
+            public Vector2 scroll = Vector2.zero;
+            public List<string> chainNames = new List<string>();
+            // Load dropdown
+            public bool showLoadDropdown = false;
+            public Vector2 loadDropScroll = Vector2.zero;
+            public int loadSelectedIdx = -1;
+
+            public void Open(List<string> allNames, string pick)
+            {
+                chainNames = new List<string>(allNames);
+                editingName = pick ?? "NewChain";
+                saveAsName  = editingName;
+                entries = (pick!=null && QuestChains.Get(pick)!=null) ?
+                          QuestChains.Get(pick).Select(e=>new QuestChains.Entry{
+                              qid=e.qid,area=e.area,frame=e.frame,pad=e.pad,iters=e.iters}).ToList() :
+                          new List<QuestChains.Entry>();
+                errorMsg = null;
+                editingExisting = (pick != null && QuestChains.Get(pick) != null);
+                editingIdx = (pick==null ? -1 : allNames.IndexOf(pick));
+                showLoadDropdown = false;
+                loadSelectedIdx = editingIdx;
+            }
+        }
+
+        private static void DrawChainEditorWindow(int windowID)
+        {
+            if (_chainEditState == null) return;
+            float p = 10f;
+            float W = _chainEditorWindowRect.width;
+            float H = _chainEditorWindowRect.height;
+            float y = 28f;
+
+            // ---- Row 1: Load existing chain ----
+            GUI.Label(new Rect(p, y + 3, 38, 22), "Load:", labelStyle);
+            string loadLabel = (_chainEditState.loadSelectedIdx >= 0 && _chainEditState.loadSelectedIdx < _chainEditState.chainNames.Count)
+                ? _chainEditState.chainNames[_chainEditState.loadSelectedIdx]
+                : "(select chain)";
+            if (GUI.Button(new Rect(p + 42, y, 180, 26), loadLabel + "  v", closeButtonStyle))
+                _chainEditState.showLoadDropdown = !_chainEditState.showLoadDropdown;
+            if (GUI.Button(new Rect(p + 228, y, 60, 26), "Load", closeButtonStyle))
+            {
+                if (_chainEditState.loadSelectedIdx >= 0 && _chainEditState.loadSelectedIdx < _chainEditState.chainNames.Count)
+                {
+                    string pick = _chainEditState.chainNames[_chainEditState.loadSelectedIdx];
+                    _chainEditState.Open(_chainEditState.chainNames, pick);
+                    _chainEditState.errorMsg = $"Loaded: {pick}";
+                }
+                else { _chainEditState.errorMsg = "Select a chain first"; }
+            }
+            if (GUI.Button(new Rect(p + 294, y, 60, 26), "New", closeButtonStyle))
+            {
+                _chainEditState.entries.Clear();
+                _chainEditState.editingName = "NewChain";
+                _chainEditState.saveAsName  = "NewChain";
+                _chainEditState.editingExisting = false;
+                _chainEditState.errorMsg = null;
+            }
+            y += 32f;
+
+            // ---- Row 2: chain name + Save As name ----
+            GUI.Label(new Rect(p, y + 3, 82, 22), "Chain Name:", labelStyle);
+            _chainEditState.editingName = GUI.TextField(new Rect(p + 86, y, 150, 26), _chainEditState.editingName, textFieldStyle);
+            GUI.Label(new Rect(p + 244, y + 3, 56, 22), "Save As:", labelStyle);
+            _chainEditState.saveAsName = GUI.TextField(new Rect(p + 302, y, 150, 26), _chainEditState.saveAsName, textFieldStyle);
+            y += 32f;
+
+            // ---- Status / error ----
+            if (_chainEditState.errorMsg != null)
+                GUI.Label(new Rect(p, y, W - p*2, 20), _chainEditState.errorMsg, logTextStyle);
+            y += 22f;
+
+            // ---- Entries header ----
+            GUI.Label(new Rect(p, y, W - p*2, 18), "Entries:   qid | area | frame | pad | iters | -", labelStyle);
+            y += 20f;
+
+            // ---- Entries scroll list ----
+            float entrH = H - y - 44f;
+            _chainEditState.scroll = GUI.BeginScrollView(
+                new Rect(p, y, W - p*2, entrH),
+                _chainEditState.scroll,
+                new Rect(0, 0, W - p*2 - 18, Mathf.Max(entrH - 4, _chainEditState.entries.Count * 32 + 36)));
+            for (int i = 0; i < _chainEditState.entries.Count; i++)
+            {
+                var ent = _chainEditState.entries[i];
+                float ey = i * 32f;
+                string sqid   = GUI.TextField(new Rect(0,   ey, 50, 26), ent.qid.ToString(),  textFieldStyle); int.TryParse(sqid, out ent.qid);
+                string sarea  = GUI.TextField(new Rect(56,  ey, 78, 26), ent.area  ?? "",     textFieldStyle); ent.area  = sarea;
+                string sframe = GUI.TextField(new Rect(140, ey, 68, 26), ent.frame ?? "",     textFieldStyle); ent.frame = sframe;
+                string spad   = GUI.TextField(new Rect(214, ey, 58, 26), ent.pad   ?? "Spawn", textFieldStyle); ent.pad   = spad;
+                string siters = GUI.TextField(new Rect(278, ey, 38, 26), ent.iters.ToString(), textFieldStyle); int iters = ent.iters; int.TryParse(siters, out iters); ent.iters = iters < 1 ? 1 : iters;
+                if (GUI.Button(new Rect(322, ey, 28, 26), "-", closeButtonStyle)) { _chainEditState.entries.RemoveAt(i); break; }
+                _chainEditState.entries[i] = ent;
+            }
+            if (GUI.Button(new Rect(0, _chainEditState.entries.Count * 32f, 28, 26), "+", closeButtonStyle))
+                _chainEditState.entries.Add(new QuestChains.Entry { qid = 1, area = "", frame = "", pad = "Spawn", iters = 1 });
+            GUI.EndScrollView();
+            y += entrH + 6f;
+
+            // ---- Bottom buttons: Save / Save As / Delete / Export / Import / Close ----
+            float bw = 72f;
+            if (GUI.Button(new Rect(p,             y, bw, 28), _chainEditState.editingExisting ? "Update" : "Save", closeButtonStyle)) SaveEditedChain(false);
+            if (GUI.Button(new Rect(p + bw + 4,    y, bw, 28), "Save As",   closeButtonStyle)) SaveEditedChain(true);
+            if (_chainEditState.editingExisting)
+                if (GUI.Button(new Rect(p + bw*2 + 8,  y, bw, 28), "Delete", closeButtonStyle)) DeleteEditedChain();
+            if (GUI.Button(new Rect(p + bw*3 + 12, y, bw, 28), "Export",   closeButtonStyle)) ExportChain();
+            if (GUI.Button(new Rect(p + bw*4 + 16, y, bw, 28), "Import",   closeButtonStyle)) ImportChain();
+            if (GUI.Button(new Rect(W - p - 58,    y, 58, 28), "Close",    closeButtonStyle)) _showChainEditor = false;
+
+            // ---- Load dropdown (drawn on top of everything else) ----
+            if (_chainEditState.showLoadDropdown && _chainEditState.chainNames.Count > 0)
+            {
+                float ddY = 56f;
+                float ddH = Mathf.Min(_chainEditState.chainNames.Count * 24f + 4, 180f);
+                GUI.Box(new Rect(p + 40, ddY - 2, 184, ddH + 4), "");
+                _chainEditState.loadDropScroll = GUI.BeginScrollView(
+                    new Rect(p + 42, ddY, 180, ddH),
+                    _chainEditState.loadDropScroll,
+                    new Rect(0, 0, 160, _chainEditState.chainNames.Count * 24f));
+                for (int ci = 0; ci < _chainEditState.chainNames.Count; ci++)
+                {
+                    bool sel = ci == _chainEditState.loadSelectedIdx;
+                    if (GUI.Button(new Rect(0, ci * 24f, 158, 22), _chainEditState.chainNames[ci], sel ? labelStyle : rowButtonStyle))
+                    {
+                        _chainEditState.loadSelectedIdx = ci;
+                        _chainEditState.showLoadDropdown = false;
+                    }
+                }
+                GUI.EndScrollView();
+            }
+
+            GUI.DragWindow(new Rect(0, 0, W, 26));
+        }
+
+        private static void SaveEditedChain(bool saveAs)
+        {
+            try {
+                string nm = (saveAs ? _chainEditState.saveAsName : _chainEditState.editingName)?.Trim();
+                if (string.IsNullOrEmpty(nm))           { _chainEditState.errorMsg = saveAs ? "Save As name required" : "Chain name required"; return; }
+                if (_chainEditState.entries.Count == 0)  { _chainEditState.errorMsg = "Add at least 1 entry"; return; }
+                foreach (var e in _chainEditState.entries)
+                    if (e.qid <= 0) { _chainEditState.errorMsg = "qid must be a positive number"; return; }
+
+                string userDir  = System.IO.Path.Combine(MelonEnvironment.UserDataDirectory, "Beyond");
+                System.IO.Directory.CreateDirectory(userDir);
+                string chainFile = System.IO.Path.Combine(userDir, "chains.json");
+
+                // Read existing user file as JObject so we preserve unknown keys / comments
+                Newtonsoft.Json.Linq.JObject root;
+                if (System.IO.File.Exists(chainFile))
+                    root = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(chainFile));
+                else
+                    root = new Newtonsoft.Json.Linq.JObject();
+
+                root[nm] = EntriesToJArray(_chainEditState.entries);
+                System.IO.File.WriteAllText(chainFile,
+                    root.ToString(Newtonsoft.Json.Formatting.Indented));
+
+                QuestChains.Init();
+
+                // Refresh editor state
+                _chainEditState.editingName     = nm;
+                _chainEditState.saveAsName      = nm;
+                _chainEditState.editingExisting = true;
+                _chainEditState.chainNames      = new List<string>(QuestChains.Names);
+                _chainEditState.loadSelectedIdx = _chainEditState.chainNames.IndexOf(nm);
+                _chainEditState.errorMsg        = saveAs ? $"Saved as: {nm}" : $"Saved: {nm}";
+            } catch (System.Exception ex) {
+                _chainEditState.errorMsg = ex.Message;
+            }
+        }
+
+        private static void DeleteEditedChain()
+        {
+            try {
+                string userDir   = System.IO.Path.Combine(MelonEnvironment.UserDataDirectory, "Beyond");
+                string chainFile = System.IO.Path.Combine(userDir, "chains.json");
+                if (!System.IO.File.Exists(chainFile)) { _chainEditState.errorMsg = "User chains.json not found"; return; }
+
+                var root = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(chainFile));
+                if (root.Remove(_chainEditState.editingName))
+                {
+                    System.IO.File.WriteAllText(chainFile, root.ToString(Newtonsoft.Json.Formatting.Indented));
+                    QuestChains.Init();
+                    _chainEditState.chainNames      = new List<string>(QuestChains.Names);
+                    _chainEditState.loadSelectedIdx = _chainEditState.chainNames.Count > 0 ? 0 : -1;
+                    _chainEditState.editingExisting = false;
+                    _chainEditState.errorMsg        = "Deleted!";
+                }
+                else { _chainEditState.errorMsg = "Not found in user file (bootstrap-only chain can't be deleted here)"; }
+            } catch (System.Exception ex) {
+                _chainEditState.errorMsg = ex.Message;
+            }
+        }
+
+        // Export the currently loaded entries as a standalone .json preset file
+        private static void ExportChain()
+        {
+            try {
+                string nm = _chainEditState.editingName?.Trim();
+                if (string.IsNullOrEmpty(nm))           { _chainEditState.errorMsg = "Set a chain name before exporting"; return; }
+                if (_chainEditState.entries.Count == 0)  { _chainEditState.errorMsg = "Nothing to export"; return; }
+
+                string defaultDir  = System.IO.Path.Combine(MelonEnvironment.UserDataDirectory, "Beyond");
+                System.IO.Directory.CreateDirectory(defaultDir);
+                string path = ShowSaveFileDialog(defaultDir, nm + ".json");
+                if (path == null) return;  // user cancelled
+
+                // Ensure .json extension
+                if (!path.EndsWith(".json", System.StringComparison.OrdinalIgnoreCase))
+                    path += ".json";
+
+                var obj = new Newtonsoft.Json.Linq.JObject();
+                obj[nm] = EntriesToJArray(_chainEditState.entries);
+                System.IO.File.WriteAllText(path, obj.ToString(Newtonsoft.Json.Formatting.Indented));
+                _chainEditState.errorMsg = $"Exported to: {System.IO.Path.GetFileName(path)}";
+            } catch (System.Exception ex) {
+                _chainEditState.errorMsg = ex.Message;
+            }
+        }
+
+        // Import a preset .json file — merges all chains found in it into UserData/Beyond/chains.json
+        private static void ImportChain()
+        {
+            try {
+                string defaultDir = System.IO.Path.Combine(MelonEnvironment.UserDataDirectory, "Beyond");
+                System.IO.Directory.CreateDirectory(defaultDir);
+                string path = ShowOpenFileDialog(defaultDir, "");
+                if (path == null) return;  // user cancelled
+
+                string imported = System.IO.File.ReadAllText(path);
+                var importObj   = Newtonsoft.Json.Linq.JObject.Parse(imported);
+
+                string chainFile = System.IO.Path.Combine(defaultDir, "chains.json");
+                Newtonsoft.Json.Linq.JObject root;
+                if (System.IO.File.Exists(chainFile))
+                    root = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(chainFile));
+                else
+                    root = new Newtonsoft.Json.Linq.JObject();
+
+                int count = 0;
+                string lastName = null;
+                foreach (var prop in importObj.Properties())
+                {
+                    if (prop.Name.StartsWith("_")) continue;
+                    if (prop.Value is not Newtonsoft.Json.Linq.JArray) continue;
+                    root[prop.Name] = prop.Value;
+                    lastName = prop.Name;
+                    count++;
+                }
+                if (count == 0) { _chainEditState.errorMsg = "No valid chains found in file"; return; }
+
+                System.IO.File.WriteAllText(chainFile, root.ToString(Newtonsoft.Json.Formatting.Indented));
+                QuestChains.Init();
+
+                _chainEditState.chainNames      = new List<string>(QuestChains.Names);
+                _chainEditState.loadSelectedIdx = lastName != null ? _chainEditState.chainNames.IndexOf(lastName) : 0;
+
+                // Auto-load the last imported chain into the editor
+                if (lastName != null) _chainEditState.Open(_chainEditState.chainNames, lastName);
+                _chainEditState.errorMsg = $"Imported {count} chain(s) from {System.IO.Path.GetFileName(path)}";
+            } catch (System.Exception ex) {
+                _chainEditState.errorMsg = ex.Message;
+            }
+        }
+
+        // Shared helper: List<Entry> -> JArray
+        private static Newtonsoft.Json.Linq.JArray EntriesToJArray(List<QuestChains.Entry> entries)
+        {
+            var arr = new Newtonsoft.Json.Linq.JArray();
+            foreach (var ent in entries)
+            {
+                var o = new Newtonsoft.Json.Linq.JObject();
+                o["qid"]   = ent.qid;
+                o["area"]  = ent.area  ?? "";
+                o["frame"] = ent.frame ?? "";
+                o["pad"]   = string.IsNullOrEmpty(ent.pad) ? "Spawn" : ent.pad;
+                o["iters"] = ent.iters < 1 ? 1 : ent.iters;
+                arr.Add(o);
+            }
+            return arr;
+        }
         public static bool IsMouseOverUI()
         {
             float mouseX = Input.mousePosition.x;

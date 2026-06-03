@@ -28,3 +28,4 @@ Feel free to open pull requests and contribute.
 # Credits & Team
 - [@SharpTheNightmare](https://github.com/SharpTheNightmare)
 - [@Drathaxie](https://github.com/drathaxie)
+- [@Tato2](https://github.com/wtffidy)
