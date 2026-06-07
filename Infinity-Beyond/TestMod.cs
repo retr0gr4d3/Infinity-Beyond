@@ -1629,7 +1629,11 @@ namespace Infinity_TestMod
             }
             curY += 45f;
 
-            curY = DrawSeparator(curY);
+            if (separatorTexture != null)
+            {
+                GUI.DrawTexture(new Rect(pad, curY, innerW, 2), separatorTexture);
+                curY += 15f;
+            }
 
             // File I/O row
             GUI.Label(new Rect(pad, curY, 70, 30), "Filename:", labelStyle);
