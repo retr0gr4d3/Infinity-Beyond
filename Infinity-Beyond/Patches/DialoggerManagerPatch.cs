@@ -30,7 +30,8 @@ namespace Infinity_TestMod.Patches
             try
             {
                 mgr.EndPressed();
-                MelonLogger.Msg("[CutsceneSkip] auto-skipped");
+                Util.CameraZoom.Reset();
+                MelonLogger.Msg("[CutsceneSkip] auto-skipped (zoom reset)");
             }
             catch (System.Exception ex)
             {

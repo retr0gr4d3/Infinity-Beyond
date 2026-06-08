@@ -1169,7 +1169,8 @@ namespace Infinity_TestMod
                     if (mgr != null)
                     {
                         mgr.EndPressed();
-                        LoggerInstance.Msg("Cutscene: skipped");
+                        Util.CameraZoom.Reset();
+                        LoggerInstance.Msg("Cutscene: skipped (zoom reset)");
                     }
                     else
                     {
