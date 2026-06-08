@@ -6,7 +6,7 @@ set ROOT=%~dp0
 set SLN=%ROOT%Infinity_TestMod.sln
 set OUT=%ROOT%Infinity-Beyond\bin\Release
 set BUILD=%ROOT%build
-set DLL=Beyond_0.0.4_Alpha-0.0.236.dll
+set DLL=Beyond_0.0.5_Alpha-0.0.238.dll
 
 echo ========================================
 echo  Building Infinity-Beyond Mod

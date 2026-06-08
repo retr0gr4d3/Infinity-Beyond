@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>Beyond_0.0.4_Alpha-0.0.236</AssemblyName>
+    <AssemblyName>Beyond_0.0.5_Alpha-0.0.238</AssemblyName>
     <TargetFramework>netstandard2.1</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>

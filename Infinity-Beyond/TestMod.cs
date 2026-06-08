@@ -845,7 +845,7 @@ namespace Infinity_TestMod
             // appear visibly.
             if (showWindow)
             {
-                windowRect = ResizableWindow.DrawScaledWindow(9999, windowRect, 300f, DrawWindow, "Mod Menu", windowStyle);
+                windowRect = ResizableWindow.DrawScaledWindow(9999, windowRect, 300f, DrawWindow, "Beyond Infinity", windowStyle);
                 windowRect = ResizableWindow.HandleResize(9999, windowRect);
             }
 
@@ -953,7 +953,7 @@ namespace Infinity_TestMod
         {
             Util.ResizableWindow.BeginScaling(windowID, windowRect, 300f);
             float contentWidth = 300f - 40f;  // -20px padding each side
-            GUI.Label(new Rect(20, 35, contentWidth, 25), "Test Mod Implementation", labelStyle);
+            GUI.Label(new Rect(20, 35, contentWidth, 25), "Tools & Automation", labelStyle);
             int currentLevel = -1;
             try
             {
@@ -1132,7 +1132,7 @@ namespace Infinity_TestMod
             if (GUI.Button(new Rect(20, curY, 260, 35), retroTestsBtnText, closeButtonStyle))
             {
                 showRetroTestsWindow = !showRetroTestsWindow;
-                MelonLogger.Msg($"[RetroTests] Button clicked! showRetroTestsWindow is now: {showRetroTestsWindow}");
+                // MelonLogger.Msg($"[RetroTests] Button clicked! showRetroTestsWindow is now: {showRetroTestsWindow}");
             }
             curY += 35f;
 
@@ -4316,10 +4316,10 @@ namespace Infinity_TestMod
             {
                 MelonLogger.Msg("[Hot-Reload] Starting reload...");
                 
-                string dllPath = @"c:\Users\retro\Documents\GitHub\Infinity_TestMod\Infinity-Beyond\bin\Release\Beyond_0.0.4_Alpha-0.0.236.dll";
+                string dllPath = @"c:\Users\retro\Documents\GitHub\Infinity_TestMod\Infinity-Beyond\bin\Release\Beyond_0.0.5_Alpha-0.0.238.dll";
                 if (!System.IO.File.Exists(dllPath))
                 {
-                    dllPath = @"c:\Users\retro\Documents\GitHub\Infinity_TestMod\build\Beyond_0.0.4_Alpha-0.0.236.dll";
+                    dllPath = @"c:\Users\retro\Documents\GitHub\Infinity_TestMod\build\Beyond_0.0.5_Alpha-0.0.238.dll";
                 }
                 
                 if (!System.IO.File.Exists(dllPath))
@@ -4412,7 +4412,7 @@ namespace Infinity_TestMod
         {
             foreach (System.Reflection.Assembly asm in System.AppDomain.CurrentDomain.GetAssemblies())
             {
-                if (!asm.IsDynamic && asm.GetName().Name == "Beyond_0.0.4_Alpha-0.0.236")
+                if (!asm.IsDynamic && asm.GetName().Name == "Beyond_0.0.5_Alpha-0.0.238")
                 {
                     return asm.GetType("Infinity_TestMod.TestMod");
                 }
