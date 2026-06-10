@@ -7,7 +7,7 @@ set OUT=%ROOT%Infinity-Beyond\bin\Release
 set BUILD=%ROOT%build
 
 echo ========================================
-echo  Building Project
+echo  Building Infinity-Beyond Mod
 echo ========================================
 echo.
 
@@ -24,9 +24,10 @@ set "DLL="
 
 for /f "delims=" %%F in ('
     powershell -NoProfile -ExecutionPolicy Bypass ^
-    -Command "Get-ChildItem -Path '%OUT%' -Filter 'Beyond_*.dll' -ErrorAction SilentlyContinue ^
+    -Command "param($p) Get-ChildItem -LiteralPath $p -Filter 'Beyond_*.dll' -ErrorAction SilentlyContinue ^
               | Sort-Object LastWriteTime -Descending ^
-              | Select-Object -First 1 -ExpandProperty Name"
+              | Select-Object -First 1 -ExpandProperty Name" ^
+    -ArgumentList "%OUT%"
 ') do (
     set "DLL=%%F"
 )
