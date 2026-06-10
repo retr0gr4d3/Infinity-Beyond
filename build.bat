@@ -13,7 +13,7 @@ echo.
 
 dotnet build "%SLN%" -c Release
 
-if !ERRORLEVEL! NEQ 0 (
+if errorlevel 1 (
     echo.
     echo BUILD FAILED
     pause
@@ -43,7 +43,7 @@ if not exist "%BUILD%" mkdir "%BUILD%"
 
 copy /Y "%OUT%\!DLL!" "%BUILD%\" >nul
 
-if !ERRORLEVEL! NEQ 0 (
+if errorlevel 1 (
     echo ERROR: Copy failed
     pause
     exit /b 1

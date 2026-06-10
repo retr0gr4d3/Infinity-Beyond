@@ -43,7 +43,7 @@ namespace Infinity_TestMod.Util
             _fHalfH = typeof(CameraFollow).GetField("camHalfHeight", Flags);
             _fHalfW = typeof(CameraFollow).GetField("camHalfWidth", Flags);
 
-            List<string> missing = [];
+            List<string> missing = new();
             if (_fCam == null) missing.Add("cam");
             if (_fHalfH == null) missing.Add("camHalfHeight");
             if (_fHalfW == null) missing.Add("camHalfWidth");
