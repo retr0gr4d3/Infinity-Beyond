@@ -1,0 +1,8 @@
+{
+  "_doc": "Ordered quest chains. Each entry: qid (int), area (str, '' = stay), frame (str, '' = stay), pad (str, default 'Spawn'), iters (int, default 1). Edit chains.json under UserData/Beyond to override locally; that file wins over this bootstrap. When area is set the runner auto-tfers; when only frame is set it does an in-area moveToCell.",
+
+  "Lair": [
+    { "qid": 19, "area": "lair", "frame": "Enter", "pad": "Spawn", "iters": 1, "_note": "Kill 2 water draconians at Enter/Spawn" },
+    { "qid": 20, "area": "lair", "frame": "r2",    "pad": "Spawn", "iters": 1, "_note": "Kill 5 wyverns in room 2 — qid still guessed; confirm before relying on" }
+  ]
+}

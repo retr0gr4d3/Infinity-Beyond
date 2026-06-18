@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.MessageWindow"
+        x:CompileBindings="False"
+        Title="Warning"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        CanResize="False"
+        SizeToContent="Height"
+        Width="400">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Warning"/>
+
+        <Border Padding="22,18">
+            <StackPanel Spacing="18">
+                <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+                    <TextBlock Text="&#x26A0;" FontSize="30" Foreground="#FFB74D" VerticalAlignment="Center"/>
+                    <TextBlock Name="MessageText" Text="" Foreground="#E2E4E9" FontSize="13"
+                               TextWrapping="Wrap" VerticalAlignment="Center" MaxWidth="290"/>
+                </StackPanel>
+                <Button Content="OK" Classes="Accent" Width="100" HorizontalAlignment="Right" Click="OnOkClick"/>
+            </StackPanel>
+        </Border>
+    </DockPanel>
+</Window>

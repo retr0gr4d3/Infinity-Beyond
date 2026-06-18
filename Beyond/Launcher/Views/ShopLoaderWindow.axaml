@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.ShopLoaderWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Shop Loader"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        CanResize="False"
+        Width="320" Height="215">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Shop Loader"/>
+
+        <StackPanel Spacing="12" Margin="15">
+            <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Load Shop" Classes="Header" Margin="0"/>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                        <TextBlock Text="Force Merge Shop" VerticalAlignment="Center"/>
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding ForceMergeShop}"/>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                        <TextBox Grid.Column="0" PlaceholderText="Shop ID" Text="{Binding ShopId}"/>
+                        <Button Grid.Column="1" Content="Load Shop" Command="{Binding LoadShopCommand}"/>
+                        <Button Grid.Column="2" Content="Load Merge" Command="{Binding LoadMergeCommand}" Classes="Accent"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</Window>

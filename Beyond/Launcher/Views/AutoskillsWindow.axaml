@@ -1,0 +1,127 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.AutoskillsWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Autoskills Configuration"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        CanResize="False"
+        Width="420" Height="710">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Autoskills Configuration"/>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12" Margin="15">
+                <!-- 1. Enable Toggle -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Autoskills Active (Retro/Combo)" VerticalAlignment="Center" FontSize="13" Foreground="#E2E4E9" FontWeight="SemiBold"/>
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding RetroAutoskillsActive}"/>
+                    </Grid>
+                </Border>
+
+                <!-- 2. Combo Sequence -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Combo Sequence (e.g. 2,3,4,2,3,2,1)" Classes="Header"/>
+                        <TextBox Text="{Binding SkillsetEditCombo}" PlaceholderText="Enter skill combo order..."/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. Skillsets Manager -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Saved Skillsets" Classes="Header"/>
+
+                        <ListBox ItemsSource="{Binding SavedSkillsets}"
+                                 SelectedIndex="{Binding SelectedSkillsetIndex, Mode=TwoWay}"
+                                 Background="#16161A" BorderThickness="1" BorderBrush="#202026"
+                                 CornerRadius="4" Height="90">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="vm:SkillsetEntry">
+                                    <TextBlock Text="{Binding Name}" FontSize="11" Margin="4,2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" Margin="0,4,0,0">
+                            <TextBox Grid.Column="0" Text="{Binding SkillsetEditName}" PlaceholderText="Skillset Name"/>
+                            <Button Grid.Column="1" Content="Save" Command="{Binding SaveSkillsetCommand}" Width="55"/>
+                            <Button Grid.Column="2" Content="Delete" Command="{Binding DeleteSkillsetCommand}" Width="60"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. Import / Export Tool -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Import / Export Tool" Classes="Header"/>
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                            <TextBox Grid.Column="0" Text="{Binding SkillsetImportExportText}" PlaceholderText="Paste or copy config string..."/>
+                            <Button Grid.Column="1" Content="Import" Command="{Binding ImportSkillsetCommand}" Width="55"/>
+                            <Button Grid.Column="2" Content="Export" Command="{Binding ExportSkillsetCommand}" Width="60"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 5. File I/O Actions -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="File Operations (Saved in UserData/Beyond)" Classes="Header"/>
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                            <TextBox Grid.Column="0" Text="{Binding SkillsetFileInput}" PlaceholderText="filename.txt"/>
+                            <Button Grid.Column="1" Content="Load File" Command="{Binding LoadSkillsetFileCommand}" Width="70"/>
+                            <Button Grid.Column="2" Content="Save File" Command="{Binding SaveSkillsetFileCommand}" Width="70"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 6. Skill Delay Configuration -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Skill Settings" Classes="Header"/>
+
+                        <Grid ColumnDefinitions="110, 75, Auto, Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,5,0,0">
+                            <!-- Key 1 -->
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Key 1 (Auto)" VerticalAlignment="Center" FontSize="11" Foreground="#C5C7D0" Margin="0,4"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Skill1Delay}" Margin="0,2,8,2" HorizontalContentAlignment="Center"/>
+                            <CheckBox Grid.Row="0" Grid.Column="2" IsChecked="{Binding Skill1Wait}" Content="Wait" Margin="0,0,10,0"/>
+                            <CheckBox Grid.Row="0" Grid.Column="3" IsChecked="{Binding Skill1Free}" Content="Free"/>
+
+                            <!-- Key 2 -->
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Key 2" VerticalAlignment="Center" FontSize="11" Foreground="#C5C7D0" Margin="0,4"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Skill2Delay}" Margin="0,2,8,2" HorizontalContentAlignment="Center"/>
+                            <CheckBox Grid.Row="1" Grid.Column="2" IsChecked="{Binding Skill2Wait}" Content="Wait" Margin="0,0,10,0"/>
+                            <CheckBox Grid.Row="1" Grid.Column="3" IsChecked="{Binding Skill2Free}" Content="Free"/>
+
+                            <!-- Key 3 -->
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Key 3" VerticalAlignment="Center" FontSize="11" Foreground="#C5C7D0" Margin="0,4"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Skill3Delay}" Margin="0,2,8,2" HorizontalContentAlignment="Center"/>
+                            <CheckBox Grid.Row="2" Grid.Column="2" IsChecked="{Binding Skill3Wait}" Content="Wait" Margin="0,0,10,0"/>
+                            <CheckBox Grid.Row="2" Grid.Column="3" IsChecked="{Binding Skill3Free}" Content="Free"/>
+
+                            <!-- Key 4 -->
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Key 4" VerticalAlignment="Center" FontSize="11" Foreground="#C5C7D0" Margin="0,4"/>
+                            <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Skill4Delay}" Margin="0,2,8,2" HorizontalContentAlignment="Center"/>
+                            <CheckBox Grid.Row="3" Grid.Column="2" IsChecked="{Binding Skill4Wait}" Content="Wait" Margin="0,0,10,0"/>
+                            <CheckBox Grid.Row="3" Grid.Column="3" IsChecked="{Binding Skill4Free}" Content="Free"/>
+
+                            <!-- Key 5 -->
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Key 5" VerticalAlignment="Center" FontSize="11" Foreground="#C5C7D0" Margin="0,4"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Skill5Delay}" Margin="0,2,8,2" HorizontalContentAlignment="Center"/>
+                            <CheckBox Grid.Row="4" Grid.Column="2" IsChecked="{Binding Skill5Wait}" Content="Wait" Margin="0,0,10,0"/>
+                            <CheckBox Grid.Row="4" Grid.Column="3" IsChecked="{Binding Skill5Free}" Content="Free"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

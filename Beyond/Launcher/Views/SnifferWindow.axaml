@@ -1,0 +1,64 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.SnifferWindow"
+        x:DataType="vm:MainWindowViewModel"
+        x:CompileBindings="False"
+        Title="Packet Sniffer"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="750" Height="580">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Packet Sniffer"/>
+
+        <Grid RowDefinitions="Auto,*" Margin="15">
+            <!-- Controls -->
+            <Border Grid.Row="0" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ToggleButton Content="Sniff Client (C2S)" IsChecked="{Binding SnifferClientActive}"/>
+                        <ToggleButton Content="Sniff Server (S2C)" IsChecked="{Binding SnifferServerActive}"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="Click a packet header to view its raw JSON payload" VerticalAlignment="Center" FontSize="11" Foreground="#656770" HorizontalAlignment="Center"/>
+                    <Button Grid.Column="2" Content="Clear Sniffer Logs" Command="{Binding ClearSnifferLogsCommand}"/>
+                </Grid>
+            </Border>
+
+            <!-- Grid Layout -->
+            <Grid Grid.Row="1" ColumnDefinitions="*,2*">
+                <!-- Left Header List -->
+                <ListBox Grid.Column="0" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4"
+                         ItemsSource="{Binding SnifferLogs}"
+                         SelectedItem="{Binding SelectedSnifferEntry}"
+                         Margin="0,0,5,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="vm:SniffPacketEntry">
+                            <TextBlock Text="{Binding DisplayText}" Foreground="{Binding Color}" FontSize="11" Margin="4,2"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Right Pretty-Printed Preview -->
+                <Border Grid.Column="1" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4" Margin="5,0,0,0" Padding="8">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBox Text="{Binding SelectedSnifferEntry.Raw, Mode=OneWay}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 FontSize="11"
+                                 FontFamily="Consolas, monospace"
+                                 Foreground="#E2E4E9"
+                                 TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

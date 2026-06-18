@@ -1,0 +1,60 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.FakeDevWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Fake Dev Settings"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        CanResize="False"
+        Width="320" Height="345">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Fake Dev Settings"/>
+
+        <StackPanel Spacing="12" Margin="15">
+            <!-- Membership -->
+            <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Membership Status" Classes="Header" Margin="0"/>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                        <TextBlock Text="Status:" VerticalAlignment="Center" FontSize="12" Foreground="#8F909A"/>
+                        <TextBlock Grid.Column="1" Text="{Binding MembershipText}" VerticalAlignment="Center" FontSize="12" Foreground="#00E5FF" FontWeight="Bold"/>
+                    </Grid>
+                    <Button Content="Toggle Membership" Command="{Binding ToggleMembershipCommand}" HorizontalAlignment="Stretch" Classes="Accent"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Access Levels -->
+            <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Access Levels (hasAccess checks)" Classes="Header" Margin="0"/>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                        <TextBlock Text="Current Level:" VerticalAlignment="Center" FontSize="12" Foreground="#8F909A"/>
+                        <TextBlock Grid.Column="1" Text="{Binding PlayerAccessLevel}" VerticalAlignment="Center" FontSize="12" Foreground="#00E5FF" FontWeight="Bold"/>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="6">
+                        <Button Grid.Column="0" Content="30" Command="{Binding SetAccessLevelCommand}" CommandParameter="30"/>
+                        <Button Grid.Column="1" Content="40" Command="{Binding SetAccessLevelCommand}" CommandParameter="40"/>
+                        <Button Grid.Column="2" Content="50" Command="{Binding SetAccessLevelCommand}" CommandParameter="50"/>
+                        <Button Grid.Column="3" Content="60" Command="{Binding SetAccessLevelCommand}" CommandParameter="60"/>
+                        <Button Grid.Column="4" Content="100" Command="{Binding SetAccessLevelCommand}" CommandParameter="100" Classes="Accent"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- System Controls -->
+            <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <Button Grid.Column="0" Content="Open Game Dev UI" Command="{Binding OpenDevUICommand}" Classes="Accent" HorizontalAlignment="Stretch"/>
+                    <Button Grid.Column="1" Content="Reset to Default" Command="{Binding ResetFakeDevCommand}" HorizontalAlignment="Stretch"/>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</Window>

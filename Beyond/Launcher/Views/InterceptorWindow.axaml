@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.InterceptorWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Packet Interceptor"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="500" Height="430">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Packet Interceptor"/>
+
+        <Grid RowDefinitions="Auto,*,Auto" Margin="15">
+            <!-- Controls -->
+            <Border Grid.Row="0" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="15">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Block Server Packets" VerticalAlignment="Center"/>
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding InterceptActive}"/>
+                    </Grid>
+                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto">
+                        <TextBlock Text="Log Blocks" VerticalAlignment="Center"/>
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding InterceptorLoggingActive}"/>
+                    </Grid>
+                    <Button Grid.Column="2" Content="Clear Logs" Command="{Binding ClearInterceptorLogsCommand}"/>
+                </Grid>
+            </Border>
+
+            <!-- List -->
+            <ListBox Grid.Row="1" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4" ItemsSource="{Binding InterceptorLogs}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:InterceptPacketEntry">
+                        <TextBlock Text="{Binding DisplayText}" Foreground="{Binding Color}" FontSize="11" Margin="4,2" TextWrapping="Wrap"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Grid.Row="2" Text="Blocks are processed locally and dropped before entering Unity dispatcher." FontSize="10" Foreground="#656770" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+        </Grid>
+    </DockPanel>
+</Window>

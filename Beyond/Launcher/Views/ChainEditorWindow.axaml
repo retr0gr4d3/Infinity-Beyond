@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.ChainEditorWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Quest Chain Editor"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="600" Height="530">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Quest Chain Editor"/>
+
+        <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" Margin="15">
+            <!-- Loader -->
+            <Border Grid.Row="0" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <ComboBox ItemsSource="{Binding ChainNames}" SelectedItem="{Binding SelectedChainName}" HorizontalAlignment="Stretch" PlaceholderText="Select chain to load..."/>
+                    <Button Grid.Column="1" Content="Load Selected Chain" Command="{Binding LoadChainForEditingCommand}" Width="150" Height="30"/>
+                </Grid>
+            </Border>
+
+            <!-- Name Inputs -->
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,0,0,8">
+                <TextBox Text="{Binding ChainEditorName}" PlaceholderText="Enter Chain Name (e.g. LairChain)"/>
+                <Button Grid.Column="1" Content="Add Entry (+)" Command="{Binding AddChainEditorEntryCommand}" Classes="Accent" Width="100"/>
+            </Grid>
+
+            <!-- Scrollable List of Entries -->
+            <ListBox Grid.Row="2" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4" ItemsSource="{Binding ChainEditorEntries}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:ChainEntryViewModel">
+                        <Grid ColumnDefinitions="50,110,90,80,60,Auto" ColumnSpacing="8" Margin="0,2">
+                            <!-- Qid -->
+                            <TextBox Grid.Column="0" Text="{Binding Qid}" PlaceholderText="QID"/>
+                            <!-- Area -->
+                            <TextBox Grid.Column="1" Text="{Binding Area}" PlaceholderText="Area Name"/>
+                            <!-- Frame -->
+                            <TextBox Grid.Column="2" Text="{Binding Frame}" PlaceholderText="Frame"/>
+                            <!-- Pad -->
+                            <TextBox Grid.Column="3" Text="{Binding Pad}" PlaceholderText="Pad"/>
+                            <!-- Items -->
+                            <TextBox Grid.Column="4" Text="{Binding Items}" PlaceholderText="Iters"/>
+                            <!-- Remove button -->
+                            <Button Grid.Column="5" Content="-"
+                                    Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).RemoveChainEditorEntryCommand}"
+                                    CommandParameter="{Binding}"
+                                    Width="28" HorizontalContentAlignment="Center"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Actions Row -->
+            <Grid Grid.Row="3" ColumnDefinitions="*,*,Auto" ColumnSpacing="10" Margin="0,10,0,10">
+                <Button Content="Save / Update Chain" Command="{Binding SaveEditedChainCommand}" Classes="Accent" HorizontalAlignment="Stretch" Height="32"/>
+                <Button Grid.Column="1" Content="Delete Chain" Command="{Binding DeleteEditedChainCommand}" HorizontalAlignment="Stretch" Height="32"/>
+                <Button Grid.Column="2" Content="Close Editor" Command="{Binding $self.((Window)VisualRoot).Close}" Width="100" Height="32"/>
+            </Grid>
+
+            <!-- Import / Export Section -->
+            <Border Grid.Row="4" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="JSON Import / Export" Classes="Header" Margin="0"/>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBox Text="{Binding ChainImportExportText}" PlaceholderText="Copy/Paste JSON payload here..."/>
+                        <Button Grid.Column="1" Content="Export JSON" Command="{Binding ExportChainJsonCommand}" Width="90"/>
+                        <Button Grid.Column="2" Content="Import JSON" Command="{Binding ImportChainJsonCommand}" Classes="Accent" Width="90"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

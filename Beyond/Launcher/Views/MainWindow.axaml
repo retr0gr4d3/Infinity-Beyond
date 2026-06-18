@@ -1,0 +1,353 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:local="using:Launcher"
+        xmlns:views="using:Launcher.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+        x:Class="Launcher.Views.MainWindow"
+        x:CompileBindings="False"
+        Title=""
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterScreen"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="1366" Height="768">
+
+    <Design.DataContext>
+        <vm:ShellViewModel/>
+    </Design.DataContext>
+
+    <Window.Styles>
+        <!-- Hide default chrome caption buttons in templates -->
+        <Style Selector="Window /template/ Button#PART_FullScreenButton,
+                         Window /template/ Button#PART_MinimizeButton,
+                         Window /template/ Button#PART_MaximizeButton,
+                         Window /template/ Button#PART_CloseButton,
+                         WindowDrawnDecorations /template/ Button#PART_FullScreenButton,
+                         WindowDrawnDecorations /template/ Button#PART_MinimizeButton,
+                         WindowDrawnDecorations /template/ Button#PART_MaximizeButton,
+                         WindowDrawnDecorations /template/ Button#PART_CloseButton">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="Window[WindowState=Maximized] Grid#MainGrid">
+            <Setter Property="Margin" Value="{Binding $parent[Window].OffScreenMargin}" />
+        </Style>
+        <!-- Custom Title Bar Buttons Styling -->
+        <Style Selector="Button.TitleBarButton">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.TitleBarButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#25252A"/>
+        </Style>
+        <Style Selector="Button.TitleBarButton:pointerover Path">
+            <Setter Property="Stroke" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.TitleBarButton:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#35353F"/>
+        </Style>
+
+        <!-- Maximize Button Path when normal -->
+        <Style Selector="Window[WindowState=Normal] Button#MaximizeButton Path">
+            <Setter Property="Data" Value="M 1,1 L 9,1 L 9,9 L 1,9 Z"/>
+        </Style>
+        <!-- Restore Button Path when maximized -->
+        <Style Selector="Window[WindowState=Maximized] Button#MaximizeButton Path">
+            <Setter Property="Data" Value="M 3,1 L 9,1 L 9,7 M 1,3 L 7,3 L 7,9 L 1,9 Z"/>
+        </Style>
+
+        <!-- Dynamic margins for Custom Caption Buttons to offset Windows border padding in Maximized mode -->
+        <Style Selector="Window[WindowState=Maximized] StackPanel#CustomCaptionButtons">
+            <Setter Property="Margin" Value="0,-8,-8,0" />
+        </Style>
+        <Style Selector="Window[WindowState=Maximized] Button.TitleBarButton">
+            <Setter Property="Height" Value="38" />
+        </Style>
+        <!-- Custom neon cyberpunk styles (cascade into each SessionView) -->
+        <Style Selector="TextBlock.Header">
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Foreground" Value="#8F909A"/>
+        </Style>
+        <Style Selector="TabItem:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="TabItem:selected">
+            <Setter Property="Foreground" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#003B46"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="8,5"/>
+        </Style>
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="#0F0F11"/>
+        </Style>
+        <Style Selector="Button.Accent">
+            <Setter Property="Background" Value="#003B46"/>
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="Button.Accent:pointerover">
+            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="#0F0F11"/>
+        </Style>
+        <!-- About badge: clickable logo chip in the title bar -->
+        <Style Selector="Button.AboutBadge">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.AboutBadge /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="Button.AboutBadge:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.AboutBadge:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <!-- Chip visuals live on the inner Border so hover/press can animate the cyan edge + glow -->
+        <Style Selector="Button.AboutBadge Border#LogoChip">
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="BoxShadow" Value="0 0 5 0 #4D00E5FF"/>
+        </Style>
+        <Style Selector="Button.AboutBadge:pointerover Border#LogoChip">
+            <Setter Property="BorderBrush" Value="#6BF3FF"/>
+            <Setter Property="BoxShadow" Value="0 0 9 0 #9900E5FF"/>
+        </Style>
+        <Style Selector="Button.AboutBadge:pressed Border#LogoChip">
+            <Setter Property="BorderBrush" Value="#00B5CC"/>
+            <Setter Property="BoxShadow" Value="0 0 3 0 #3300E5FF"/>
+        </Style>
+        <Style Selector="ToggleSwitch">
+            <Setter Property="OnContent" Value="ON"/>
+            <Setter Property="OffContent" Value="OFF"/>
+            <Setter Property="Foreground" Value="#C5C7D0"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#16161A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#26262E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="ToggleButton.Tab">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#8F909A"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,0,10,0"/>
+        </Style>
+        <Style Selector="ToggleButton.Tab:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.Tab:checked">
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.Danger">
+            <Setter Property="Background" Value="#2D1C1C"/>
+            <Setter Property="BorderBrush" Value="#FF5252"/>
+            <Setter Property="Foreground" Value="#FF5252"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="8,5"/>
+        </Style>
+        <Style Selector="ToggleButton.Danger:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#25252A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#3F3F4A"/>
+        </Style>
+        <Style Selector="ToggleButton.Danger:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2D1C1C"/>
+            <Setter Property="Foreground" Value="#FF5252"/>
+            <Setter Property="BorderBrush" Value="#FF5252"/>
+        </Style>
+        <Style Selector="ToggleButton.Danger:checked:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#25252A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#3F3F4A"/>
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#8F909A"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="ListBoxItem:selected:not(:focus) /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="ListBoxItem:focus /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.CloseTab">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="#656770"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Margin" Value="4,0,0,0"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.CloseTab:pointerover">
+            <Setter Property="Background" Value="#2D1C1C"/>
+            <Setter Property="Foreground" Value="#FF5252"/>
+        </Style>
+    </Window.Styles>
+ 
+     <Grid Name="MainGrid" RowDefinitions="Auto,Auto,*">
+         <!-- Custom Title Bar -->
+         <Border Grid.Row="0" Height="30" Background="#141418" Padding="0">
+             <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Stretch">
+                 <!-- Icon + Title -->
+                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0" Spacing="9">
+                     <!-- About button: clickable cyan-accented logo chip -->
+                     <Button Classes="AboutBadge" Click="AboutButtonClick" ToolTip.Tip="About Beyond" VerticalAlignment="Center">
+                         <Border Name="LogoChip" Width="21" Height="21" CornerRadius="6" BorderThickness="1">
+                             <Border.Background>
+                                 <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                                     <GradientStop Offset="0" Color="#15262B"/>
+                                     <GradientStop Offset="1" Color="#101619"/>
+                                 </LinearGradientBrush>
+                             </Border.Background>
+                             <Image Source="/Assets/Beyond.png" Width="16" Height="16"
+                                    Margin="1,0,0,1"
+                                    RenderOptions.BitmapInterpolationMode="HighQuality"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                         </Border>
+                     </Button>
+                     <TextBlock Text="Beyond - Standalone Client" Foreground="#8F909A" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                 </StackPanel>
+                 <!-- Middle spacer (allows dragging) -->
+                 <Border Grid.Column="1" Background="Transparent" IsHitTestVisible="True"
+                         WindowDecorationProperties.ElementRole="TitleBar"/>
+                  <!-- Custom Caption Buttons (Minimize/Maximize/Close) -->
+                  <StackPanel Name="CustomCaptionButtons" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Stretch">
+                      <Button Name="MinimizeButton" Classes="TitleBarButton" Click="MinimizeWindowClick">
+                          <Path Stretch="None" Stroke="#8F909A" StrokeThickness="1.5" Data="M 0,5 L 10,5" Width="10" Height="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                      </Button>
+                      <Button Name="MaximizeButton" Classes="TitleBarButton" Click="MaximizeWindowClick">
+                          <Path Stretch="None" Stroke="#8F909A" StrokeThickness="1.5" Data="M 1,1 L 9,1 L 9,9 L 1,9 Z" Width="10" Height="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                      </Button>
+                      <Button Name="CloseButton" Classes="TitleBarButton Close" Click="CloseWindowClick">
+                          <Path Stretch="None" Stroke="#8F909A" StrokeThickness="1.5" Data="M 1,1 L 9,9 M 9,1 L 1,9" Width="10" Height="10" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                      </Button>
+                  </StackPanel>
+             </Grid>
+         </Border>
+
+         <!-- Session tab strip + global actions -->
+         <Border Grid.Row="1" Background="#141418" BorderBrush="#202026" BorderThickness="0,0,0,1" Padding="8,5">
+             <Grid ColumnDefinitions="*,Auto">
+                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0">
+                     <ListBox Name="SessionStrip" Background="Transparent" BorderThickness="0" Padding="0" Focusable="False"
+                              ItemsSource="{Binding Sessions}" SelectedItem="{Binding SelectedSession, Mode=TwoWay}">
+                         <ListBox.ItemsPanel>
+                             <ItemsPanelTemplate>
+                                 <StackPanel Orientation="Horizontal" Spacing="4"/>
+                             </ItemsPanelTemplate>
+                         </ListBox.ItemsPanel>
+                         <ListBox.ItemTemplate>
+                             <DataTemplate>
+                                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                     <Ellipse Width="7" Height="7" Fill="{Binding StatusColor}" VerticalAlignment="Center"/>
+                                     <TextBlock Text="{Binding Title}" VerticalAlignment="Center" FontSize="12"/>
+                                     <Button Content="✕" Classes="CloseTab"
+                                             Command="{Binding DataContext.CloseSessionCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                             CommandParameter="{Binding}"/>
+                                 </StackPanel>
+                             </DataTemplate>
+                         </ListBox.ItemTemplate>
+                     </ListBox>
+                 </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                    <ToggleButton Content="⚙ Configurator" Classes="Danger" IsChecked="{Binding IsConfiguratorSelected, Mode=TwoWay}"/>
+                    <Button Content="+ Add Session" Classes="Accent" Command="{Binding AddSessionCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="2">
+            <!-- Configurator Panel -->
+            <views:ConfiguratorView IsVisible="{Binding IsConfiguratorSelected}" DataContext="{Binding Configurator}"/>
+            
+            <!-- All sessions live simultaneously; only the selected one is visible
+                 so every embedded game keeps running. -->
+            <ItemsControl ItemsSource="{Binding Sessions}" IsVisible="{Binding IsSessionActive}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Panel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <views:SessionView IsVisible="{Binding IsSelected}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </Grid>
+</Window>

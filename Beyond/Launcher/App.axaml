@@ -1,0 +1,225 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Launcher.App"
+             xmlns:local="using:Launcher"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <FluentTheme />
+
+        <!-- ===================================================================
+             Shared neon-cyberpunk theme. Defined once at the application level
+             so every window (main + tool windows) inherits the same look.
+             Window-local styles still override these where a view needs to.
+             =================================================================== -->
+
+        <!-- Hide the OS caption buttons: every window draws its own title bar. -->
+        <Style Selector="Window /template/ Button#PART_FullScreenButton,
+                         Window /template/ Button#PART_MinimizeButton,
+                         Window /template/ Button#PART_MaximizeButton,
+                         Window /template/ Button#PART_CloseButton,
+                         WindowDrawnDecorations /template/ Button#PART_FullScreenButton,
+                         WindowDrawnDecorations /template/ Button#PART_MinimizeButton,
+                         WindowDrawnDecorations /template/ Button#PART_MaximizeButton,
+                         WindowDrawnDecorations /template/ Button#PART_CloseButton">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+
+        <!-- Keep a maximized custom-chrome window clear of the off-screen border. -->
+        <Style Selector="Window[WindowState=Maximized] DockPanel.WindowRoot">
+            <Setter Property="Margin" Value="{Binding $parent[Window].OffScreenMargin}" />
+        </Style>
+
+        <!-- Custom title-bar caption buttons (minimize / maximize / close). -->
+        <Style Selector="Button.TitleBarButton">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.TitleBarButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#25252A"/>
+        </Style>
+        <Style Selector="Button.TitleBarButton:pointerover Path">
+            <Setter Property="Stroke" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.TitleBarButton:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="#35353F"/>
+        </Style>
+        <!-- Close button gets the conventional red hover. -->
+        <Style Selector="Button.TitleBarButton.Close:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#C42B1C"/>
+        </Style>
+        <!-- Maximize / restore glyph swaps with the window state. -->
+        <Style Selector="Window[WindowState=Normal] Button#MaximizeButton Path">
+            <Setter Property="Data" Value="M 1,1 L 9,1 L 9,9 L 1,9 Z"/>
+        </Style>
+        <Style Selector="Window[WindowState=Maximized] Button#MaximizeButton Path">
+            <Setter Property="Data" Value="M 3,1 L 9,1 L 9,7 M 1,3 L 7,3 L 7,9 L 1,9 Z"/>
+        </Style>
+
+        <!-- Section header. -->
+        <Style Selector="TextBlock.Header">
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Margin" Value="0,5,0,3"/>
+        </Style>
+
+        <!-- Buttons. -->
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#003B46"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="6,4"/>
+        </Style>
+        <Style Selector="Button:pointerover">
+            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="#0F0F11"/>
+        </Style>
+        <Style Selector="Button.Accent">
+            <Setter Property="Background" Value="#003B46"/>
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="Button.Accent:pointerover">
+            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="#0F0F11"/>
+        </Style>
+
+        <!-- Toggle pill (used by the sniffer / interceptor toolbars). -->
+        <Style Selector="ToggleButton">
+            <Setter Property="Background" Value="#1C1D24"/>
+            <Setter Property="Foreground" Value="#8F909A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#2F303B"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="8,4"/>
+        </Style>
+        <Style Selector="ToggleButton:checked">
+            <Setter Property="Background" Value="#003B46"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+        </Style>
+
+        <!-- Sidebar Collapse Toggle Button Specific Styles -->
+        <Style Selector="ToggleButton#CollapseButton">
+            <Setter Property="Background" Value="#141418"/>
+            <Setter Property="BorderBrush" Value="#202026"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="BorderThickness" Value="0,1,1,1"/>
+        </Style>
+        <Style Selector="ToggleButton#CollapseButton /template/ ContentPresenter">
+            <Setter Property="Background" Value="#141418"/>
+            <Setter Property="BorderBrush" Value="#202026"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="BorderThickness" Value="0,1,1,1"/>
+        </Style>
+        <Style Selector="ToggleButton#CollapseButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1C1D24"/>
+            <Setter Property="BorderBrush" Value="#2A2A32"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="ToggleButton#CollapseButton:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="#141418"/>
+            <Setter Property="BorderBrush" Value="#202026"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="BorderThickness" Value="0,1,1,1"/>
+        </Style>
+        <Style Selector="ToggleButton#CollapseButton:checked:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#1C1D24"/>
+            <Setter Property="BorderBrush" Value="#2A2A32"/>
+            <Setter Property="Foreground" Value="#00E5FF"/>
+        </Style>
+
+        <!-- Text input. -->
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#16161A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#26262E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <Style Selector="TextBox:focus">
+            <Setter Property="BorderBrush" Value="#00E5FF"/>
+        </Style>
+
+        <!-- Dropdown. -->
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#16161A"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#26262E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+
+        <!-- Check box. -->
+        <Style Selector="CheckBox">
+            <Setter Property="Foreground" Value="#C5C7D0"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+
+        <!-- On/off switch. -->
+        <Style Selector="ToggleSwitch">
+            <Setter Property="OnContent" Value="ON"/>
+            <Setter Property="OffContent" Value="OFF"/>
+            <Setter Property="Foreground" Value="#C5C7D0"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+
+        <!-- Slider. -->
+        <Style Selector="Slider">
+            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Style.Resources>
+                <SolidColorBrush x:Key="SliderTrackValueFill">#00E5FF</SolidColorBrush>
+                <SolidColorBrush x:Key="SliderTrackValueFillPointerOver">#00E5FF</SolidColorBrush>
+                <SolidColorBrush x:Key="SliderTrackValueFillPressed">#00E5FF</SolidColorBrush>
+                <SolidColorBrush x:Key="SliderThumbBackground">#00E5FF</SolidColorBrush>
+                <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver">#00E5FF</SolidColorBrush>
+                <SolidColorBrush x:Key="SliderThumbBackgroundPressed">#00E5FF</SolidColorBrush>
+            </Style.Resources>
+        </Style>
+        <Style Selector="Slider /template/ RepeatButton#PART_DecreaseButton">
+            <Setter Property="Background" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="Slider /template/ RepeatButton#PART_DecreaseButton:pointerover">
+            <Setter Property="Background" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="Slider /template/ RepeatButton#PART_DecreaseButton:pressed">
+            <Setter Property="Background" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="Slider /template/ Thumb">
+            <Setter Property="Background" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="Slider /template/ Thumb:pointerover">
+            <Setter Property="Background" Value="#00E5FF"/>
+        </Style>
+        <Style Selector="Slider /template/ Thumb:pressed">
+            <Setter Property="Background" Value="#00E5FF"/>
+        </Style>
+    </Application.Styles>
+</Application>

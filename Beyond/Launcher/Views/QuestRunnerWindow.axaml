@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.QuestRunnerWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Quest Runner &amp; Automation"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="600" Height="580">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Quest Runner &amp; Automation"/>
+
+        <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="15">
+            <!-- Part A: Simple Quest Runner -->
+            <Border Grid.Row="0" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Single Quest Automation" Classes="Header" Margin="0"/>
+                    <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="8">
+                        <StackPanel Grid.Column="0" Spacing="3">
+                            <TextBlock Text="Quest ID" FontSize="10" Foreground="#8F909A"/>
+                            <TextBox Text="{Binding RunnerQuestId}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="3">
+                            <TextBlock Text="Iters" FontSize="10" Foreground="#8F909A"/>
+                            <TextBox Text="{Binding RunnerIters}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="3">
+                            <TextBlock Text="Area" FontSize="10" Foreground="#8F909A"/>
+                            <TextBox Text="{Binding RunnerArea}" PlaceholderText="Stay"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Spacing="3">
+                            <TextBlock Text="Cell" FontSize="10" Foreground="#8F909A"/>
+                            <TextBox Text="{Binding RunnerFrame}" PlaceholderText="Stay"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Spacing="3">
+                            <TextBlock Text="Spawn Pad" FontSize="10" Foreground="#8F909A"/>
+                            <TextBox Text="{Binding RunnerPad}"/>
+                        </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,5,0,0">
+                        <TextBlock Text="Automatically accepts, fights room monsters, turns in items, and loops." FontSize="9" Foreground="#656770" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Start Runner" Command="{Binding StartQuestRunnerCommand}" Classes="Accent" Width="105" Height="30"/>
+                        <Button Grid.Column="2" Content="Stop Runner" Command="{Binding StopQuestRunnerCommand}" Width="105" Height="30"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Part B: Quest Chain Runner -->
+            <Border Grid.Row="1" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Chain Automation" Classes="Header" Margin="0"/>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <ComboBox ItemsSource="{Binding ChainNames}" SelectedItem="{Binding SelectedChainName}" HorizontalAlignment="Stretch"/>
+                        <Button Grid.Column="1" Content="Run Quest Chain" Command="{Binding RunChainCommand}" Classes="Accent" Width="135"/>
+                        <Button Grid.Column="2" Content="Open Chain Editor" Command="{Binding OpenChainEditorWindowCommand}" Width="135"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Logs output -->
+            <ListBox Grid.Row="2" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4" ItemsSource="{Binding QuestRunnerLogs}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="x:String">
+                        <TextBlock Text="{Binding}" Foreground="#E2E4E9" FontSize="11" TextWrapping="Wrap" Margin="4,2" FontFamily="Consolas, monospace"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock Grid.Row="3" Text="Quest runner runs entirely game-side. Check launcher logs if disconnected." FontSize="10" Foreground="#656770" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+        </Grid>
+    </DockPanel>
+</Window>

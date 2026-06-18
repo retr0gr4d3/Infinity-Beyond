@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.QuestLoaderWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Quest Loader"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        CanResize="False"
+        Width="320" Height="185">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Quest Loader"/>
+
+        <StackPanel Spacing="12" Margin="15">
+            <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Load / Manage Quest" Classes="Header" Margin="0"/>
+
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
+                        <TextBox Grid.Column="0" PlaceholderText="Quest ID" Text="{Binding QuestId}"/>
+                        <Button Grid.Column="1" Content="Load" Command="{Binding LoadQuestCommand}"/>
+                        <Button Grid.Column="2" Content="Accept" Command="{Binding AcceptQuestCommand}"/>
+                        <Button Grid.Column="3" Content="Turn In" Command="{Binding TurnInQuestCommand}" Classes="Accent"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</Window>

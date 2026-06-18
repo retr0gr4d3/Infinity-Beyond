@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.ReceiverWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Packet Receiver (Local Injector)"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        CanResize="False"
+        Width="500" Height="365">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Packet Receiver (Local Injector)"/>
+
+        <StackPanel Spacing="12" Margin="15">
+            <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+                    <TextBlock Grid.Row="0" Text="Inject Server Response Packet (S2C)" Classes="Header" Margin="0"/>
+
+                    <TextBox Grid.Row="1" PlaceholderText="Paste server JSON message structure here..."
+                             Text="{Binding PacketToInject}"
+                             AcceptsReturn="True"
+                             Height="180"
+                             VerticalAlignment="Stretch"
+                             TextWrapping="Wrap"
+                             FontFamily="Consolas, monospace"/>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,5,0,0">
+                        <TextBlock Text="Simulates dynamic packets received from server (e.g. chat messages, class updates, bank items)." VerticalAlignment="Center" FontSize="9" Foreground="#656770" TextWrapping="Wrap"/>
+                        <Button Grid.Column="1" Content="Inject Server Response" Command="{Binding InjectPacketCommand}" Classes="Accent" Width="170"/>
+                    </Grid>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</Window>

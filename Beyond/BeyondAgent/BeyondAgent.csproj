@@ -1,0 +1,151 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>BeyondAgent</AssemblyName>
+    <Version>0.1.0</Version>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!--
+      Silence MSB3277 (assembly version conflicts). The game's Unity assemblies
+      reference newer System.* versions than netstandard2.1's reference
+      assemblies. The mismatch is harmless because Mono inside Unity resolves
+      these against its own runtime copies — but MSBuild emits ~20 warnings per
+      build that drown out real issues.
+    -->
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      Game install resolution. The mod is compiled against the game's managed
+      assemblies (Assembly-CSharp.dll + Unity modules), so the build needs to know
+      where the game lives. Provide it one of these ways (highest priority first):
+        1. AQWI_MANAGED_DIR  - the "<name>_Data\Managed" folder, pointed at directly
+                               (build.bat sets this after prompting).
+        2. AQWI_GAME_DIR / AQW_PATH - the game install folder (env var).
+        3. The Steam registry install location.
+      The "<name>_Data" folder is discovered by pattern, so this works across the
+      game's differently-named releases without hard-coding an executable name.
+    -->
+    <AqwiGameDir Condition="'$(AQWI_GAME_DIR)' != ''">$(AQWI_GAME_DIR)</AqwiGameDir>
+    <AqwiGameDir Condition="'$(AqwiGameDir)' == ''">$(AQW_PATH)</AqwiGameDir>
+
+    <AQWPathReg1>$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 2094530', 'InstallLocation', null, RegistryView.Registry64, RegistryView.Registry32))</AQWPathReg1>
+    <AqwiGameDir Condition="'$(AqwiGameDir)' == '' and '$(AQWPathReg1)' != ''">$(AQWPathReg1)</AqwiGameDir>
+
+    <AqwiGameDir Condition="'$(AqwiGameDir)' != ''">$([System.IO.Path]::GetFullPath('$(AqwiGameDir)'))</AqwiGameDir>
+
+    <!-- Managed folder: explicit override wins; otherwise discover "<name>_Data\Managed". -->
+    <AqwiManagedDir Condition="'$(AQWI_MANAGED_DIR)' != ''">$(AQWI_MANAGED_DIR)</AqwiManagedDir>
+    <AqwiDataDir Condition="'$(AqwiManagedDir)' == '' and '$(AqwiGameDir)' != '' and Exists('$(AqwiGameDir)')">$([System.IO.Directory]::GetDirectories('$(AqwiGameDir)', '*_Data'))</AqwiDataDir>
+    <AqwiManagedDir Condition="'$(AqwiManagedDir)' == '' and '$(AqwiDataDir)' != '' and !$(AqwiDataDir.Contains(';'))">$(AqwiDataDir)\Managed</AqwiManagedDir>
+  </PropertyGroup>
+
+  <Target Name="CopyToBuildDir" AfterTargets="Build">
+    <PropertyGroup>
+      <NugetPkgRoot Condition="'$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)</NugetPkgRoot>
+      <NugetPkgRoot Condition="'$(NugetPkgRoot)' == ''">$(UserProfile)\.nuget\packages\</NugetPkgRoot>
+      <HarmonyPkgDll>$(NugetPkgRoot)lib.harmony\2.4.2\lib\net48\0Harmony.dll</HarmonyPkgDll>
+    </PropertyGroup>
+    <MakeDir Directories="$(MSBuildProjectDirectory)\..\build" />
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
+          DestinationFolder="$(MSBuildProjectDirectory)\..\build"
+          OverwriteReadOnlyFiles="true" />
+    <Copy SourceFiles="$(OutputPath)0Harmony.dll"
+          DestinationFolder="$(MSBuildProjectDirectory)\..\build"
+          OverwriteReadOnlyFiles="true"
+          Condition="Exists('$(OutputPath)0Harmony.dll')" />
+    <Copy SourceFiles="$(HarmonyPkgDll)"
+          DestinationFolder="$(MSBuildProjectDirectory)\..\build"
+          OverwriteReadOnlyFiles="true"
+          Condition="!Exists('$(OutputPath)0Harmony.dll') and Exists('$(HarmonyPkgDll)')" />
+    <Message Importance="high" Text="[Infinity-Beyond] DLL → $(MSBuildProjectDirectory)\..\build\$(AssemblyName).dll" />
+  </Target>
+
+  <!-- Deploy directly into the game's Managed folder -->
+  <Target Name="PostBuild" AfterTargets="Build" Condition="Exists('$(AqwiManagedDir)')">
+    <PropertyGroup>
+      <NugetPkgRoot Condition="'$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)</NugetPkgRoot>
+      <NugetPkgRoot Condition="'$(NugetPkgRoot)' == ''">$(UserProfile)\.nuget\packages\</NugetPkgRoot>
+      <HarmonyPkgDll>$(NugetPkgRoot)lib.harmony\2.4.2\lib\net48\0Harmony.dll</HarmonyPkgDll>
+    </PropertyGroup>
+    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(AqwiManagedDir)" />
+    <Copy SourceFiles="$(OutputPath)0Harmony.dll" DestinationFolder="$(AqwiManagedDir)" Condition="Exists('$(OutputPath)0Harmony.dll')" />
+    <Copy SourceFiles="$(HarmonyPkgDll)" DestinationFolder="$(AqwiManagedDir)" Condition="!Exists('$(OutputPath)0Harmony.dll') and Exists('$(HarmonyPkgDll)')" />
+    <Message Importance="high" Text="[Infinity-Beyond] Deployed Agent and Harmony to $(AqwiManagedDir)" />
+  </Target>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Data\quests.json" />
+    <EmbeddedResource Include="Data\shops.json" />
+    <EmbeddedResource Include="Data\chains.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(AqwiManagedDir)\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(AqwiManagedDir)\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.AnimationModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.AudioModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <!-- Canvas, CanvasGroup, CanvasRenderer live here (not in UnityEngine.UI,
+           which is the uGUI controls assembly). DragPanel needs Canvas to
+           read scaleFactor so dragging tracks the cursor on scaled canvases. -->
+      <HintPath>$(AqwiManagedDir)\UnityEngine.UIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(AqwiManagedDir)\Unity.TextMeshPro.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+  </ItemGroup>
+</Project>

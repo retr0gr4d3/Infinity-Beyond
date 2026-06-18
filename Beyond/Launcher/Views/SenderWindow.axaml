@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.SenderWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Packet Sender"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        CanResize="False"
+        Width="500" Height="365">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Packet Sender"/>
+
+        <StackPanel Spacing="12" Margin="15">
+            <!-- Raw Sender -->
+            <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Raw C2S Client Command" Classes="Header" Margin="0"/>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBox Grid.Column="0" PlaceholderText="Command name only, e.g. tfer (no parameters)" Text="{Binding PacketToSend}"/>
+                        <Button Grid.Column="1" Content="Send Client Packet" Command="{Binding SendPacketCommand}" Classes="Accent"/>
+                    </Grid>
+                    <TextBlock Text="Sends raw string payload to client's sendRequest handler directly." FontSize="9" Foreground="#656770"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Command / Parameters Sender -->
+            <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Custom Packet Builder" Classes="Header" Margin="0"/>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <StackPanel Grid.Column="0" Spacing="3">
+                            <TextBlock Text="Cmd / Method" FontSize="10" Foreground="#8F909A"/>
+                            <TextBox Text="{Binding SenderCmd}" PlaceholderText="tfer"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="3">
+                            <TextBlock Text="Parameters (Comma Separated)" FontSize="10" Foreground="#8F909A"/>
+                            <TextBox Text="{Binding SenderParams}" PlaceholderText="username,lair,0,Enter,Spawn"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+                        <CheckBox Grid.Column="0" IsChecked="{Binding SenderSingleString}" Content="Single Parameter String (Do not comma-split)"/>
+                        <Button Grid.Column="1" Content="Build &amp; Send" Command="{Binding SendManuallyInjectedPacketCommand}" Classes="Accent" Width="120"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</Window>

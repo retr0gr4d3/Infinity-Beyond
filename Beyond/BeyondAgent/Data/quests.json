@@ -1,0 +1,430 @@
+{
+  "1": {
+    "name": "First Quest",
+    "storyline": null
+  },
+  "2": {
+    "name": "Into the Dragon's Lair - OLD",
+    "storyline": null
+  },
+  "4": {
+    "name": "The Dragon's Lair - OLD",
+    "storyline": null
+  },
+  "5": {
+    "name": "Fight Up the Steps - OLD",
+    "storyline": null
+  },
+  "6": {
+    "name": "Path to the Dragon - OLD",
+    "storyline": null
+  },
+  "7": {
+    "name": "Dragonslayer- OLD",
+    "storyline": null
+  },
+  "8": {
+    "name": "Talk to Thrax Ironhide",
+    "storyline": null
+  },
+  "9": {
+    "name": "Defeat the Undead",
+    "storyline": null
+  },
+  "10": {
+    "name": "One Little Piggie",
+    "storyline": null
+  },
+  "11": {
+    "name": "A Boar's Tail",
+    "storyline": null
+  },
+  "12": {
+    "name": "Affect or Effect?",
+    "storyline": null
+  },
+  "13": {
+    "name": "Scale the Monsters",
+    "storyline": null
+  },
+  "14": {
+    "name": "Winged Menace",
+    "storyline": null
+  },
+  "15": {
+    "name": "Who Else is Here?",
+    "storyline": null
+  },
+  "16": {
+    "name": "Bev's Tale",
+    "storyline": null
+  },
+  "17": {
+    "name": "Find the Chickens",
+    "storyline": null
+  },
+  "18": {
+    "name": "Chase the Chicken",
+    "storyline": null
+  },
+  "22": {
+    "name": "Watch Alpha Cutscene",
+    "storyline": null
+  },
+  "23": {
+    "name": "Find my Hammer",
+    "storyline": null
+  },
+  "24": {
+    "name": "Pesky Lizards",
+    "storyline": null
+  },
+  "49": {
+    "name": "AnotherQuest",
+    "storyline": null
+  },
+  "50": {
+    "name": "AnotherQuest",
+    "storyline": null
+  },
+  "51": {
+    "name": "Become Stronger - OLD",
+    "storyline": null
+  },
+  "52": {
+    "name": "Solo Quest",
+    "storyline": null
+  },
+  "55": {
+    "name": "Dage Kill Test?",
+    "storyline": null
+  },
+  "56": {
+    "name": "*test test",
+    "storyline": null
+  },
+  "57": {
+    "name": "Go Keel Tings",
+    "storyline": null
+  },
+  "58": {
+    "name": "Talk to Despair",
+    "storyline": null
+  },
+  "63": {
+    "name": "*Keel awl da tings ztest",
+    "storyline": null
+  },
+  "64": {
+    "name": "**Keel awl da tings ztest",
+    "storyline": null
+  },
+  "65": {
+    "name": "AnotherQuest",
+    "storyline": null
+  },
+  "66": {
+    "name": "Daaa*First Quest",
+    "storyline": null
+  },
+  "67": {
+    "name": "Do Nothing",
+    "storyline": null
+  },
+  "68": {
+    "name": "Slay 2 Testzards",
+    "storyline": null
+  },
+  "69": {
+    "name": "Hunt Frogzards for Teef",
+    "storyline": null
+  },
+  "70": {
+    "name": "Talk to Artix",
+    "storyline": null
+  },
+  "71": {
+    "name": "Multi-Hunt",
+    "storyline": null
+  },
+  "72": {
+    "name": "Talk to Zhoom",
+    "storyline": null
+  },
+  "85": {
+    "name": "Call of Doody",
+    "storyline": null
+  },
+  "93": {
+    "name": "Defend the Rats",
+    "storyline": null
+  },
+  "94": {
+    "name": "Save the Rats",
+    "storyline": null
+  },
+  "95": {
+    "name": "Get those Wyverns",
+    "storyline": null
+  },
+  "96": {
+    "name": "DragonSlayer Gear NOTUSED",
+    "storyline": null
+  },
+  "97": {
+    "name": "Rats in the Cradle",
+    "storyline": null
+  },
+  "98": {
+    "name": "Letter Interception",
+    "storyline": null
+  },
+  "99": {
+    "name": "Get the Trainer",
+    "storyline": null
+  },
+  "100": {
+    "name": "Get a Clue",
+    "storyline": null
+  },
+  "101": {
+    "name": "Missing King",
+    "storyline": null
+  },
+  "102": {
+    "name": "Take Down",
+    "storyline": null
+  },
+  "103": {
+    "name": "Clear the Horcs",
+    "storyline": null
+  },
+  "105": {
+    "name": "The Horc Clubber",
+    "storyline": null
+  },
+  "106": {
+    "name": "Destroy the Barricade",
+    "storyline": null
+  },
+  "107": {
+    "name": "Get the Key",
+    "storyline": null
+  },
+  "118": {
+    "name": "AnotherQuest",
+    "storyline": null
+  },
+  "119": {
+    "name": "Return the Diary to Veddrian",
+    "storyline": "Bludrut Keep"
+  },
+  "120": {
+    "name": "Unlock the Keep",
+    "storyline": "Bludrut Keep"
+  },
+  "121": {
+    "name": "Talk to the Spirit",
+    "storyline": "Bludrut Keep"
+  },
+  "122": {
+    "name": "Find the Diary",
+    "storyline": "Bludrut Keep"
+  },
+  "123": {
+    "name": "Remembering...",
+    "storyline": "Bludrut Keep"
+  },
+  "124": {
+    "name": "Stone Cold Dead",
+    "storyline": "Bludrut Keep"
+  },
+  "125": {
+    "name": "Find Cursed Chests",
+    "storyline": "Bludrut Keep"
+  },
+  "127": {
+    "name": "Heart of Stone",
+    "storyline": "Bludrut Keep"
+  },
+  "128": {
+    "name": "Test turn in diff map",
+    "storyline": null
+  },
+  "129": {
+    "name": "Fire Endurance",
+    "storyline": "Bludrut Keep"
+  },
+  "130": {
+    "name": "Burning Chests",
+    "storyline": "Bludrut Keep"
+  },
+  "132": {
+    "name": "Burning Heart",
+    "storyline": "Bludrut Keep"
+  },
+  "133": {
+    "name": "Ice Endurance",
+    "storyline": "Bludrut Keep"
+  },
+  "134": {
+    "name": "Icy Chests",
+    "storyline": "Bludrut Keep"
+  },
+  "135": {
+    "name": "A Personal Effect",
+    "storyline": "Bludrut Keep"
+  },
+  "136": {
+    "name": "Find the Hidden Room",
+    "storyline": "Bludrut Keep"
+  },
+  "137": {
+    "name": "Find the Ice Spirit's Bones",
+    "storyline": "Bludrut Keep"
+  },
+  "138": {
+    "name": "Liquid Soul",
+    "storyline": "Bludrut Keep"
+  },
+  "139": {
+    "name": "Dark Endurance",
+    "storyline": "Bludrut Keep"
+  },
+  "140": {
+    "name": "Dark Artifacts",
+    "storyline": "Bludrut Keep"
+  },
+  "142": {
+    "name": "Heart of Darkness",
+    "storyline": "Bludrut Keep"
+  },
+  "143": {
+    "name": "Dispel the Shadows",
+    "storyline": "Bludrut Keep"
+  },
+  "144": {
+    "name": "Stop IT",
+    "storyline": "Bludrut Keep"
+  },
+  "146": {
+    "name": "A Sad Farewell",
+    "storyline": "Bludrut Keep"
+  },
+  "148": {
+    "name": "The Groglurk",
+    "storyline": "Bludrut Keep"
+  },
+  "149": {
+    "name": "Enter the Keep",
+    "storyline": "Bludrut Keep"
+  },
+  "150": {
+    "name": "Talk to the Fire Spirit",
+    "storyline": "Bludrut Keep"
+  },
+  "151": {
+    "name": "Descend to Level 3",
+    "storyline": "Bludrut Keep"
+  },
+  "152": {
+    "name": "Talk to the Ice Spirit",
+    "storyline": "Bludrut Keep"
+  },
+  "153": {
+    "name": "Grate Expectations",
+    "storyline": "Bludrut Keep"
+  },
+  "154": {
+    "name": "Talk to the Shadow Spirit",
+    "storyline": "Bludrut Keep"
+  },
+  "156": {
+    "name": "Freedom!",
+    "storyline": null
+  },
+  "157": {
+    "name": "Find the Bludrut Key",
+    "storyline": "Bludrut Keep"
+  },
+  "158": {
+    "name": "Descend to Level 2",
+    "storyline": "Bludrut Keep"
+  },
+  "159": {
+    "name": "Grim Skullsword of Vengeance!",
+    "storyline": null
+  },
+  "160": {
+    "name": "Dual Wield Skullswords",
+    "storyline": null
+  },
+  "161": {
+    "name": "test !!!",
+    "storyline": null
+  },
+  "163": {
+    "name": "Find the Fire Spirit's Bones",
+    "storyline": "Bludrut Keep"
+  },
+  "164": {
+    "name": "Find the Bones",
+    "storyline": "Bludrut Keep"
+  },
+  "166": {
+    "name": "Shadowed Freedom",
+    "storyline": "Bludrut Keep"
+  },
+  "167": {
+    "name": "Ectoamber",
+    "storyline": null
+  },
+  "168": {
+    "name": "Screamwave",
+    "storyline": null
+  },
+  "169": {
+    "name": "Spirit Ward Sigil",
+    "storyline": null
+  },
+  "182": {
+    "name": "Artix Auto Accept Quest Test",
+    "storyline": null
+  },
+  "183": {
+    "name": "The Bear",
+    "storyline": null
+  },
+  "184": {
+    "name": "Zorbak Quest 1 - Shaken Bones",
+    "storyline": null
+  },
+  "192": {
+    "name": "Box-pocolypse",
+    "storyline": null
+  },
+  "213": {
+    "name": "Choose DOOM PACK",
+    "storyline": null
+  },
+  "214": {
+    "name": "Choose DESTINY PACK",
+    "storyline": null
+  },
+  "215": {
+    "name": "Choose CHAOS PACK",
+    "storyline": null
+  },
+  "216": {
+    "name": "Choose Dragon DESTINY",
+    "storyline": null
+  },
+  "217": {
+    "name": "Choose Dragon DOOM",
+    "storyline": null
+  },
+  "218": {
+    "name": "Choose Dragon CHAOS",
+    "storyline": null
+  }
+}

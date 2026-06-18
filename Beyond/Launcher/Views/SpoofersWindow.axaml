@@ -1,0 +1,176 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.SpoofersWindow"
+        x:DataType="vm:MainWindowViewModel"
+        x:CompileBindings="False"
+        Title="Visual Spoofers &amp; Cosmetics"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="550" Height="680">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Visual Spoofers &amp; Cosmetics"/>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="12" Margin="15">
+                <!-- 1. Name Spoofing -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Name Spoofing (Local only)" Classes="Header" Margin="0"/>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBox Grid.Column="0" PlaceholderText="New Custom Name (leave blank to clear)" Text="{Binding SpoofedName}"/>
+                            <Button Grid.Column="1" Content="Apply Name" Command="{Binding ApplySpoofedNameCommand}" Classes="Accent" Width="100"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. Gear Spoofing -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Gear / Visual Spoofs" Classes="Header" Margin="0"/>
+
+                        <!-- Helms -->
+                        <StackPanel Spacing="3" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding HelmSpoofActive}" Content="Helm" VerticalAlignment="Center" Width="75"/>
+                                <TextBox Grid.Column="1" PlaceholderText="Helm Asset Bundle" Text="{Binding HelmSpoofBundle}"/>
+                                <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyHelmSpoofCommand}" Classes="Accent" Width="60"/>
+                            </Grid>
+                            <ComboBox ItemsSource="{Binding HelmsCatalog}" SelectedItem="{Binding SelectedHelmCatalog}" PlaceholderText="Pick from Helms Catalog..." HorizontalAlignment="Stretch" Margin="83,0,0,0">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="vm:CatalogEntry">
+                                        <TextBlock Text="{Binding DisplayText}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Armors -->
+                        <StackPanel Spacing="3" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding ArmorSpoofActive}" Content="Armor" VerticalAlignment="Center" Width="75"/>
+                                <TextBox Grid.Column="1" PlaceholderText="Armor Asset Bundle" Text="{Binding ArmorSpoofBundle}"/>
+                                <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyArmorSpoofCommand}" Classes="Accent" Width="60"/>
+                            </Grid>
+                            <ComboBox ItemsSource="{Binding ArmorsCatalog}" SelectedItem="{Binding SelectedArmorCatalog}" PlaceholderText="Pick from Armors Catalog..." HorizontalAlignment="Stretch" Margin="83,0,0,0">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="vm:CatalogEntry">
+                                        <TextBlock Text="{Binding DisplayText}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Cape/Back -->
+                        <StackPanel Spacing="3" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding BackSpoofActive}" Content="Back/Cape" VerticalAlignment="Center" Width="75"/>
+                                <TextBox Grid.Column="1" PlaceholderText="Back Asset Bundle" Text="{Binding BackSpoofBundle}"/>
+                                <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyBackSpoofCommand}" Classes="Accent" Width="60"/>
+                            </Grid>
+                            <ComboBox ItemsSource="{Binding BacksCatalog}" SelectedItem="{Binding SelectedBackCatalog}" PlaceholderText="Pick from Capes Catalog..." HorizontalAlignment="Stretch" Margin="83,0,0,0">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="vm:CatalogEntry">
+                                        <TextBlock Text="{Binding DisplayText}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Weapons -->
+                        <StackPanel Spacing="3" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding WeaponSpoofActive}" Content="Weapon" VerticalAlignment="Center" Width="75"/>
+                                <TextBox Grid.Column="1" PlaceholderText="Weapon Asset Bundle" Text="{Binding WeaponSpoofBundle}"/>
+                                <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyWeaponSpoofCommand}" Classes="Accent" Width="60"/>
+                            </Grid>
+                            <ComboBox ItemsSource="{Binding WeaponsCatalog}" SelectedItem="{Binding SelectedWeaponCatalog}" PlaceholderText="Pick from Weapons Catalog..." HorizontalAlignment="Stretch" Margin="83,0,0,0">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="vm:CatalogEntry">
+                                        <TextBlock Text="{Binding DisplayText}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- Pets -->
+                        <StackPanel Spacing="3" Margin="0,0,0,4">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding PetSpoofActive}" Content="Pet" VerticalAlignment="Center" Width="75"/>
+                                <TextBox Grid.Column="1" PlaceholderText="Pet Asset Bundle" Text="{Binding PetSpoofBundle}"/>
+                                <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyPetSpoofCommand}" Classes="Accent" Width="60"/>
+                            </Grid>
+                            <ComboBox ItemsSource="{Binding PetsCatalog}" SelectedItem="{Binding SelectedPetCatalog}" PlaceholderText="Pick from Pets Catalog..." HorizontalAlignment="Stretch" Margin="83,0,0,0">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="vm:CatalogEntry">
+                                        <TextBlock Text="{Binding DisplayText}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 3. Extras & Transform -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Extras &amp; Transforms" Classes="Header" Margin="0"/>
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                            <TextBlock Text="Flip Gender (Local Swap)" VerticalAlignment="Center"/>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding GenderSpoofActive}"/>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+                            <TextBlock Text="Pet Combat Anim Driver" VerticalAlignment="Center"/>
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding PetCombatAnimActive}"/>
+                        </Grid>
+
+                        <Separator Height="1" Background="#2A2A32" Margin="0,0,0,10"/>
+
+                        <StackPanel Spacing="3">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <CheckBox Grid.Column="0" IsChecked="{Binding MonTransformActive}" Content="Transform" VerticalAlignment="Center" Width="90"/>
+                                <TextBox Grid.Column="1" PlaceholderText="Monster Asset Bundle" Text="{Binding MonTransformBundle}"/>
+                                <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyMonTransformCommand}" Classes="Accent" Width="60"/>
+                            </Grid>
+                            <ComboBox ItemsSource="{Binding MonstersCatalog}" SelectedItem="{Binding SelectedMonsterCatalog}" PlaceholderText="Pick from Monster Transform Catalog..." HorizontalAlignment="Stretch" Margin="98,0,0,0">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="vm:CatalogEntry">
+                                        <TextBlock Text="{Binding DisplayText}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 4. Music Jukebox -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="BGM Music Jukebox" Classes="Header" Margin="0"/>
+
+                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
+                            <TextBox Grid.Column="0" PlaceholderText="Track ID" Text="{Binding JukeboxTrackId}"/>
+                            <Button Grid.Column="1" Content="Play Track" Command="{Binding PlayJukeboxCommand}" Classes="Accent"/>
+                            <Button Grid.Column="2" Content="Stop" Command="{Binding StopJukeboxCommand}"/>
+                            <Button Grid.Column="3" Content="Restore BGM" Command="{Binding RestoreAreaBGMCommand}"/>
+                        </Grid>
+
+                        <ComboBox ItemsSource="{Binding JukeboxTracks}" SelectedItem="{Binding SelectedJukeboxTrack}" PlaceholderText="Pick track from BGMusic Catalog..." HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate DataType="vm:JukeboxTrack">
+                                    <TextBlock Text="{Binding DisplayText}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

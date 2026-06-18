@@ -1,0 +1,37 @@
+{
+  "1": {
+    "name": "Level 1",
+    "location": "Menu,battleon",
+    "item_count": 4
+  },
+  "2380": {
+    "name": "Dragonslayer Gear",
+    "location": null,
+    "item_count": 2
+  },
+  "2468": {
+    "name": "Gravelyn's Infinity",
+    "location": "Menu",
+    "item_count": 8
+  },
+  "2469": {
+    "name": "Infinity DragonSlayer Crafting",
+    "location": null,
+    "item_count": 4
+  },
+  "2508": {
+    "name": "Grimskull's Infinity",
+    "location": null,
+    "item_count": 1
+  },
+  "2704": {
+    "name": "Infinity World Record Breaker",
+    "location": "Menu",
+    "item_count": 3
+  },
+  "2705": {
+    "name": "Infinity Eternal Thanks",
+    "location": "Menu",
+    "item_count": 2
+  }
+}

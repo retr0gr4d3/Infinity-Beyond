@@ -1,0 +1,54 @@
+# ==========================================
+#  Dotnet / C# build outputs
+# ==========================================
+[Bb]in/
+[Oo]bj/
+[Pp]ublish/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userossc
+*.userprefs
+*.docstates
+
+# JetBrains Rider / VS Code
+.idea/
+.vscode/
+*.sln.iml
+
+# Local tooling configuration
+.claude/settings.local.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# ==========================================
+#  Infinity-Beyond Standalone ignores
+# ==========================================
+
+# Game installation files (manually added or linked)
+/game/
+/game
+
+# Dynamic user data / configs
+UserData/
+
+# Runtime logs
+*.log
+
+# Agent build directory
+build/
+
+# Deployed binaries in root folder
+/*.exe
+/*.dll
+/*.pdb
+/*.deps.json
+/*.runtimeconfig.json
+/runtimes/
+
+# Keep solution files
+!/Beyond/Beyond.sln
