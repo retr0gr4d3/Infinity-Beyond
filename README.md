@@ -1,4 +1,4 @@
-# Beyond — Standalone Client
+# Beyond - Standalone Client
 
 A custom launcher and in-game mod for **AdventureQuest Worlds Infinity**. The
 launcher embeds the Unity game inside its own window, runs multiple accounts side
@@ -16,32 +16,32 @@ game.
 The project is two cooperating pieces plus the game itself:
 
 ```
-┌──────────────────────────┐         named pipe          ┌──────────────────────────┐
-│  Launcher (Avalonia app) │  ◄────  BeyondAgent_<guid> ────►  │  BeyondAgent (game mod)  │
-│  BeyondLauncher.exe       │        JSON, newline-       │  injected into the game   │
-│  • embeds the game window │        delimited            │  • applies settings       │
-│  • tool windows / UI      │                             │  • runs commands          │
-│  • per-session view-model │                             │  • streams status back    │
-└──────────────────────────┘                             └──────────────────────────┘
+┌───────────────────────────┐         named pipe               ┌───────────────────────────┐
+│  Launcher (Avalonia app)  │  ◄────  BeyondAgent_<guid> ────► │  BeyondAgent (game mod)   │
+│  BeyondLauncher.exe       │         JSON, newline-           │  injected into the game   │
+│  • embeds the game window │         delimited                │  • applies settings       │
+│  • tool windows / UI      │                                  │  • runs commands          │
+│  • per-session view-model │                                  │  • streams status back    │
+└───────────────────────────┘                                  └───────────────────────────┘
             │ spawns + HWND-parents                                  ▲ injected into
             ▼                                                        │ Assembly-CSharp.dll
-┌─────────────────────────────────────────────────────────────────────────────────────┐
+┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  AdventureQuest Worlds Infinity (Unity, Mono)                                          │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Launcher** (`Beyond/Launcher/`) — an [Avalonia](https://avaloniaui.net/) desktop app
+- **Launcher** (`Beyond/Launcher/`)  an [Avalonia](https://avaloniaui.net/) desktop app
   (.NET 10, win-x64). It spawns the game, re-parents the game's window into a
   session tab, and drives everything from one view-model per session.
-- **BeyondAgent** (`Beyond/BeyondAgent/`) — the mod (.NET Standard 2.1, [Harmony](https://github.com/pardeike/Harmony)).
+- **BeyondAgent** (`Beyond/BeyondAgent/`) - the mod (.NET Standard 2.1, [Harmony](https://github.com/pardeike/Harmony)).
   On build it is copied into the game's `Managed` folder; the launcher then patches
   the game's `Assembly-CSharp.dll` with Mono.Cecil to call
   `Infinity_TestMod.BeyondLifecycle.Create()` from `AEC.Start()`, which boots the
   mod. The mod and launcher speak over a per-session named pipe.
-- **The game** — your AdventureQuest Worlds Infinity install, in any location. The
+- **The game** - your AdventureQuest Worlds Infinity install, in any location. The
   launcher patches and embeds it; you point at it from the Configurator. It is not
   bundled with the source (and is git-ignored). Release names differ, so nothing
-  assumes a fixed folder or executable name — the launcher runs whatever game
+  assumes a fixed folder or executable name - the launcher runs whatever game
   executable it finds in the configured directory.
 
 Each launcher session mints a unique pipe name, launches the game with that pipe
@@ -52,38 +52,16 @@ back to the launcher so every tool window reflects live game state.
 
 ## Features
 
-- **Multi-account sessions** — launch several accounts at once, each an embedded
+- **Multi-account sessions** - launch several accounts at once, each an embedded
   game in its own tab; all keep running while you switch between them.
-- **Configurator** — store accounts (with nicknames) and the game directory.
-- **Auto-launch** — fills the login screen and advances the play screen straight to
+- **Configurator** - store accounts (with nicknames) and the game directory.
+- **Auto-launch** - fills the login screen and advances the play screen straight to
   server select.
-- **Tool windows** — Visual Spoofers &amp; Jukebox, Autoskills, Quest Loader, Quest
+- **Tool windows** - Visual Spoofers &amp; Jukebox, Autoskills, Quest Loader, Quest
   Runner &amp; Chain Editor, Shop Loader, Fake Dev, Packet Sniffer / Interceptor /
   Sender / Receiver.
 
 ---
-
-## Repository layout
-
-```
-Beyond/
-  Launcher/                 Avalonia launcher app (BeyondLauncher.exe)
-    App.axaml               Shared theme (one canonical set of control styles)
-    GameLocator.cs          Resolves whether the game is present
-    ModConnection.cs        Named-pipe client to the mod
-    AssemblyPatcher.cs      Injects the mod into Assembly-CSharp.dll (Mono.Cecil)
-    UnityWindowHost.cs      Spawns + HWND-parents the game window
-    ViewModels/
-      MainWindowViewModel.cs            Per-session core (connection, dispatch, launchers)
-      MainWindowViewModel.<Feature>.cs  One partial file per tool window
-      Models.cs / Shell / Configurator  Data records and shell/config view-models
-    Views/                  One .axaml per window + the reusable TitleBar control
-  BeyondAgent/              The in-game mod (BeyondAgent.dll)
-  TestMod.cs              Main mod: OnUpdate loop, command dispatch, status
-  Util/ , Patches/        Harmony patches and helpers
-build.bat                 Build + publish + deploy; prompts for the game directory
-Beyond.sln            Solution (Launcher + BeyondAgent)
-```
 
 The game install lives outside the repo (git-ignored); point at it from the
 Configurator at runtime and via the build script at build time.
@@ -106,7 +84,7 @@ builds, publishes, and deploys the launcher to the repo root:
 build.bat
 ```
 
-To build with the SDK directly, tell the mod build where the game is — either set
+To build with the SDK directly, tell the mod build where the game is - either set
 `AQWI_GAME_DIR`, or pass the managed folder explicitly:
 
 ```sh
@@ -126,10 +104,6 @@ Building `BeyondAgent` copies `BeyondAgent.dll` (and Harmony) into the game's
    found in the configured directory, the launcher warns you instead.
 
 ---
-
-## Credits
-
-Created by **Retr0gr4d3** — <https://github.com/retr0gr4d3/Infinity-Beyond>
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how the code is organized and a full,
 worked walkthrough of adding a feature.
