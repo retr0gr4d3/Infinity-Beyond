@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     /// <summary>
     /// Passive catalog of music tracks the game has loaded. Fed by
@@ -25,7 +25,7 @@ namespace Infinity_TestMod.Util
             public string prefab;
         }
 
-        public static readonly Dictionary<int, TrackEntry> Tracks = new();
+        public static readonly Dictionary<int, TrackEntry> Tracks = [];
 
         // Highest known soundtrack ID — we pre-seed the in-memory dict
         // 1..SeedMax with placeholder entries so the Jukebox dropdown shows
@@ -33,9 +33,9 @@ namespace Infinity_TestMod.Util
         // them. Bumped a bit above the 318 the dev mentioned for headroom.
         public const int SeedMax = 350;
 
-        static string _filePath;
-        static bool _dirty;
-        static readonly object _lock = new();
+        private static string _filePath;
+        private static bool _dirty;
+        private static readonly object _lock = new();
 
         public static void Init()
         {
@@ -52,8 +52,10 @@ namespace Infinity_TestMod.Util
                         if (t is JObject e)
                         {
                             TrackEntry entry = e.ToObject<TrackEntry>();
-                            if (entry != null && entry.id > 0)
+                            if (entry?.id > 0)
+                            {
                                 Tracks[entry.id] = entry;
+                            }
                         }
                     }
                 }
@@ -81,17 +83,20 @@ namespace Infinity_TestMod.Util
 
         public static void Save()
         {
-            if (!_dirty || _filePath == null) return;
+            if (!_dirty || _filePath == null)
+            {
+                return;
+            }
+
             try
             {
                 lock (_lock)
                 {
                     // Only persist entries the harvest has filled in —
                     // placeholders (empty name + zero length) are synthetic.
-                    List<TrackEntry> payload = Tracks.Values
+                    List<TrackEntry> payload = [.. Tracks.Values
                         .Where(e => !string.IsNullOrEmpty(e.name) || e.length > 0f)
-                        .OrderBy(e => e.id)
-                        .ToList();
+                        .OrderBy(e => e.id)];
                     File.WriteAllText(_filePath, JsonConvert.SerializeObject(payload, Formatting.Indented));
                     _dirty = false;
                     BeyondLog.Msg($"[MusicCatalog] saved {Tracks.Count} tracks");
@@ -105,16 +110,26 @@ namespace Infinity_TestMod.Util
 
         public static void Record(int id, string name, float length, string prefab)
         {
-            if (id <= 0) return;
+            if (id <= 0)
+            {
+                return;
+            }
+
             lock (_lock)
             {
                 if (Tracks.TryGetValue(id, out TrackEntry existing))
                 {
                     // Sticky-name: don't blank an already-named entry.
                     if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(existing.name))
+                    {
                         name = existing.name;
+                    }
+
                     if (existing.name == name && Math.Abs(existing.length - length) < 0.01f
-                        && existing.prefab == (prefab ?? "")) return;
+                        && existing.prefab == (prefab ?? ""))
+                    {
+                        return;
+                    }
                 }
                 Tracks[id] = new TrackEntry
                 {
@@ -125,7 +140,7 @@ namespace Infinity_TestMod.Util
                 };
                 _dirty = true;
             }
-            TestMod.activeInstance?.SendCatalogs();
+            BeyondAgentClass.activeInstance?.SendCatalogs();
         }
 
         public static void Clear()

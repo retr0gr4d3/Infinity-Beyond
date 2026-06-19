@@ -19,6 +19,9 @@ namespace Launcher.Views
             }
         }
 
-        private void OnOkClick(object sender, RoutedEventArgs e) => Close();
+        private void OnOkClick(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
     }
 }

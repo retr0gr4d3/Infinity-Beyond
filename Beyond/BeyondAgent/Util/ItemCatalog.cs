@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     /// <summary>
     /// Passive catalog of gear seen on any character in the world. Fed by the
@@ -40,31 +40,54 @@ namespace Infinity_TestMod.Util
             public double? offY;
         }
 
-        public static readonly Dictionary<string, ItemEntry> Armors = new();
-        public static readonly Dictionary<string, ItemEntry> Helms = new();
-        public static readonly Dictionary<string, ItemEntry> Backs = new();
-        public static readonly Dictionary<string, ItemEntry> Weapons = new();
-        public static readonly Dictionary<string, ItemEntry> Pets = new();
+        public static readonly Dictionary<string, ItemEntry> Armors = [];
+        public static readonly Dictionary<string, ItemEntry> Helms = [];
+        public static readonly Dictionary<string, ItemEntry> Backs = [];
+        public static readonly Dictionary<string, ItemEntry> Weapons = [];
+        public static readonly Dictionary<string, ItemEntry> Pets = [];
         // Monsters are catalogued for "wear as pet" — their bundle/linkage/
         // scale fit the same shape PetLoader consumes. Harvested separately
         // from Monster ctor (not via charItemLoader) since they aren't gear.
-        public static readonly Dictionary<string, ItemEntry> Monsters = new();
+        public static readonly Dictionary<string, ItemEntry> Monsters = [];
 
-        static string _liveFilePath;
-        static bool _dirty;
-        static readonly object _lock = new();
+        private static string _liveFilePath;
+        private static bool _dirty;
+        private static readonly object _lock = new();
 
         /// <summary>
         /// Empty one slot's bucket and persist immediately. Used by the UI's
         /// per-slot Clear button so a wipe is durable across game restarts
         /// even if OnApplicationQuit doesn't fire (crash, hard kill).
         /// </summary>
-        public static void ClearArmors() => ClearBucket(Armors);
-        public static void ClearHelms() => ClearBucket(Helms);
-        public static void ClearBacks() => ClearBucket(Backs);
-        public static void ClearWeapons() => ClearBucket(Weapons);
-        public static void ClearPets() => ClearBucket(Pets);
-        public static void ClearMonsters() => ClearBucket(Monsters);
+        public static void ClearArmors()
+        {
+            ClearBucket(Armors);
+        }
+
+        public static void ClearHelms()
+        {
+            ClearBucket(Helms);
+        }
+
+        public static void ClearBacks()
+        {
+            ClearBucket(Backs);
+        }
+
+        public static void ClearWeapons()
+        {
+            ClearBucket(Weapons);
+        }
+
+        public static void ClearPets()
+        {
+            ClearBucket(Pets);
+        }
+
+        public static void ClearMonsters()
+        {
+            ClearBucket(Monsters);
+        }
 
         /// <summary>
         /// Look up a bundle in the Pets bucket first, falling back to Monsters.
@@ -73,13 +96,21 @@ namespace Infinity_TestMod.Util
         /// </summary>
         public static bool TryGetPetOrMonster(string bundleFilename, out ItemEntry entry)
         {
-            if (Pets.TryGetValue(bundleFilename, out entry)) return true;
-            if (Monsters.TryGetValue(bundleFilename, out entry)) return true;
+            if (Pets.TryGetValue(bundleFilename, out entry))
+            {
+                return true;
+            }
+
+            if (Monsters.TryGetValue(bundleFilename, out entry))
+            {
+                return true;
+            }
+
             entry = null;
             return false;
         }
 
-        static void ClearBucket(Dictionary<string, ItemEntry> bucket)
+        private static void ClearBucket(Dictionary<string, ItemEntry> bucket)
         {
             int removed;
             lock (_lock)
@@ -101,16 +132,25 @@ namespace Infinity_TestMod.Util
         /// </summary>
         public static string ParseFriendlyName(string bundleFilename)
         {
-            if (string.IsNullOrEmpty(bundleFilename)) return "";
+            if (string.IsNullOrEmpty(bundleFilename))
+            {
+                return "";
+            }
+
             string basename = bundleFilename;
             int slash = basename.LastIndexOf('/');
-            if (slash >= 0 && slash + 1 < basename.Length) basename = basename.Substring(slash + 1);
+            if (slash >= 0 && slash + 1 < basename.Length)
+            {
+                basename = basename[(slash + 1)..];
+            }
+
             if (basename.EndsWith(".unity3d", StringComparison.OrdinalIgnoreCase))
-                basename = basename.Substring(0, basename.Length - ".unity3d".Length);
+            {
+                basename = basename[..^".unity3d".Length];
+            }
+
             int underscore = basename.IndexOf('_');
-            if (underscore >= 0 && underscore + 1 < basename.Length)
-                return basename.Substring(underscore + 1);
-            return basename;
+            return underscore >= 0 && underscore + 1 < basename.Length ? basename[(underscore + 1)..] : basename;
         }
 
         public static void Init()
@@ -120,7 +160,11 @@ namespace Infinity_TestMod.Util
                 string userDir = Path.Combine(BeyondEnv.UserDataDirectory, "Beyond");
                 System.IO.Directory.CreateDirectory(userDir);
                 _liveFilePath = Path.Combine(userDir, "items.json");
-                if (File.Exists(_liveFilePath)) LoadLive(_liveFilePath);
+                if (File.Exists(_liveFilePath))
+                {
+                    LoadLive(_liveFilePath);
+                }
+
                 BeyondLog.Msg($"[ItemCatalog] loaded {Armors.Count} armors, {Helms.Count} helms, {Backs.Count} capes, {Weapons.Count} weapons, {Pets.Count} pets, {Monsters.Count} monsters from {_liveFilePath}");
             }
             catch (Exception ex)
@@ -131,7 +175,11 @@ namespace Infinity_TestMod.Util
 
         public static void Save()
         {
-            if (!_dirty || _liveFilePath == null) return;
+            if (!_dirty || _liveFilePath == null)
+            {
+                return;
+            }
+
             try
             {
                 lock (_lock)
@@ -157,29 +205,45 @@ namespace Infinity_TestMod.Util
         }
 
         public static void RecordArmor(int id, string name, AssetBundleData bundle, string prefabName)
-            => Record(Armors, "Armor", id, name, bundle, prefabName);
+        {
+            Record(Armors, "Armor", id, name, bundle, prefabName);
+        }
 
         public static void RecordHelm(int id, string name, AssetBundleData bundle, string prefabName)
-            => Record(Helms, "Head", id, name, bundle, prefabName);
+        {
+            Record(Helms, "Head", id, name, bundle, prefabName);
+        }
 
         public static void RecordBack(int id, string name, AssetBundleData bundle, string prefabName)
-            => Record(Backs, "Back", id, name, bundle, prefabName);
+        {
+            Record(Backs, "Back", id, name, bundle, prefabName);
+        }
 
         public static void RecordWeapon(int id, string name, AssetBundleData bundle, string prefabName, int itemType)
-            => Record(Weapons, "Weapon", id, name, bundle, prefabName, itemType);
+        {
+            Record(Weapons, "Weapon", id, name, bundle, prefabName, itemType);
+        }
 
         public static void RecordPet(int id, string name, AssetBundleData bundle, string prefabName,
                                      double? scale, double? offX, double? offY)
-            => Record(Pets, "Pet", id, name, bundle, prefabName, 0, scale, offX, offY);
+        {
+            Record(Pets, "Pet", id, name, bundle, prefabName, 0, scale, offX, offY);
+        }
 
         public static void RecordMonster(int id, string name, AssetBundleData bundle, string linkage, double scale)
-            => Record(Monsters, "Monster", id, name, bundle, linkage, 0, scale, null, null);
+        {
+            Record(Monsters, "Monster", id, name, bundle, linkage, 0, scale, null, null);
+        }
 
-        static void Record(Dictionary<string, ItemEntry> bucket, string slot, int id, string name,
+        private static void Record(Dictionary<string, ItemEntry> bucket, string slot, int id, string name,
                            AssetBundleData bundle, string prefabName, int itemType = 0,
                            double? scale = null, double? offX = null, double? offY = null)
         {
-            if (bundle == null || string.IsNullOrEmpty(bundle.Filename)) return;
+            if (bundle == null || string.IsNullOrEmpty(bundle.Filename))
+            {
+                return;
+            }
+
             string key = bundle.Filename;
             ItemEntry entry = new()
             {
@@ -205,20 +269,25 @@ namespace Infinity_TestMod.Util
                     && existing.itemType == entry.itemType
                     && existing.scale == entry.scale
                     && existing.offX == entry.offX && existing.offY == entry.offY)
+                {
                     return;
+                }
                 // Sticky-name: if a previous sighting captured a real name and
                 // the new one is empty, keep the existing name. Nearby NPC
                 // gear shows up as raw EquipItem without a Name field, so this
                 // protects already-named entries from being overwritten with
                 // blanks.
                 if (existing != null && string.IsNullOrEmpty(entry.name) && !string.IsNullOrEmpty(existing.name))
+                {
                     entry.name = existing.name;
+                }
+
                 bucket[key] = entry;
                 _dirty = true;
             }
         }
 
-        static void LoadLive(string path)
+        private static void LoadLive(string path)
         {
             JObject obj = JObject.Parse(File.ReadAllText(path));
             LoadBucket(obj, "armors", Armors);
@@ -229,7 +298,7 @@ namespace Infinity_TestMod.Util
             LoadBucket(obj, "monsters", Monsters);
         }
 
-        static void LoadBucket(JObject obj, string key, Dictionary<string, ItemEntry> bucket)
+        private static void LoadBucket(JObject obj, string key, Dictionary<string, ItemEntry> bucket)
         {
             if (obj[key] is JArray arr)
             {
@@ -239,7 +308,9 @@ namespace Infinity_TestMod.Util
                     {
                         ItemEntry entry = e.ToObject<ItemEntry>();
                         if (entry != null && !string.IsNullOrEmpty(entry.bundle))
+                        {
                             bucket[entry.bundle] = entry;
+                        }
                     }
                 }
             }

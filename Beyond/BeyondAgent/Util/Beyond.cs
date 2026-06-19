@@ -3,12 +3,12 @@ using System.Collections;
 using System.IO;
 using UnityEngine;
 
-namespace Infinity_TestMod
+namespace BeyondAgent.Util
 {
     // Standalone runtime support for the Beyond agent. No third-party loader is
     // involved: the agent is injected by our own launcher (see
     // Launcher/AssemblyPatcher.cs) and ticked by BeyondLifecycle. These types
-    // live in the root Infinity_TestMod namespace so every Infinity_TestMod.*
+    // live in the root BeyondAgent namespace so every BeyondAgent.*
     // file resolves them via enclosing-namespace lookup, no using needed.
 
     // Base class for the agent. Lifecycle methods are driven by BeyondLifecycle
@@ -28,16 +28,38 @@ namespace Infinity_TestMod
     // goes.
     public sealed class BeyondLogger
     {
-        public void Msg(string msg) => Debug.Log("[Beyond] " + msg);
-        public void Warning(string msg) => Debug.LogWarning("[Beyond] " + msg);
-        public void Error(string msg) => Debug.LogError("[Beyond] " + msg);
+        public void Msg(string msg)
+        {
+            Debug.Log("[Beyond] " + msg);
+        }
+
+        public void Warning(string msg)
+        {
+            Debug.LogWarning("[Beyond] " + msg);
+        }
+
+        public void Error(string msg)
+        {
+            Debug.LogError("[Beyond] " + msg);
+        }
     }
 
     public static class BeyondLog
     {
-        public static void Msg(string msg) => Debug.Log("[Beyond] " + msg);
-        public static void Warning(string msg) => Debug.LogWarning("[Beyond] " + msg);
-        public static void Error(string msg) => Debug.LogError("[Beyond] " + msg);
+        public static void Msg(string msg)
+        {
+            Debug.Log("[Beyond] " + msg);
+        }
+
+        public static void Warning(string msg)
+        {
+            Debug.LogWarning("[Beyond] " + msg);
+        }
+
+        public static void Error(string msg)
+        {
+            Debug.LogError("[Beyond] " + msg);
+        }
     }
 
     // Coroutine pump. We have no loader-provided host, so we run coroutines on

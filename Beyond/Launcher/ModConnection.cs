@@ -1,3 +1,6 @@
+using Avalonia.Threading;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -5,9 +8,6 @@ using System.IO.Pipes;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Threading;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Launcher
 {
@@ -47,10 +47,8 @@ namespace Launcher
 
         private readonly string _pipeName;
         private Conn? _active;
-        private readonly object _connLock = new object();
+        private readonly object _connLock = new();
         private CancellationTokenSource? _cts;
-        private bool _isConnected;
-
         private static readonly string PingLine = JsonConvert.SerializeObject(new JObject { ["Type"] = "Ping" }) + "\n";
 
         public event Action<bool>? ConnectionStateChanged;
@@ -71,13 +69,13 @@ namespace Launcher
 
         public bool IsConnected
         {
-            get => _isConnected;
+            get;
             private set
             {
-                if (_isConnected != value)
+                if (field != value)
                 {
-                    _isConnected = value;
-                    Dispatcher.UIThread.Post(() => ConnectionStateChanged?.Invoke(_isConnected));
+                    field = value;
+                    Dispatcher.UIThread.Post(() => ConnectionStateChanged?.Invoke(field));
                 }
             }
         }
@@ -109,7 +107,7 @@ namespace Launcher
                         pipe = new NamedPipeClientStream(".", _pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
                         pipe.Connect(ConnectTimeoutMs); // throws if the server pipe isn't up yet
 
-                        Conn conn = new Conn
+                        Conn conn = new()
                         {
                             Pipe = pipe,
                             Outbound = new BlockingCollection<string>(OutboundCapacity),
@@ -146,9 +144,16 @@ namespace Launcher
                 while (!ct.IsCancellationRequested && conn.Pipe.IsConnected)
                 {
                     string? line = reader.ReadLine();
-                    if (line == null) break; // server closed / died
+                    if (line == null)
+                    {
+                        break; // server closed / died
+                    }
+
                     conn.LastRxTicks = Environment.TickCount64;
-                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
 
                     // Server Pings keep LastRxTicks fresh; ProcessMessage ignores
                     // unknown types, so Ping needs no special handling.
@@ -170,10 +175,12 @@ namespace Launcher
                 while (!ct.IsCancellationRequested && conn.Pipe.IsConnected)
                 {
                     // Inbound-activity watchdog (PipeStream has no ReadTimeout).
-                    if (Environment.TickCount64 - conn.LastRxTicks > ReadStaleMs) break;
+                    if (Environment.TickCount64 - conn.LastRxTicks > ReadStaleMs)
+                    {
+                        break;
+                    }
 
-                    string? msg;
-                    if (!conn.Outbound.TryTake(out msg, IdlePingMs, ct))
+                    if (!conn.Outbound.TryTake(out string? msg, IdlePingMs, ct))
                     {
                         msg = PingLine; // idle => heartbeat
                     }
@@ -199,13 +206,15 @@ namespace Launcher
             {
                 JObject msg = JObject.Parse(rawJson);
                 string? type = (string?)msg["Type"];
-                if (type == null) return;
+                if (type == null)
+                {
+                    return;
+                }
 
                 switch (type)
                 {
                     case "Status":
-                        JObject? settings = msg["Settings"] as JObject;
-                        if (settings != null)
+                        if (msg["Settings"] is JObject settings)
                         {
                             Dispatcher.UIThread.Post(() => StatusReceived?.Invoke(settings));
                         }
@@ -262,8 +271,7 @@ namespace Launcher
                         break;
 
                     case "QuestChains":
-                        JObject? chains = msg["Chains"] as JObject;
-                        if (chains != null)
+                        if (msg["Chains"] is JObject chains)
                         {
                             Dispatcher.UIThread.Post(() => QuestChainsReceived?.Invoke(chains));
                         }
@@ -279,14 +287,17 @@ namespace Launcher
         public void SendCommand(string type, JObject? parameters)
         {
             Conn? conn = _active;
-            if (conn == null) return;
+            if (conn == null)
+            {
+                return;
+            }
 
             try
             {
-                JObject payload = new JObject { ["Type"] = type };
+                JObject payload = new() { ["Type"] = type };
                 if (parameters != null)
                 {
-                    foreach (var prop in parameters.Properties())
+                    foreach (JProperty prop in parameters.Properties())
                     {
                         payload[prop.Name] = prop.Value;
                     }
@@ -316,20 +327,34 @@ namespace Launcher
         // is still the active one, so a stale loop can't disturb a newer link.
         private void CloseConn(Conn? conn)
         {
-            if (conn == null) return;
+            if (conn == null)
+            {
+                return;
+            }
+
             bool wasActive;
             lock (_connLock)
             {
                 wasActive = _active == conn;
-                if (wasActive) _active = null;
+                if (wasActive)
+                {
+                    _active = null;
+                }
             }
             Teardown(conn);
-            if (wasActive) IsConnected = false;
+            if (wasActive)
+            {
+                IsConnected = false;
+            }
         }
 
         private static void Teardown(Conn? conn)
         {
-            if (conn == null) return;
+            if (conn == null)
+            {
+                return;
+            }
+
             try { conn.Outbound.CompleteAdding(); } catch { }
             try { conn.Pipe.Dispose(); } catch { }
         }

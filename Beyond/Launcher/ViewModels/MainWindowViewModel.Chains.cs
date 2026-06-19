@@ -1,8 +1,8 @@
-using System;
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.ObjectModel;
 
 namespace Launcher.ViewModels
 {
@@ -10,13 +10,13 @@ namespace Launcher.ViewModels
     // import and export quest chains.
     public partial class MainWindowViewModel
     {
-        public ObservableCollection<string> ChainNames { get; } = new();
-        public System.Collections.Generic.Dictionary<string, JArray> ChainDetails { get; } = new();
+        public ObservableCollection<string> ChainNames { get; } = [];
+        public System.Collections.Generic.Dictionary<string, JArray> ChainDetails { get; } = [];
 
         [ObservableProperty] private string? _selectedChainName;
 
         [ObservableProperty] private string _chainEditorName = "NewChain";
-        public ObservableCollection<ChainEntryViewModel> ChainEditorEntries { get; } = new();
+        public ObservableCollection<ChainEntryViewModel> ChainEditorEntries { get; } = [];
 
         [ObservableProperty] private string _chainImportExportText = "";
 
@@ -32,11 +32,11 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void LoadChainForEditing()
         {
-            if (!string.IsNullOrEmpty(SelectedChainName) && ChainDetails.TryGetValue(SelectedChainName, out var arr))
+            if (!string.IsNullOrEmpty(SelectedChainName) && ChainDetails.TryGetValue(SelectedChainName, out JArray? arr))
             {
                 ChainEditorName = SelectedChainName;
                 ChainEditorEntries.Clear();
-                foreach (var t in arr)
+                foreach (JToken t in arr)
                 {
                     ChainEditorEntries.Add(new ChainEntryViewModel
                     {
@@ -65,11 +65,19 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void SaveEditedChain()
         {
-            if (string.IsNullOrWhiteSpace(ChainEditorName)) return;
-            JArray entries = new JArray();
-            foreach (var ent in ChainEditorEntries)
+            if (string.IsNullOrWhiteSpace(ChainEditorName))
             {
-                if (ent.Qid <= 0) continue;
+                return;
+            }
+
+            JArray entries = [];
+            foreach (ChainEntryViewModel ent in ChainEditorEntries)
+            {
+                if (ent.Qid <= 0)
+                {
+                    continue;
+                }
+
                 entries.Add(new JObject
                 {
                     ["qid"] = ent.Qid,
@@ -89,18 +97,30 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void DeleteEditedChain()
         {
-            if (string.IsNullOrWhiteSpace(ChainEditorName)) return;
+            if (string.IsNullOrWhiteSpace(ChainEditorName))
+            {
+                return;
+            }
+
             _connection.SendCommand("DeleteChain", new JObject { ["Name"] = ChainEditorName.Trim() });
         }
 
         [RelayCommand]
         private void ExportChainJson()
         {
-            if (string.IsNullOrWhiteSpace(ChainEditorName)) return;
-            JArray entries = new JArray();
-            foreach (var ent in ChainEditorEntries)
+            if (string.IsNullOrWhiteSpace(ChainEditorName))
             {
-                if (ent.Qid <= 0) continue;
+                return;
+            }
+
+            JArray entries = [];
+            foreach (ChainEntryViewModel ent in ChainEditorEntries)
+            {
+                if (ent.Qid <= 0)
+                {
+                    continue;
+                }
+
                 entries.Add(new JObject
                 {
                     ["qid"] = ent.Qid,
@@ -110,7 +130,7 @@ namespace Launcher.ViewModels
                     ["items"] = ent.Items < 1 ? 1 : ent.Items
                 });
             }
-            JObject obj = new JObject
+            JObject obj = new()
             {
                 [ChainEditorName] = entries
             };
@@ -120,17 +140,21 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void ImportChainJson()
         {
-            if (string.IsNullOrWhiteSpace(ChainImportExportText)) return;
+            if (string.IsNullOrWhiteSpace(ChainImportExportText))
+            {
+                return;
+            }
+
             try
             {
                 JObject obj = JObject.Parse(ChainImportExportText);
-                foreach (var prop in obj.Properties())
+                foreach (JProperty prop in obj.Properties())
                 {
                     if (prop.Value is JArray arr)
                     {
                         ChainEditorName = prop.Name;
                         ChainEditorEntries.Clear();
-                        foreach (var t in arr)
+                        foreach (JToken t in arr)
                         {
                             ChainEditorEntries.Add(new ChainEntryViewModel
                             {
@@ -154,7 +178,7 @@ namespace Launcher.ViewModels
             ChainDetails.Clear();
             if (chains != null)
             {
-                foreach (var prop in chains.Properties())
+                foreach (JProperty prop in chains.Properties())
                 {
                     ChainNames.Add(prop.Name);
                     if (prop.Value is JArray arr)

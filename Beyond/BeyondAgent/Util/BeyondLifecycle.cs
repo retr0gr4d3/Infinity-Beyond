@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Infinity_TestMod
+namespace BeyondAgent.Util
 {
     public class BeyondLifecycle : MonoBehaviour
     {
@@ -8,39 +8,42 @@ namespace Infinity_TestMod
 
         public static void Create()
         {
-            if (_instance != null) return;
-            
+            if (_instance != null)
+            {
+                return;
+            }
+
             UnityEngine.Debug.Log("[Beyond] Bootstrapping standalone agent...");
 
-            var go = new GameObject("BeyondAgent");
+            GameObject go = new("BeyondAgent");
             UnityEngine.Object.DontDestroyOnLoad(go);
             _instance = go.AddComponent<BeyondLifecycle>();
-            
+
             // Initialize the TestMod
-            TestMod.Initialize();
+            BeyondAgentClass.Initialize();
         }
 
         private void Update()
         {
-            if (TestMod.activeInstance != null)
+            if (BeyondAgentClass.activeInstance != null)
             {
-                try { TestMod.activeInstance.OnUpdate(); } catch { }
+                try { BeyondAgentClass.activeInstance.OnUpdate(); } catch { }
             }
         }
 
         private void OnGUI()
         {
-            if (TestMod.activeInstance != null)
+            if (BeyondAgentClass.activeInstance != null)
             {
-                try { TestMod.activeInstance.OnGUI(); } catch { }
+                try { BeyondAgentClass.activeInstance.OnGUI(); } catch { }
             }
         }
 
         private void OnApplicationQuit()
         {
-            if (TestMod.activeInstance != null)
+            if (BeyondAgentClass.activeInstance != null)
             {
-                try { TestMod.activeInstance.OnApplicationQuit(); } catch { }
+                try { BeyondAgentClass.activeInstance.OnApplicationQuit(); } catch { }
             }
         }
     }

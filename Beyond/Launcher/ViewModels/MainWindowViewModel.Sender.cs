@@ -28,12 +28,12 @@ namespace Launcher.ViewModels
             JArray pArr;
             if (SenderSingleString)
             {
-                pArr = new JArray { SenderParams };
+                pArr = [SenderParams];
             }
             else
             {
-                pArr = new JArray();
-                foreach (var p in SenderParams.Split(','))
+                pArr = [];
+                foreach (string p in SenderParams.Split(','))
                 {
                     pArr.Add(p.Trim());
                 }

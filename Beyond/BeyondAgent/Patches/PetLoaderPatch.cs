@@ -1,8 +1,8 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 using System.Collections.Generic;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Pet harvester. PetLoader.LoadItem reads player.Pet.{Bundle, PrefabName,
     // Scale, OffsetX, OffsetY} directly into BundlePrefabLoader, so the spoof
@@ -14,9 +14,17 @@ namespace Infinity_TestMod.Patches
         {
             try
             {
-                if (p == null || p.character == null) return;
+                if (p == null || p.character == null)
+                {
+                    return;
+                }
+
                 EquipItem item = p.character.Pet;
-                if (item == null || item.Bundle == null) return;
+                if (item == null || item.Bundle == null)
+                {
+                    return;
+                }
+
                 string name = (item as Item)?.Name ?? "";
                 ItemCatalog.RecordPet(item.ID, name, item.Bundle, item.PrefabName,
                                       item.Scale, item.OffsetX, item.OffsetY);
@@ -43,7 +51,11 @@ namespace Infinity_TestMod.Patches
         public static void Apply(EquipItem item, AssetBundleData newBundle, string newPrefab,
                                  double? newScale, double? newOffX, double? newOffY)
         {
-            if (item == null) return;
+            if (item == null)
+            {
+                return;
+            }
+
             if (mutatedItem != item)
             {
                 Restore();
@@ -63,7 +75,11 @@ namespace Infinity_TestMod.Patches
 
         public static void Restore()
         {
-            if (mutatedItem == null) return;
+            if (mutatedItem == null)
+            {
+                return;
+            }
+
             try
             {
                 mutatedItem.Bundle = origBundle;
@@ -85,19 +101,37 @@ namespace Infinity_TestMod.Patches
     {
         public static void Postfix(HumanoidAvatar p)
         {
-            if (!TestMod.petSpoofActive || string.IsNullOrWhiteSpace(TestMod.petSpoofBundle))
+            if (!BeyondAgentClass.petSpoofActive || string.IsNullOrWhiteSpace(BeyondAgentClass.petSpoofBundle))
+            {
                 return;
+            }
+
             try
             {
-                if (p == null || p.character == null) return;
-                if (p.character != Entity.mainPlayer) return;
-                EquipItem pet = p.character.Pet;
-                if (pet == null) return;
-                if (!ItemCatalog.TryGetPetOrMonster(TestMod.petSpoofBundle, out ItemCatalog.ItemEntry cat)) return;
+                if (p == null || p.character == null)
+                {
+                    return;
+                }
 
-                Dictionary<string, ItemCatalog.ItemEntry> sourceBucket = ItemCatalog.Pets.ContainsKey(TestMod.petSpoofBundle)
+                if (p.character != Entity.mainPlayer)
+                {
+                    return;
+                }
+
+                EquipItem pet = p.character.Pet;
+                if (pet == null)
+                {
+                    return;
+                }
+
+                if (!ItemCatalog.TryGetPetOrMonster(BeyondAgentClass.petSpoofBundle, out ItemCatalog.ItemEntry cat))
+                {
+                    return;
+                }
+
+                Dictionary<string, ItemCatalog.ItemEntry> sourceBucket = ItemCatalog.Pets.ContainsKey(BeyondAgentClass.petSpoofBundle)
                     ? ItemCatalog.Pets : ItemCatalog.Monsters;
-                AssetBundleData spoofedBundle = BundleBuilder.Build(TestMod.petSpoofBundle, sourceBucket, pet.Bundle, pet.Bundle);
+                AssetBundleData spoofedBundle = BundleBuilder.Build(BeyondAgentClass.petSpoofBundle, sourceBucket, pet.Bundle, pet.Bundle);
                 PetSpoofState.Apply(pet, spoofedBundle, cat.prefab, cat.scale, cat.offX, cat.offY);
             }
             catch (System.Exception ex)

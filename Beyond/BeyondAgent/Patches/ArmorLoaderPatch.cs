@@ -1,7 +1,7 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Passive armor catalog feeder. Every time an ArmorLoader is constructed —
     // for the local player, party members, NPCs, or random players walking
@@ -15,10 +15,17 @@ namespace Infinity_TestMod.Patches
         {
             try
             {
-                if (p == null || p.character == null) return;
+                if (p == null || p.character == null)
+                {
+                    return;
+                }
+
                 Entity ent = p.character;
                 EquipItem item = ent.Armor ?? ent.Class;
-                if (item == null || item.Bundle == null) return;
+                if (item == null || item.Bundle == null)
+                {
+                    return;
+                }
 
                 // Item adds Name on top of EquipItem. At runtime the equip dict
                 // typically stores Item/InventoryItem instances, so the cast
@@ -50,19 +57,29 @@ namespace Infinity_TestMod.Patches
 
         public static void Postfix(ArmorLoader __instance, ref AssetBundleData __result)
         {
-            if (!TestMod.armorSpoofActive || string.IsNullOrWhiteSpace(TestMod.armorSpoofBundle))
+            if (!BeyondAgentClass.armorSpoofActive || string.IsNullOrWhiteSpace(BeyondAgentClass.armorSpoofBundle))
+            {
                 return;
+            }
+
             try
             {
                 HumanoidAvatar avt = _avtRef(__instance);
-                if (avt == null || avt.character == null) return;
-                if (avt.character != Entity.mainPlayer) return;
+                if (avt == null || avt.character == null)
+                {
+                    return;
+                }
+
+                if (avt.character != Entity.mainPlayer)
+                {
+                    return;
+                }
 
                 // Catalog-first version lookup; falls back to the equipped
                 // armor (or class bundle when no armor) when the target hasn't
                 // been catalogued yet.
                 AssetBundleData equipped = avt.character.Armor?.Bundle ?? avt.character.Class?.Bundle;
-                __result = BundleBuilder.Build(TestMod.armorSpoofBundle, ItemCatalog.Armors, equipped, __result);
+                __result = BundleBuilder.Build(BeyondAgentClass.armorSpoofBundle, ItemCatalog.Armors, equipped, __result);
             }
             catch (System.Exception ex)
             {

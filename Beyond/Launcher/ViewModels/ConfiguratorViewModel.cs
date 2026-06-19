@@ -1,7 +1,8 @@
-using System;
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Launcher.ViewModels
 {
@@ -18,12 +19,12 @@ namespace Launcher.ViewModels
     public class LauncherConfig
     {
         public string GameDirectory { get; set; } = "";
-        public System.Collections.Generic.List<AccountEntry> Accounts { get; set; } = new();
+        public System.Collections.Generic.List<AccountEntry> Accounts { get; set; } = [];
     }
 
     public partial class ConfiguratorViewModel : ObservableObject
     {
-        public ObservableCollection<AccountEntry> Accounts { get; } = new();
+        public ObservableCollection<AccountEntry> Accounts { get; } = [];
 
         [ObservableProperty]
         private string _gameDirectory = "";
@@ -50,7 +51,10 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void AddAccount()
         {
-            if (string.IsNullOrWhiteSpace(NewUsername)) return;
+            if (string.IsNullOrWhiteSpace(NewUsername))
+            {
+                return;
+            }
 
             Accounts.Add(new AccountEntry
             {
@@ -79,7 +83,10 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void LaunchAccount(AccountEntry account)
         {
-            if (account == null || !EnsureGameAvailable()) return;
+            if (account == null || !EnsureGameAvailable())
+            {
+                return;
+            }
 
             OnLaunchRequested?.Invoke(account.Username, account.Password, account.Nickname);
         }
@@ -87,9 +94,12 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void LaunchAll()
         {
-            if (!EnsureGameAvailable()) return;
+            if (!EnsureGameAvailable())
+            {
+                return;
+            }
 
-            foreach (var account in Accounts)
+            foreach (AccountEntry account in Accounts)
             {
                 OnLaunchRequested?.Invoke(account.Username, account.Password, account.Nickname);
             }
@@ -113,7 +123,7 @@ namespace Launcher.ViewModels
         {
             if (OnRequestFolderBrowse != null)
             {
-                var path = await OnRequestFolderBrowse();
+                string? path = await OnRequestFolderBrowse();
                 if (path != null)
                 {
                     GameDirectory = path;
@@ -154,7 +164,7 @@ namespace Launcher.ViewModels
                     {
                         try
                         {
-                            var accountsList = Newtonsoft.Json.JsonConvert.DeserializeObject<System.Collections.Generic.List<AccountEntry>>(json);
+                            List<AccountEntry>? accountsList = Newtonsoft.Json.JsonConvert.DeserializeObject<System.Collections.Generic.List<AccountEntry>>(json);
                             if (accountsList != null)
                             {
                                 config = new LauncherConfig
@@ -176,7 +186,7 @@ namespace Launcher.ViewModels
                         Accounts.Clear();
                         if (config.Accounts != null)
                         {
-                            foreach (var acc in config.Accounts)
+                            foreach (AccountEntry acc in config.Accounts)
                             {
                                 Accounts.Add(acc);
                             }
@@ -200,10 +210,10 @@ namespace Launcher.ViewModels
                 {
                     System.IO.Directory.CreateDirectory(dir);
                 }
-                var config = new LauncherConfig
+                LauncherConfig config = new()
                 {
                     GameDirectory = GameDirectory ?? "",
-                    Accounts = new System.Collections.Generic.List<AccountEntry>(Accounts)
+                    Accounts = [.. Accounts]
                 };
                 string json = Newtonsoft.Json.JsonConvert.SerializeObject(config, Newtonsoft.Json.Formatting.Indented);
                 System.IO.File.WriteAllText(path, json);

@@ -4,7 +4,9 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Launcher
 {
@@ -20,8 +22,16 @@ namespace Launcher
         {
             int width = (int)Bounds.Width;
             int height = (int)Bounds.Height;
-            if (width <= 0) width = 800;
-            if (height <= 0) height = 600;
+            if (width <= 0)
+            {
+                width = 800;
+            }
+
+            if (height <= 0)
+            {
+                height = 600;
+            }
+
             StartUnityProcessDeferred(width, height);
         }
 
@@ -153,9 +163,11 @@ namespace Launcher
         }
 
         private const string HostClassName = "BeyondUnityHost";
+
         // RGB(0x0F, 0x0F, 0x11) packed as a COLORREF (0x00BBGGRR).
         private const int HostBackgroundColor = 0x00110F0F;
-        private static readonly object _hostClassLock = new();
+
+        private static readonly Lock _hostClassLock = new();
         private static bool _hostClassReady;
         private static WndProcDelegate? _hostWndProc; // kept alive for the class registration
         private static IntPtr _hostBgBrush = IntPtr.Zero;
@@ -167,12 +179,16 @@ namespace Launcher
         {
             lock (_hostClassLock)
             {
-                if (_hostClassReady) return HostClassName;
+                if (_hostClassReady)
+                {
+                    return HostClassName;
+                }
+
                 try
                 {
                     _hostBgBrush = CreateSolidBrush(HostBackgroundColor);
                     _hostWndProc = (h, m, w, l) => DefWindowProc(h, m, w, l);
-                    var wc = new WNDCLASSEX
+                    WNDCLASSEX wc = new()
                     {
                         cbSize = (uint)Marshal.SizeOf<WNDCLASSEX>(),
                         lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_hostWndProc),
@@ -204,6 +220,7 @@ namespace Launcher
         // own thread, so the launcher UI thread's input queue must be attached
         // to it for click-to-focus to deliver keystrokes (login fields, chat).
         private bool _inputAttached;
+
         private bool _processStarted;
         private uint _gameThreadId;
         private uint _guiThreadId;
@@ -267,8 +284,15 @@ namespace Launcher
             {
                 int width = (int)Bounds.Width;
                 int height = (int)Bounds.Height;
-                if (width <= 0) width = 800;
-                if (height <= 0) height = 600;
+                if (width <= 0)
+                {
+                    width = 800;
+                }
+
+                if (height <= 0)
+                {
+                    height = 600;
+                }
 
                 // Create a WS_CHILD | WS_VISIBLE control to host the Unity window.
                 // Uses a custom class with a dark (#0F0F11) background brush and no
@@ -305,19 +329,27 @@ namespace Launcher
 
         private void StartUnityProcessDeferred(int width, int height)
         {
-            if (_childHwnd == IntPtr.Zero || _processStarted) return;
+            if (_childHwnd == IntPtr.Zero || _processStarted)
+            {
+                return;
+            }
+
             _processStarted = true;
             try
             {
                 // Write debug file
                 try
                 {
-                    string logPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UserData", "launch_debug.log");
-                    string dir = System.IO.Path.GetDirectoryName(logPath)!;
-                    if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-                    System.IO.File.AppendAllText(logPath, $"[{System.DateTime.Now:HH:mm:ss}] Starting launch. GameDirectory='{GameDirectory}' PipeName='{PipeName}' Username='{PresetUsername}'\n");
+                    string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UserData", "launch_debug.log");
+                    string dir = Path.GetDirectoryName(logPath)!;
+                    if (!Directory.Exists(dir))
+                    {
+                        Directory.CreateDirectory(dir);
+                    }
+
+                    File.AppendAllText(logPath, $"[{System.DateTime.Now:HH:mm:ss}] Starting launch. GameDirectory='{GameDirectory}' PipeName='{PipeName}' Username='{PresetUsername}'\n");
                 }
-                catch {}
+                catch { }
 
                 GameLocator.TryResolveGameExe(GameDirectory, out string? gameExe);
                 if (gameExe == null)
@@ -327,14 +359,12 @@ namespace Launcher
 
                 if (gameExe != null)
                 {
-                    string? gameDir = System.IO.Path.GetDirectoryName(gameExe);
+                    string? gameDir = Path.GetDirectoryName(gameExe);
                     string managedDir = GameLocator.GetManagedDir(gameExe)!;
                     bool isMelonLoaderDetected = false;
                     if (gameDir != null)
                     {
-                        isMelonLoaderDetected = System.IO.Directory.Exists(System.IO.Path.Combine(gameDir, "MelonLoader")) ||
-                                                System.IO.File.Exists(System.IO.Path.Combine(gameDir, "version.dll")) ||
-                                                System.IO.File.Exists(System.IO.Path.Combine(gameDir, "MelonLoader", "MelonLoader.dll"));
+                        isMelonLoaderDetected = File.Exists(Path.Combine(gameDir, "version.dll")) && (Directory.Exists(Path.Combine(gameDir, "MelonLoader")) || File.Exists(Path.Combine(gameDir, "MelonLoader", "MelonLoader.dll")));
                     }
 
                     if (!isMelonLoaderDetected)
@@ -343,13 +373,13 @@ namespace Launcher
                         {
                             // Copy BeyondAgent.dll and 0Harmony.dll from launcher directory to game's managed directory
                             string launcherDir = AppDomain.CurrentDomain.BaseDirectory;
-                            string sourceAgent = System.IO.Path.Combine(launcherDir, "BeyondAgent.dll");
-                            string sourceHarmony = System.IO.Path.Combine(launcherDir, "0Harmony.dll");
+                            string sourceAgent = Path.Combine(launcherDir, "BeyondAgent.dll");
+                            string sourceHarmony = Path.Combine(launcherDir, "0Harmony.dll");
 
-                            if (System.IO.File.Exists(sourceAgent))
+                            if (File.Exists(sourceAgent))
                             {
-                                string destAgent = System.IO.Path.Combine(managedDir, "BeyondAgent.dll");
-                                System.IO.File.Copy(sourceAgent, destAgent, true);
+                                string destAgent = Path.Combine(managedDir, "BeyondAgent.dll");
+                                File.Copy(sourceAgent, destAgent, true);
                                 Trace.WriteLine($"[Launcher] Copied BeyondAgent.dll to {destAgent}");
                             }
                             else
@@ -357,10 +387,10 @@ namespace Launcher
                                 Trace.WriteLine($"[Launcher] Warning: BeyondAgent.dll not found in launcher directory: {sourceAgent}");
                             }
 
-                            if (System.IO.File.Exists(sourceHarmony))
+                            if (File.Exists(sourceHarmony))
                             {
-                                string destHarmony = System.IO.Path.Combine(managedDir, "0Harmony.dll");
-                                System.IO.File.Copy(sourceHarmony, destHarmony, true);
+                                string destHarmony = Path.Combine(managedDir, "0Harmony.dll");
+                                File.Copy(sourceHarmony, destHarmony, true);
                                 Trace.WriteLine($"[Launcher] Copied 0Harmony.dll to {destHarmony}");
                             }
                             else
@@ -380,11 +410,11 @@ namespace Launcher
                         Trace.WriteLine("MelonLoader detected. Disabling built-in modifications (restoring original assembly if needed).");
                         try
                         {
-                            string assemblyPath = System.IO.Path.Combine(managedDir, "Assembly-CSharp.dll");
+                            string assemblyPath = Path.Combine(managedDir, "Assembly-CSharp.dll");
                             string backupPath = assemblyPath + ".bak";
-                            if (System.IO.File.Exists(backupPath))
+                            if (File.Exists(backupPath))
                             {
-                                System.IO.File.Copy(backupPath, assemblyPath, true);
+                                File.Copy(backupPath, assemblyPath, true);
                                 Trace.WriteLine("Restored original Assembly-CSharp.dll from backup.");
                             }
                         }
@@ -394,11 +424,11 @@ namespace Launcher
                         }
                     }
 
-                    ProcessStartInfo psi = new ProcessStartInfo
+                    ProcessStartInfo psi = new()
                     {
                         FileName = gameExe,
                         Arguments = $"-parentHWND {(long)_childHwnd} -screen-width {width} -screen-height {height}",
-                        WorkingDirectory = System.IO.Path.GetDirectoryName(gameExe),
+                        WorkingDirectory = Path.GetDirectoryName(gameExe),
                         UseShellExecute = false
                     };
                     // Tell the agent which named pipe to serve for this session.
@@ -492,15 +522,20 @@ namespace Launcher
 
         private void KeepUnityFocus(IntPtr unityHwnd)
         {
-            if (unityHwnd == IntPtr.Zero) return;
+            if (unityHwnd == IntPtr.Zero)
+            {
+                return;
+            }
 
             // Only redirect focus if the launcher app or Unity is the foreground window
             IntPtr fgWnd = GetForegroundWindow();
-            if (fgWnd == IntPtr.Zero) return;
+            if (fgWnd == IntPtr.Zero)
+            {
+                return;
+            }
 
-            GetWindowThreadProcessId(fgWnd, out uint fgPid);
-            uint currentPid = (uint)Process.GetCurrentProcess().Id;
-            uint unityPid = _unityProcess != null ? (uint)_unityProcess.Id : 0;
+            uint currentPid = (uint)Environment.ProcessId;
+            uint unityPid = GetWindowThreadProcessId(fgWnd, out uint fgPid);
 
             if (fgPid != currentPid && (unityPid == 0 || fgPid != unityPid))
             {
@@ -508,7 +543,7 @@ namespace Launcher
             }
 
             // Check if mouse left or right button is down
-            bool isMouseDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0 || 
+            bool isMouseDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0 ||
                                 (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
 
             if (isMouseDown)
@@ -542,15 +577,11 @@ namespace Launcher
             }
         }
 
-        private IntPtr GetGlobalFocusedWindow()
+        private static IntPtr GetGlobalFocusedWindow()
         {
-            GUITHREADINFO gti = new GUITHREADINFO();
+            GUITHREADINFO gti = new();
             gti.cbSize = Marshal.SizeOf(gti);
-            if (GetGUIThreadInfo(0, ref gti))
-            {
-                return gti.hwndFocus;
-            }
-            return IntPtr.Zero;
+            return GetGUIThreadInfo(0, ref gti) ? gti.hwndFocus : nint.Zero;
         }
 
         protected override void OnGotFocus(Avalonia.Input.FocusChangedEventArgs e)
@@ -569,11 +600,17 @@ namespace Launcher
         // Done once, when the Unity child window first appears.
         private void EnsureInputAttached(IntPtr unityHwnd)
         {
-            if (_inputAttached) return;
+            if (_inputAttached)
+            {
+                return;
+            }
 
             uint gameThread = GetWindowThreadProcessId(unityHwnd, out _);
             uint guiThread = GetCurrentThreadId();
-            if (gameThread == 0 || gameThread == guiThread) return;
+            if (gameThread == 0 || gameThread == guiThread)
+            {
+                return;
+            }
 
             if (AttachThreadInput(guiThread, gameThread, true))
             {
@@ -599,7 +636,7 @@ namespace Launcher
 
             if (_unityProcess != null)
             {
-                try { if (!_unityProcess.HasExited) _unityProcess.Kill(true); } catch { }
+                try { if (!_unityProcess.HasExited) { _unityProcess.Kill(true); } } catch { }
                 try { _unityProcess.Dispose(); } catch { }
                 _unityProcess = null;
             }

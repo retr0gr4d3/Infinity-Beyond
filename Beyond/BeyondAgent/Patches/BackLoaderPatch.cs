@@ -1,7 +1,7 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Local-only cape visual swap. BackLoader.GetBundleData returns
     // player.Back.Bundle directly. Receiver uses hardcoded "CapeGO" prefab,
@@ -14,15 +14,25 @@ namespace Infinity_TestMod.Patches
 
         public static void Postfix(BackLoader __instance, ref AssetBundleData __result)
         {
-            if (!TestMod.backSpoofActive || string.IsNullOrWhiteSpace(TestMod.backSpoofBundle))
+            if (!BeyondAgentClass.backSpoofActive || string.IsNullOrWhiteSpace(BeyondAgentClass.backSpoofBundle))
+            {
                 return;
+            }
+
             try
             {
                 HumanoidAvatar avt = _avtRef(__instance);
-                if (avt == null || avt.character == null) return;
-                if (avt.character != Entity.mainPlayer) return;
+                if (avt == null || avt.character == null)
+                {
+                    return;
+                }
 
-                __result = BundleBuilder.Build(TestMod.backSpoofBundle, ItemCatalog.Backs, avt.character.Back?.Bundle, __result);
+                if (avt.character != Entity.mainPlayer)
+                {
+                    return;
+                }
+
+                __result = BundleBuilder.Build(BeyondAgentClass.backSpoofBundle, ItemCatalog.Backs, avt.character.Back?.Bundle, __result);
             }
             catch (System.Exception ex)
             {

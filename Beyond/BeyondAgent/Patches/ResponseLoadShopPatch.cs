@@ -1,6 +1,7 @@
+using BeyondAgent.Util;
 using HarmonyLib;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     [HarmonyPatch(typeof(ResponseLoadShop), nameof(ResponseLoadShop.Execute))]
     public static class ResponseLoadShopExecutePatch
@@ -12,8 +13,12 @@ namespace Infinity_TestMod.Patches
             // could leak to the next shop load (or, if the targeted request
             // failed entirely, persist indefinitely until the next shop the
             // user opened got force-merged).
-            if (!TestMod.forceMergeShop) return;
-            TestMod.forceMergeShop = false;
+            if (!BeyondAgentClass.forceMergeShop)
+            {
+                return;
+            }
+
+            BeyondAgentClass.forceMergeShop = false;
             if (__instance.shop != null)
             {
                 __instance.shop.mergeShop = true;

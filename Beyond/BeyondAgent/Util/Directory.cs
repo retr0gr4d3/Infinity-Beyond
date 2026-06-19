@@ -5,10 +5,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     /// <summary>
-    /// Catalog of known quests and shops, used by the in-game browser so the
+    ///<para>Catalog of known quests and shops, used by the in-game browser so the
     /// user doesn't have to memorize numeric IDs. Two data sources merged:
     ///
     ///   1. Bootstrap — embedded `Data/quests.json` and `Data/shops.json`,
@@ -20,6 +20,7 @@ namespace Infinity_TestMod.Util
     ///
     /// Lookup order: live overrides bootstrap, so a renamed-on-server quest
     /// shows the updated name once the player has seen it once.
+    /// </para>
     /// </summary>
     public static class Directory
     {
@@ -36,12 +37,12 @@ namespace Infinity_TestMod.Util
             public int item_count;
         }
 
-        public static readonly Dictionary<int, QuestEntry> Quests = new();
-        public static readonly Dictionary<int, ShopEntry> Shops = new();
+        public static readonly Dictionary<int, QuestEntry> Quests = [];
+        public static readonly Dictionary<int, ShopEntry> Shops = [];
 
-        static string _liveFilePath;
-        static bool _dirty;
-        static readonly object _lock = new();
+        private static string _liveFilePath;
+        private static bool _dirty;
+        private static readonly object _lock = new();
 
         public static void Init()
         {
@@ -68,7 +69,11 @@ namespace Infinity_TestMod.Util
 
         public static void Save()
         {
-            if (!_dirty || _liveFilePath == null) return;
+            if (!_dirty || _liveFilePath == null)
+            {
+                return;
+            }
+
             try
             {
                 lock (_lock)
@@ -94,7 +99,11 @@ namespace Infinity_TestMod.Util
         /// <summary>Record from a `getQuests` response — qdef is the per-quest JObject.</summary>
         public static void RecordQuest(int qid, JObject qdef)
         {
-            if (qid <= 0 || qdef == null) return;
+            if (qid <= 0 || qdef == null)
+            {
+                return;
+            }
+
             QuestEntry entry = new()
             {
                 name = (string)qdef["Name"],
@@ -104,19 +113,30 @@ namespace Infinity_TestMod.Util
             {
                 if (Quests.TryGetValue(qid, out QuestEntry existing)
                     && existing.name == entry.name && existing.storyline == entry.storyline)
+                {
                     return; // no change
+                }
+
                 Quests[qid] = entry;
                 _dirty = true;
             }
-            TestMod.activeInstance?.SendCatalogs();
+            BeyondAgentClass.activeInstance?.SendCatalogs();
         }
 
         /// <summary>Record from a `loadShop` response — shop is the inner shop JObject.</summary>
         public static void RecordShop(JObject shop)
         {
-            if (shop == null) return;
+            if (shop == null)
+            {
+                return;
+            }
+
             int? sid = (int?)shop["shopID"];
-            if (sid == null || sid.Value <= 0) return;
+            if (sid == null || sid.Value <= 0)
+            {
+                return;
+            }
+
             JArray items = shop["items"] as JArray;
             ShopEntry entry = new()
             {
@@ -128,7 +148,10 @@ namespace Infinity_TestMod.Util
             {
                 if (Shops.TryGetValue(sid.Value, out ShopEntry existing)
                     && existing.name == entry.name && existing.item_count == entry.item_count)
+                {
                     return;
+                }
+
                 Shops[sid.Value] = entry;
                 _dirty = true;
             }
@@ -136,10 +159,10 @@ namespace Infinity_TestMod.Util
 
         // --- loaders ---
 
-        static void LoadEmbedded(string fileName, Action<string> apply)
+        private static void LoadEmbedded(string fileName, Action<string> apply)
         {
             // Resource name follows csproj layout: namespace + folder + file
-            string resName = $"Infinity_TestMod.Data.{fileName}";
+            string resName = $"BeyondAgent.Data.{fileName}";
             using Stream s = typeof(Directory).Assembly.GetManifestResourceStream(resName);
             if (s == null)
             {
@@ -150,27 +173,35 @@ namespace Infinity_TestMod.Util
             apply(r.ReadToEnd());
         }
 
-        static void LoadQuestsJson(string json)
+        private static void LoadQuestsJson(string json)
         {
             JObject obj = JObject.Parse(json);
             foreach (JProperty prop in obj.Properties())
             {
-                if (!int.TryParse(prop.Name, out int qid)) continue;
+                if (!int.TryParse(prop.Name, out int qid))
+                {
+                    continue;
+                }
+
                 Quests[qid] = prop.Value.ToObject<QuestEntry>();
             }
         }
 
-        static void LoadShopsJson(string json)
+        private static void LoadShopsJson(string json)
         {
             JObject obj = JObject.Parse(json);
             foreach (JProperty prop in obj.Properties())
             {
-                if (!int.TryParse(prop.Name, out int sid)) continue;
+                if (!int.TryParse(prop.Name, out int sid))
+                {
+                    continue;
+                }
+
                 Shops[sid] = prop.Value.ToObject<ShopEntry>();
             }
         }
 
-        static void LoadLive(string path)
+        private static void LoadLive(string path)
         {
             JObject obj = JObject.Parse(File.ReadAllText(path));
             if (obj["quests"] is JObject qs)
@@ -178,7 +209,9 @@ namespace Infinity_TestMod.Util
                 foreach (JProperty p in qs.Properties())
                 {
                     if (int.TryParse(p.Name, out int qid))
+                    {
                         Quests[qid] = p.Value.ToObject<QuestEntry>();
+                    }
                 }
             }
             if (obj["shops"] is JObject ss)
@@ -186,7 +219,9 @@ namespace Infinity_TestMod.Util
                 foreach (JProperty p in ss.Properties())
                 {
                     if (int.TryParse(p.Name, out int sid))
+                    {
                         Shops[sid] = p.Value.ToObject<ShopEntry>();
+                    }
                 }
             }
         }

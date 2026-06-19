@@ -1,7 +1,7 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // UIBank isn't a UIWindow subclass (it derives from MonoBehaviour
     // directly), so the generic UIWindow.Show hook doesn't cover it.

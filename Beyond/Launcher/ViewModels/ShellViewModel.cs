@@ -1,6 +1,6 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
 
 namespace Launcher.ViewModels
 {
@@ -13,7 +13,7 @@ namespace Launcher.ViewModels
     {
         private int _sessionCounter;
 
-        public ObservableCollection<MainWindowViewModel> Sessions { get; } = new();
+        public ObservableCollection<MainWindowViewModel> Sessions { get; } = [];
 
         [ObservableProperty] private MainWindowViewModel? _selectedSession;
 
@@ -32,7 +32,7 @@ namespace Launcher.ViewModels
         public void AddSessionWithCredentials(string? user, string? pass, string? nickname = null)
         {
             _sessionCounter++;
-            var session = new MainWindowViewModel
+            MainWindowViewModel session = new()
             {
                 Title = $"Session {_sessionCounter}",
                 PresetUsername = user,
@@ -59,7 +59,10 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void CloseSession(MainWindowViewModel session)
         {
-            if (session == null) return;
+            if (session == null)
+            {
+                return;
+            }
 
             int index = Sessions.IndexOf(session);
             session.Shutdown();
@@ -78,7 +81,10 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void BroadcastSkipCutscene()
         {
-            foreach (var s in Sessions) s.SendCommandExternal("SkipCutscene");
+            foreach (MainWindowViewModel s in Sessions)
+            {
+                s.SendCommandExternal("SkipCutscene");
+            }
         }
 
         partial void OnIsConfiguratorSelectedChanged(bool value)
@@ -102,7 +108,10 @@ namespace Launcher.ViewModels
 
         public void Shutdown()
         {
-            foreach (var s in Sessions) s.Shutdown();
+            foreach (MainWindowViewModel s in Sessions)
+            {
+                s.Shutdown();
+            }
         }
     }
 }

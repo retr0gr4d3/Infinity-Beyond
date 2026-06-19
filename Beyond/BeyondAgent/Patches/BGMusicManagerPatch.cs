@@ -1,8 +1,8 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 using UnityEngine;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Passive music catalog feeder. Fires for every track the game registers
     // with BGMusicManager — area BGM, cutscene stings, our own Jukebox loads.
@@ -14,7 +14,7 @@ namespace Infinity_TestMod.Patches
         {
             try
             {
-                float len = clip != null ? clip.length : 0f;
+                float len = (clip?.length) ?? 0f;
                 MusicCatalog.Record(id, name ?? "", len, name ?? "");
             }
             catch { }

@@ -1,7 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
-using System.Threading.Tasks;
 using Launcher.ViewModels;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Launcher.Views
 {
@@ -22,9 +23,13 @@ namespace Launcher.Views
 
         private async Task<string?> BrowseFolderAsync()
         {
-            var topLevel = TopLevel.GetTopLevel(this);
-            if (topLevel == null) return null;
-            var folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            TopLevel? topLevel = TopLevel.GetTopLevel(this);
+            if (topLevel == null)
+            {
+                return null;
+            }
+
+            IReadOnlyList<IStorageFolder> folders = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = "Select AdventureQuest Worlds Infinity Installation Directory",
                 AllowMultiple = false

@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Top-left UIPlayerPanel writes target.Name into a TMP_Text every Update via
     // setText(). Postfix and overwrite the label when the panel's target is the
@@ -11,13 +11,27 @@ namespace Infinity_TestMod.Patches
     {
         public static void Postfix(UIPlayerPanel __instance)
         {
-            if (string.IsNullOrEmpty(TestMod.spoofedName))
+            if (string.IsNullOrEmpty(BeyondAgentClass.spoofedName))
+            {
                 return;
-            if (__instance == null || __instance.nameText == null) return;
-            if (__instance.target == null || Entity.mainPlayer == null) return;
-            if (__instance.target != Entity.mainPlayer) return;
+            }
 
-            __instance.nameText.text = TestMod.spoofedName;
+            if (__instance == null || __instance.nameText == null)
+            {
+                return;
+            }
+
+            if (__instance.target == null || Entity.mainPlayer == null)
+            {
+                return;
+            }
+
+            if (__instance.target != Entity.mainPlayer)
+            {
+                return;
+            }
+
+            __instance.nameText.text = BeyondAgentClass.spoofedName;
         }
     }
 }

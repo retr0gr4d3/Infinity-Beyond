@@ -16,8 +16,8 @@ namespace Launcher.Views
         public SessionView()
         {
             InitializeComponent();
-            
-            var sidebar = this.FindControl<Border>("Sidebar");
+
+            Border? sidebar = this.FindControl<Border>("Sidebar");
             if (sidebar != null)
             {
                 sidebar.PropertyChanged += (sender, args) =>
@@ -32,20 +32,20 @@ namespace Launcher.Views
                 };
             }
 
-            this.LayoutUpdated += OnLayoutUpdated;
+            LayoutUpdated += OnLayoutUpdated;
         }
 
         protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
         {
             base.OnAttachedToVisualTree(e);
-            
+
             _parentWindow = TopLevel.GetTopLevel(this) as Window;
             if (_parentWindow != null)
             {
                 _parentWindow.PropertyChanged += OnWindowPropertyChanged;
                 _parentWindow.PositionChanged += OnWindowPositionChanged;
             }
-            
+
             Dispatcher.UIThread.Post(() =>
             {
                 UpdateChildWindowState();
@@ -66,25 +66,25 @@ namespace Launcher.Views
                 _childWindow.Close();
                 _childWindow = null;
             }
-            
+
             base.OnDetachedFromVisualTree(e);
         }
 
         protected override void OnDataContextChanged(EventArgs e)
         {
             base.OnDataContextChanged(e);
-            
+
             if (_viewModel != null)
             {
                 _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
             }
-            
+
             _viewModel = DataContext as MainWindowViewModel;
             if (_viewModel != null)
             {
                 _viewModel.PropertyChanged += OnViewModelPropertyChanged;
             }
-            
+
             Dispatcher.UIThread.Post(() =>
             {
                 UpdateChildWindowState();
@@ -125,7 +125,7 @@ namespace Launcher.Views
 
         private Window CreateChildWindow()
         {
-            var btn = new ToggleButton
+            ToggleButton btn = new()
             {
                 Name = "CollapseButton",
                 Width = 20,
@@ -144,7 +144,7 @@ namespace Launcher.Views
                 }
             };
 
-            var sidebar = this.FindControl<Border>("Sidebar");
+            Border? sidebar = this.FindControl<Border>("Sidebar");
             if (sidebar != null)
             {
                 btn.IsChecked = sidebar.IsVisible;
@@ -152,7 +152,7 @@ namespace Launcher.Views
                 {
                     sidebar.IsVisible = btn.IsChecked ?? false;
                 };
-                
+
                 sidebar.PropertyChanged += (s, e) =>
                 {
                     if (e.Property == Border.IsVisibleProperty)
@@ -162,7 +162,7 @@ namespace Launcher.Views
                 };
             }
 
-            var win = new Window
+            Window win = new()
             {
                 WindowDecorations = WindowDecorations.None,
                 Background = Avalonia.Media.Brushes.Transparent,
@@ -180,8 +180,7 @@ namespace Launcher.Views
 
         private void UpdateChildWindowState()
         {
-            var vm = DataContext as MainWindowViewModel;
-            bool isSelected = vm != null && vm.IsSelected;
+            bool isSelected = DataContext is MainWindowViewModel vm && vm.IsSelected;
 
             bool isWindowVisible = _parentWindow != null && _parentWindow.IsVisible;
             bool isWindowNotMinimized = _parentWindow != null && _parentWindow.WindowState != WindowState.Minimized;
@@ -190,11 +189,8 @@ namespace Launcher.Views
 
             if (shouldBeOpen)
             {
-                if (_childWindow == null)
-                {
-                    _childWindow = CreateChildWindow();
-                }
-                
+                _childWindow ??= CreateChildWindow();
+
                 if (!_childWindow.IsVisible)
                 {
                     _childWindow.Show(_parentWindow!);
@@ -212,16 +208,22 @@ namespace Launcher.Views
 
         private void UpdateChildWindowPosition()
         {
-            if (_childWindow == null || _parentWindow == null || !_childWindow.IsVisible) return;
+            if (_childWindow == null || _parentWindow == null || !_childWindow.IsVisible)
+            {
+                return;
+            }
 
             try
             {
-                var anchor = this.FindControl<Control>("PopupAnchor");
-                if (anchor == null || !anchor.IsVisible || TopLevel.GetTopLevel(anchor) == null) return;
+                Control? anchor = this.FindControl<Control>("PopupAnchor");
+                if (anchor == null || !anchor.IsVisible || TopLevel.GetTopLevel(anchor) == null)
+                {
+                    return;
+                }
 
-                var screenPos = anchor.PointToScreen(new Point(0, 0));
-                var targetPos = new PixelPoint(screenPos.X, screenPos.Y - 20);
-                
+                PixelPoint screenPos = anchor.PointToScreen(new Point(0, 0));
+                PixelPoint targetPos = new(screenPos.X, screenPos.Y - 20);
+
                 _childWindow.Position = targetPos;
             }
             catch (Exception ex)

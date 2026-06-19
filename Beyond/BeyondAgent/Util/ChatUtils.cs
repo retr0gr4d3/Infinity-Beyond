@@ -1,4 +1,4 @@
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     public static class ChatUtils
     {

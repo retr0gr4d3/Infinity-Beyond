@@ -1,6 +1,6 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
+using System.Collections.ObjectModel;
 
 namespace Launcher.ViewModels
 {
@@ -9,63 +9,52 @@ namespace Launcher.ViewModels
     public partial class MainWindowViewModel
     {
         // --- Enable toggles ---
-        private bool _autoskillsActive;
         public bool AutoskillsActive
         {
-            get => _autoskillsActive;
-            set => UpdateSetting(ref _autoskillsActive, value, "autoskillsActive");
+            get;
+            set => UpdateSetting(ref field, value, "autoskillsActive");
         }
-
-        private bool _retroAutoskillsActive;
         public bool RetroAutoskillsActive
         {
-            get => _retroAutoskillsActive;
-            set => UpdateSetting(ref _retroAutoskillsActive, value, "retroAutoskillsActive");
+            get;
+            set => UpdateSetting(ref field, value, "retroAutoskillsActive");
         }
 
         // --- Skillset manager ---
-        private string _skillsetEditCombo = "";
         public string SkillsetEditCombo
         {
-            get => _skillsetEditCombo;
-            set => UpdateSetting(ref _skillsetEditCombo, value, "skillsetEditCombo");
-        }
-
-        private string _skillsetEditName = "";
+            get;
+            set => UpdateSetting(ref field, value, "skillsetEditCombo");
+        } = "";
         public string SkillsetEditName
         {
-            get => _skillsetEditName;
-            set => UpdateSetting(ref _skillsetEditName, value, "skillsetEditName");
-        }
-
-        private string _skillsetFileInput = "";
+            get;
+            set => UpdateSetting(ref field, value, "skillsetEditName");
+        } = "";
         public string SkillsetFileInput
         {
-            get => _skillsetFileInput;
-            set => UpdateSetting(ref _skillsetFileInput, value, "skillsetFileInput");
-        }
-
-        private string _skillsetImportExportText = "";
+            get;
+            set => UpdateSetting(ref field, value, "skillsetFileInput");
+        } = "";
         public string SkillsetImportExportText
         {
-            get => _skillsetImportExportText;
-            set => UpdateSetting(ref _skillsetImportExportText, value, "skillsetImportExportText");
-        }
+            get;
+            set => UpdateSetting(ref field, value, "skillsetImportExportText");
+        } = "";
 
-        private int _selectedSkillsetIndex = -1;
         public int SelectedSkillsetIndex
         {
-            get => _selectedSkillsetIndex;
+            get;
             set
             {
-                if (SetProperty(ref _selectedSkillsetIndex, value) && !_isUpdatingFromMod)
+                if (SetProperty(ref field, value) && !_isUpdatingFromMod)
                 {
                     _connection.SendCommand("SelectSkillset", new JObject { ["Index"] = value });
                 }
             }
-        }
+        } = -1;
 
-        public ObservableCollection<SkillsetEntry> SavedSkillsets { get; } = new ObservableCollection<SkillsetEntry>();
+        public ObservableCollection<SkillsetEntry> SavedSkillsets { get; } = [];
 
         // --- Per-key delay ---
         private string _skill1Delay = "1000";
@@ -75,7 +64,9 @@ namespace Launcher.ViewModels
             set
             {
                 if (SetProperty(ref _skill1Delay, value) && !_isUpdatingFromMod)
+                {
                     SendRetroDelaysUpdate();
+                }
             }
         }
 
@@ -86,7 +77,9 @@ namespace Launcher.ViewModels
             set
             {
                 if (SetProperty(ref _skill2Delay, value) && !_isUpdatingFromMod)
+                {
                     SendRetroDelaysUpdate();
+                }
             }
         }
 
@@ -97,7 +90,9 @@ namespace Launcher.ViewModels
             set
             {
                 if (SetProperty(ref _skill3Delay, value) && !_isUpdatingFromMod)
+                {
                     SendRetroDelaysUpdate();
+                }
             }
         }
 
@@ -108,7 +103,9 @@ namespace Launcher.ViewModels
             set
             {
                 if (SetProperty(ref _skill4Delay, value) && !_isUpdatingFromMod)
+                {
                     SendRetroDelaysUpdate();
+                }
             }
         }
 
@@ -119,7 +116,9 @@ namespace Launcher.ViewModels
             set
             {
                 if (SetProperty(ref _skill5Delay, value) && !_isUpdatingFromMod)
+                {
                     SendRetroDelaysUpdate();
+                }
             }
         }
 
@@ -143,7 +142,9 @@ namespace Launcher.ViewModels
                     SendRetroFreesUpdate();
                 }
                 if (SetProperty(ref _skill1Wait, value) && !_isUpdatingFromMod)
+                {
                     SendRetroWaitsUpdate();
+                }
             }
         }
 
@@ -160,7 +161,9 @@ namespace Launcher.ViewModels
                     SendRetroFreesUpdate();
                 }
                 if (SetProperty(ref _skill2Wait, value) && !_isUpdatingFromMod)
+                {
                     SendRetroWaitsUpdate();
+                }
             }
         }
 
@@ -177,7 +180,9 @@ namespace Launcher.ViewModels
                     SendRetroFreesUpdate();
                 }
                 if (SetProperty(ref _skill3Wait, value) && !_isUpdatingFromMod)
+                {
                     SendRetroWaitsUpdate();
+                }
             }
         }
 
@@ -194,7 +199,9 @@ namespace Launcher.ViewModels
                     SendRetroFreesUpdate();
                 }
                 if (SetProperty(ref _skill4Wait, value) && !_isUpdatingFromMod)
+                {
                     SendRetroWaitsUpdate();
+                }
             }
         }
 
@@ -211,7 +218,9 @@ namespace Launcher.ViewModels
                     SendRetroFreesUpdate();
                 }
                 if (SetProperty(ref _skill5Wait, value) && !_isUpdatingFromMod)
+                {
                     SendRetroWaitsUpdate();
+                }
             }
         }
 
@@ -235,7 +244,9 @@ namespace Launcher.ViewModels
                     SendRetroWaitsUpdate();
                 }
                 if (SetProperty(ref _skill1Free, value) && !_isUpdatingFromMod)
+                {
                     SendRetroFreesUpdate();
+                }
             }
         }
 
@@ -252,7 +263,9 @@ namespace Launcher.ViewModels
                     SendRetroWaitsUpdate();
                 }
                 if (SetProperty(ref _skill2Free, value) && !_isUpdatingFromMod)
+                {
                     SendRetroFreesUpdate();
+                }
             }
         }
 
@@ -269,7 +282,9 @@ namespace Launcher.ViewModels
                     SendRetroWaitsUpdate();
                 }
                 if (SetProperty(ref _skill3Free, value) && !_isUpdatingFromMod)
+                {
                     SendRetroFreesUpdate();
+                }
             }
         }
 
@@ -286,7 +301,9 @@ namespace Launcher.ViewModels
                     SendRetroWaitsUpdate();
                 }
                 if (SetProperty(ref _skill4Free, value) && !_isUpdatingFromMod)
+                {
                     SendRetroFreesUpdate();
+                }
             }
         }
 
@@ -303,7 +320,9 @@ namespace Launcher.ViewModels
                     SendRetroWaitsUpdate();
                 }
                 if (SetProperty(ref _skill5Free, value) && !_isUpdatingFromMod)
+                {
                     SendRetroFreesUpdate();
+                }
             }
         }
 

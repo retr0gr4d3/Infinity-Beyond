@@ -58,39 +58,30 @@ namespace Launcher.ViewModels
 
     public class ChainEntryViewModel : ViewModelBase
     {
-        private int _qid = 1;
         public int Qid
         {
-            get => _qid;
-            set => SetProperty(ref _qid, value);
-        }
-
-        private string _area = "";
+            get;
+            set => SetProperty(ref field, value);
+        } = 1;
         public string Area
         {
-            get => _area;
-            set => SetProperty(ref _area, value);
-        }
-
-        private string _frame = "";
+            get;
+            set => SetProperty(ref field, value);
+        } = "";
         public string Frame
         {
-            get => _frame;
-            set => SetProperty(ref _frame, value);
-        }
-
-        private string _pad = "Spawn";
+            get;
+            set => SetProperty(ref field, value);
+        } = "";
         public string Pad
         {
-            get => _pad;
-            set => SetProperty(ref _pad, value);
-        }
-
-        private int _items = 1;
+            get;
+            set => SetProperty(ref field, value);
+        } = "Spawn";
         public int Items
         {
-            get => _items;
-            set => SetProperty(ref _items, value);
-        }
+            get;
+            set => SetProperty(ref field, value);
+        } = 1;
     }
 }

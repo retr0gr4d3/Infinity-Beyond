@@ -37,7 +37,7 @@ namespace Launcher
             }
 
             // Prefer the Unity player exe: "<name>.exe" sitting next to "<name>_Data".
-            foreach (var exe in exes)
+            foreach (string exe in exes)
             {
                 string name = Path.GetFileNameWithoutExtension(exe);
                 if (Directory.Exists(Path.Combine(gameDirectory, name + "_Data")))
@@ -48,7 +48,7 @@ namespace Launcher
             }
 
             // Fallback: first executable that isn't a known Unity helper.
-            foreach (var exe in exes)
+            foreach (string exe in exes)
             {
                 string name = Path.GetFileNameWithoutExtension(exe);
                 if (name.IndexOf("UnityCrashHandler", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -78,6 +78,9 @@ namespace Launcher
         }
 
         /// <summary>True when a game executable can be found in the directory.</summary>
-        public static bool Exists(string? gameDirectory) => TryResolveGameExe(gameDirectory, out _);
+        public static bool Exists(string? gameDirectory)
+        {
+            return TryResolveGameExe(gameDirectory, out _);
+        }
     }
 }

@@ -1,9 +1,10 @@
+using BeyondAgent.Util;
 using HarmonyLib;
 using System;
 using System.IO;
 using UnityEngine;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Local bundle override. When a requested bundle Filename starts with
     // "local/", load bytes off disk from UserData\Beyond\customBundles\<rest>
@@ -29,10 +30,17 @@ namespace Infinity_TestMod.Patches
             {
                 AssetBundleData data = __instance?.BundleData;
                 string fn = data?.Filename;
-                if (string.IsNullOrEmpty(fn)) return true;
-                if (!fn.StartsWith(Prefix_, StringComparison.OrdinalIgnoreCase)) return true;
+                if (string.IsNullOrEmpty(fn))
+                {
+                    return true;
+                }
 
-                string rest = fn.Substring(Prefix_.Length);
+                if (!fn.StartsWith(Prefix_, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                string rest = fn[Prefix_.Length..];
                 string root = Path.Combine(BeyondEnv.UserDataDirectory, "Beyond", "customBundles");
                 System.IO.Directory.CreateDirectory(root);
                 string path = Path.Combine(root, rest);
@@ -41,7 +49,10 @@ namespace Infinity_TestMod.Patches
                 if (!File.Exists(path) && !rest.EndsWith(".unity3d", StringComparison.OrdinalIgnoreCase))
                 {
                     string alt = path + ".unity3d";
-                    if (File.Exists(alt)) path = alt;
+                    if (File.Exists(alt))
+                    {
+                        path = alt;
+                    }
                 }
 
                 if (!File.Exists(path))

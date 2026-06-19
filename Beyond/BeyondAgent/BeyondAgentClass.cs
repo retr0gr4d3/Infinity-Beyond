@@ -1,5 +1,5 @@
-using Infinity_TestMod.Patches;
-using Infinity_TestMod.Util;
+using BeyondAgent.Patches;
+using BeyondAgent.Util;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,9 +7,9 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace Infinity_TestMod
+namespace BeyondAgent
 {
-    public class TestMod : BeyondMod
+    public class BeyondAgentClass : BeyondMod
     {
         public static bool useImgui = false;
         public static bool showWindow = false;
@@ -131,13 +131,13 @@ namespace Infinity_TestMod
                     ["Stub: Pyromancer"] = new JObject { ["ID"] = "103", ["Skills"] = new JObject() },
                 };
                 CharacterClass.ClassNodes = classes;
-                CharacterClass.SkillNodes = new System.Collections.Generic.Dictionary<string, JObject>
+                CharacterClass.SkillNodes = new Dictionary<string, JObject>
                 {
-                    ["headers"] = new JObject(),
-                    ["nodes"] = new JObject(),
-                    ["helpers"] = new JObject(),
-                    ["conditionals"] = new JObject(),
-                    ["activators"] = new JObject(),
+                    ["headers"] = [],
+                    ["nodes"] = [],
+                    ["helpers"] = [],
+                    ["conditionals"] = [],
+                    ["activators"] = [],
                 };
                 // PerformSave's Editing branch accesses SkillData[SelectedSkill].
                 // When the user clicks Save on a stub class without ever
@@ -151,12 +151,12 @@ namespace Infinity_TestMod
                     description: "placeholder for stubbed Forge UI",
                     icon: "",
                     slot: 0,
-                    data: new JArray(),
-                    forgedata: new JArray(),
+                    data: [],
+                    forgedata: [],
                     autohRange: 0f,
                     autovRange: 0f,
                     mana: 0);
-                CharacterClass.AllSkills = new System.Collections.Generic.Dictionary<int, Skill>
+                CharacterClass.AllSkills = new Dictionary<int, Skill>
                 {
                     [0] = stubSkill,
                 };
@@ -185,9 +185,13 @@ namespace Infinity_TestMod
 
         private static string FormatTrackTime(float seconds)
         {
-            if (seconds <= 0f) return "?";
+            if (seconds <= 0f)
+            {
+                return "?";
+            }
+
             int s = (int)System.Math.Round(seconds);
-            return $"{s / 60}:{(s % 60):D2}";
+            return $"{s / 60}:{s % 60:D2}";
         }
 
         // Gender flip — mutates Entity.mainPlayer.Gender (enum field) while
@@ -245,7 +249,7 @@ namespace Infinity_TestMod
         private static string questRunnerAreaInput = "";
         private static string questRunnerFrameInput = "";
         private static string questRunnerPadInput = "Spawn";
-        public static System.Collections.Generic.List<string> questRunnerLog = new();
+        public static List<string> questRunnerLog = [];
         private static Vector2 questRunnerLogScroll = Vector2.zero;
         private static bool showQuestPicker = false;
         private static string questPickerFilter = "";
@@ -260,7 +264,7 @@ namespace Infinity_TestMod
         private static string receiverJsonInput = "{\n  \"Cmd\": \"\",\n  \"Params\": {}\n}";
         private static Vector2 receiverScrollPosition = Vector2.zero;
         private static System.Reflection.MethodInfo _wrapAndQueueResponseMethod = null;
-        public static System.Collections.Generic.List<string> interceptedPacketsLog = new();
+        public static List<string> interceptedPacketsLog = [];
         private static Vector2 interceptorScrollPosition = Vector2.zero;
 
         public struct SniffEntry
@@ -271,7 +275,7 @@ namespace Infinity_TestMod
 
         public static bool snifferServerActive = false;
         public static bool snifferClientActive = false;
-        public static System.Collections.Generic.List<SniffEntry> snifferLog = new();
+        public static List<SniffEntry> snifferLog = [];
         public static Vector2 snifferScrollPosition = Vector2.zero;
         public static int selectedSniffIndex = -1;
         public static string selectedPacketJson = "";
@@ -280,13 +284,13 @@ namespace Infinity_TestMod
         private static GUIStyle rowButtonStyle;
         private static GUIStyle previewTextStyle;
 
-        private static System.Collections.Generic.List<int> skillOrder = new() { 0, 1, 2, 3, 4 };
-        private static System.Collections.Generic.Dictionary<int, float> skillDelays = new()
+        private static readonly List<int> skillOrder = [0, 1, 2, 3, 4];
+        private static readonly Dictionary<int, float> skillDelays = new()
         {
             { 0, 1f }, { 1, 1f }, { 2, 1f }, { 3, 1f }, { 4, 1f }
         };
-        private static string[] delayInputs = new string[] { "1000", "1000", "1000", "1000", "1000" };
-        private static bool[] skillEnabled = new bool[] { true, true, true, true, true };
+        private static readonly string[] delayInputs = ["1000", "1000", "1000", "1000", "1000"];
+        private static readonly bool[] skillEnabled = [true, true, true, true, true];
         public static bool interceptActive = false;
         public static bool interceptorLoggingActive = false;
         public static string lastPacketInfo = "None";
@@ -294,11 +298,11 @@ namespace Infinity_TestMod
         private static float nextSkillTime = 0f;
 
         public static bool retroAutoskillsActive = false;
-        private static System.Collections.Generic.Dictionary<int, float> retroSkillDelays = new()
+        private static readonly Dictionary<int, float> retroSkillDelays = new()
         {
             { 0, 1f }, { 1, 1f }, { 2, 1f }, { 3, 1f }, { 4, 1f }
         };
-        private static string[] retroDelayInputs = new string[] { "1000", "1000", "1000", "1000", "1000" };
+        private static readonly string[] retroDelayInputs = ["1000", "1000", "1000", "1000", "1000"];
         private static int retroCurrentSkillIndex = 0;
         private static float retroNextSkillTime = 0f;
 
@@ -312,18 +316,18 @@ namespace Infinity_TestMod
             public string Frees { get; set; }
         }
 
-        private static System.Collections.Generic.List<SkillsetEntry> savedSkillsets = new();
+        private static List<SkillsetEntry> savedSkillsets = [];
         private static int selectedSkillsetIndex = -1;
         private static string skillsetEditName = "Generic";
         private static string skillsetEditCombo = "1,2,3,4,5";
-        private static bool[] retroSkillWaits = new bool[5] { false, false, false, false, false };
-        private static bool[] retroSkillFrees = new bool[5] { false, false, false, false, false };
+        private static readonly bool[] retroSkillWaits = [false, false, false, false, false];
+        private static readonly bool[] retroSkillFrees = [false, false, false, false, false];
         private static bool lastCastWasFree = false;
         private static string skillsetImportExportText = "";
         private static string skillsetFileInput = "export_skillset.txt";
         private static string _skillsetFilePath;
         private static Vector2 retroSkillsetsScroll = Vector2.zero;
-        private static System.Collections.Generic.List<int> activeComboList = new();
+        private static List<int> activeComboList = [];
 
         private static Texture2D buttonTexture;
         private static Texture2D buttonHoverTexture;
@@ -341,9 +345,9 @@ namespace Infinity_TestMod
         private static GUIStyle logTextStyle;
         private static GUIStyle containerBoxStyle;
 
-        public static TestMod activeInstance = null;
+        public static BeyondAgentClass activeInstance = null;
 
-        public TestMod()
+        public BeyondAgentClass()
         {
             activeInstance = this;
         }
@@ -352,20 +356,21 @@ namespace Infinity_TestMod
 
         public static void Initialize()
         {
-            if (_initialized) return;
+            if (_initialized)
+            {
+                return;
+            }
+
             _initialized = true;
 
             try
             {
-                if (activeInstance == null)
-                {
-                    activeInstance = new TestMod();
-                }
+                activeInstance ??= new BeyondAgentClass();
                 activeInstance.OnInitialize();
             }
             catch (System.Exception ex)
             {
-                UnityEngine.Debug.LogError("[Beyond] Standalone Mod Agent Initialization failed: " + ex);
+                Debug.LogError("[Beyond] Standalone Mod Agent Initialization failed: " + ex);
             }
         }
 
@@ -374,7 +379,10 @@ namespace Infinity_TestMod
             if (defaultTargetFrameRate == -2)
             {
                 defaultTargetFrameRate = UnityEngine.Application.targetFrameRate;
-                if (defaultTargetFrameRate <= 0) defaultTargetFrameRate = 60;
+                if (defaultTargetFrameRate <= 0)
+                {
+                    defaultTargetFrameRate = 60;
+                }
             }
 
             LauncherServer.Start();
@@ -390,7 +398,7 @@ namespace Infinity_TestMod
             _skillsetFilePath = System.IO.Path.Combine(userDir, "skillsets.json");
             LoadSkillsets();
 
-            HarmonyLib.Harmony harmony = new(nameof(TestMod));
+            HarmonyLib.Harmony harmony = new(nameof(BeyondAgentClass));
             harmony.PatchAll();
             LoggerInstance.Msg("Harmony patches applied!");
             GenerateTextures();
@@ -406,7 +414,11 @@ namespace Infinity_TestMod
                 if (!string.IsNullOrEmpty(nick))
                 {
                     nick = nick.Trim();
-                    if (nick.Length > 24) nick = nick.Substring(0, 24);
+                    if (nick.Length > 24)
+                    {
+                        nick = nick[..24];
+                    }
+
                     spoofedName = nick;
                     nameSpoofInput = nick;
                     LoggerInstance.Msg($"Pre-seeded local name spoof from launcher nickname: '{nick}'.");
@@ -459,9 +471,9 @@ namespace Infinity_TestMod
                     // Game's Unity build lacks the Find*ByType replacements; the
                     // obsolete FindObjectOfType is the only binding available here.
 #pragma warning disable CS0618
-                    var login = UnityEngine.Object.FindObjectOfType<UILogin>();
+                    UILogin login = UnityEngine.Object.FindObjectOfType<UILogin>();
 #pragma warning restore CS0618
-                    if (login != null && login.gameObject.activeInHierarchy)
+                    if (login?.gameObject.activeInHierarchy == true)
                     {
                         string user = System.Environment.GetEnvironmentVariable("BEYOND_USER");
                         string pass = System.Environment.GetEnvironmentVariable("BEYOND_PASS");
@@ -502,10 +514,8 @@ namespace Infinity_TestMod
                     }
                     else
                     {
-#pragma warning disable CS0618
-                        var charSelect = UnityEngine.Object.FindObjectOfType<CharacterSelect>();
-#pragma warning restore CS0618
-                        if (charSelect != null && charSelect.gameObject.activeInHierarchy)
+                        CharacterSelect charSelect = Object.FindFirstObjectByType<CharacterSelect>();
+                        if (charSelect?.gameObject.activeInHierarchy == true)
                         {
                             charSelect.GoServerSelect();
                             triedAutoServerSelect = true;
@@ -564,7 +574,7 @@ namespace Infinity_TestMod
                     bool playerExists = false;
                     try
                     {
-                        playerExists = (Entity.mainPlayer != null);
+                        playerExists = Entity.mainPlayer != null;
                     }
                     catch { }
 
@@ -642,7 +652,7 @@ namespace Infinity_TestMod
                     bool playerExists = false;
                     try
                     {
-                        playerExists = (Entity.mainPlayer != null);
+                        playerExists = Entity.mainPlayer != null;
                     }
                     catch { }
 
@@ -696,7 +706,7 @@ namespace Infinity_TestMod
                             }
                         }
 
-                        List<int> combo = activeComboList.Count > 0 ? activeComboList : new System.Collections.Generic.List<int>() { 0, 1, 2, 3, 4 };
+                        List<int> combo = activeComboList.Count > 0 ? activeComboList : [0, 1, 2, 3, 4];
                         if (combo.Count > 0)
                         {
                             int targetSkillSlot = -1;
@@ -706,7 +716,7 @@ namespace Infinity_TestMod
                             while (checkCount < combo.Count)
                             {
                                 int tempSlot = combo[retroCurrentSkillIndex % combo.Count];
-                                if (tempSlot >= 0 && tempSlot < 5)
+                                if (tempSlot is >= 0 and < 5)
                                 {
                                     targetSkillSlot = tempSlot;
                                     found = true;
@@ -754,7 +764,7 @@ namespace Infinity_TestMod
                                     // Skill was on cooldown/disabled. Check again in 100ms.
                                     retroNextSkillTime = Time.time + 0.1f;
                                     bool waitThisSkill = false;
-                                    if (targetSkillSlot >= 0 && targetSkillSlot < 5)
+                                    if (targetSkillSlot is >= 0 and < 5)
                                     {
                                         waitThisSkill = retroSkillWaits[targetSkillSlot];
                                     }
@@ -816,7 +826,11 @@ namespace Infinity_TestMod
 
         public override void OnGUI()
         {
-            if (!useImgui) return;
+            if (!useImgui)
+            {
+                return;
+            }
+
             if (buttonTexture != null && buttonHoverTexture != null && buttonStyle == null)
             {
                 buttonStyle = new GUIStyle();
@@ -1054,15 +1068,14 @@ namespace Infinity_TestMod
 
         private void DrawWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, windowRect, 300f);
-            float contentWidth = 300f - 40f;  // -20px padding each side
+            ResizableWindow.BeginScaling(windowID, windowRect, 300f);
+            const float contentWidth = 300f - 40f;  // -20px padding each side
             GUI.Label(new Rect(20, 35, contentWidth, 25), "Tools & Automation", labelStyle);
-            int currentLevel = -1;
             try
             {
                 if (Entity.mainPlayer != null)
                 {
-                    currentLevel = Entity.mainPlayer.AccessLevel;
+                    int currentLevel = Entity.mainPlayer.AccessLevel;
                     if (!defaultsCaptured)
                     {
                         defaultUpgradeDays = Entity.mainPlayer.UpgradeDays;
@@ -1080,7 +1093,7 @@ namespace Infinity_TestMod
             }
 
             bool playerExists = false;
-            try { playerExists = (Entity.mainPlayer != null); } catch { }
+            try { playerExists = Entity.mainPlayer != null; } catch { }
 
             float curY = 70f;
 
@@ -1242,18 +1255,18 @@ namespace Infinity_TestMod
             curY = DrawSeparator(curY);
 
             // Section 8: View — camera zoom multiplier.
-            GUI.Label(new Rect(20, curY, 260, 20), $"<b>View</b>  <size=11>Zoom: {Util.CameraZoom.Multiplier:0.00}x</size>", labelStyle);
+            GUI.Label(new Rect(20, curY, 260, 20), $"<b>View</b>  <size=11>Zoom: {CameraZoom.Multiplier:0.00}x</size>", labelStyle);
             curY += 22f;
 
-            float newZoom = GUI.HorizontalSlider(new Rect(20, curY + 8, 195, 20), Util.CameraZoom.Multiplier, Util.CameraZoom.Min, Util.CameraZoom.Max);
-            if (!Mathf.Approximately(newZoom, Util.CameraZoom.Multiplier))
+            float newZoom = GUI.HorizontalSlider(new Rect(20, curY + 8, 195, 20), CameraZoom.Multiplier, CameraZoom.Min, CameraZoom.Max);
+            if (!Mathf.Approximately(newZoom, CameraZoom.Multiplier))
             {
-                Util.CameraZoom.Multiplier = newZoom;
-                Util.CameraZoom.Apply();
+                CameraZoom.Multiplier = newZoom;
+                CameraZoom.Apply();
             }
             if (GUI.Button(new Rect(220, curY, 60, 30), "Reset", closeButtonStyle))
             {
-                Util.CameraZoom.Reset();
+                CameraZoom.Reset();
             }
             curY += 30f;
 
@@ -1279,7 +1292,7 @@ namespace Infinity_TestMod
                     if (mgr != null)
                     {
                         mgr.EndPressed();
-                        Util.CameraZoom.Reset();
+                        CameraZoom.Reset();
                         LoggerInstance.Msg("Cutscene: skipped (zoom reset)");
                     }
                     else
@@ -1310,33 +1323,34 @@ namespace Infinity_TestMod
             }
             curY += 35f;
 
-            if (!Util.ResizableWindow.WasManuallyResized(9999))
+            if (!ResizableWindow.WasManuallyResized(9999))
+            {
                 windowRect.height = curY + 20f;
+            }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(300f));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(300f));
+            ResizableWindow.EndScaling();
         }
 
         private static string GetSkillKeyName(int slot)
         {
-            if (slot == 0) return "Key 1 (Auto)";
-            return $"Key {slot + 1}";
+            return slot == 0 ? "Key 1 (Auto)" : $"Key {slot + 1}";
         }
 
         private void DrawConfigWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, configWindowRect, 320f);
+            ResizableWindow.BeginScaling(windowID, configWindowRect, 320f);
             GUI.Label(new Rect(20, 35, 280, 20), "Configure Skill Delays & Order", labelStyle);
             GUI.Label(new Rect(20, 60, 90, 20), "Skill", labelStyle);
             GUI.Label(new Rect(115, 60, 65, 20), "Delay (ms)", labelStyle);
             GUI.Label(new Rect(190, 60, 70, 20), "Order", labelStyle);
             GUI.Label(new Rect(268, 60, 32, 20), "Auto", labelStyle);
 
-            int startY = 85;
+            const int startY = 85;
             for (int i = 0; i < skillOrder.Count; i++)
             {
                 int slot = skillOrder[i];
-                int currentY = startY + i * 42;
+                int currentY = startY + (i * 42);
 
                 GUI.Label(new Rect(20, currentY, 90, 35), GetSkillKeyName(slot), labelStyle);
 
@@ -1378,19 +1392,19 @@ namespace Infinity_TestMod
                 showConfigWindow = false;
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(320f));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(320f));
+            ResizableWindow.EndScaling();
         }
 
         private void DrawSkillsetTestWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, skillsetTestWindowRect, 320f);
-            float winWidth = 320f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, skillsetTestWindowRect, 320f);
+            const float winWidth = 320f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             bool playerExists = false;
-            try { playerExists = (Entity.mainPlayer != null); } catch { }
+            try { playerExists = Entity.mainPlayer != null; } catch { }
 
             float curY = 35f;
 
@@ -1442,7 +1456,7 @@ namespace Infinity_TestMod
             GUI.Label(new Rect(pad, curY, innerW, 20), "<b>Saved Skillsets:</b>", labelStyle);
             curY += 20f;
 
-            float scrollHeight = 90f;
+            const float scrollHeight = 90f;
             GUI.Box(new Rect(pad, curY, innerW, scrollHeight), "", containerBoxStyle ?? GUI.skin.box);
 
             float listHeight = Mathf.Max(scrollHeight - 10f, savedSkillsets.Count * 25f);
@@ -1931,18 +1945,21 @@ namespace Infinity_TestMod
             }
             curY += 45f;
 
-            if (!Util.ResizableWindow.WasManuallyResized(9986))
+            if (!ResizableWindow.WasManuallyResized(9986))
+            {
                 skillsetTestWindowRect.height = curY;
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(winWidth));
-            Util.ResizableWindow.EndScaling();
+            }
+
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
+            ResizableWindow.EndScaling();
         }
 
         private void DrawRetroTestsWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, retroTestsWindowRect, 320f);
-            float winWidth = 320f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, retroTestsWindowRect, 320f);
+            const float winWidth = 320f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             float curY = 35f;
 
@@ -1964,23 +1981,30 @@ namespace Infinity_TestMod
             }
             curY += 45f;
 
-            if (!Util.ResizableWindow.WasManuallyResized(9988))
+            if (!ResizableWindow.WasManuallyResized(9988))
+            {
                 retroTestsWindowRect.height = curY;
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(winWidth));
-            Util.ResizableWindow.EndScaling();
+            }
+
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
+            ResizableWindow.EndScaling();
         }
 
-        private static System.Collections.Generic.List<int> ParseCombo(string comboStr)
+        private static List<int> ParseCombo(string comboStr)
         {
-            List<int> list = new();
-            if (string.IsNullOrEmpty(comboStr)) return list;
+            List<int> list = [];
+            if (string.IsNullOrEmpty(comboStr))
+            {
+                return list;
+            }
+
             string[] parts = comboStr.Split(',');
             foreach (string part in parts)
             {
                 if (int.TryParse(part.Trim(), out int keyNum))
                 {
                     int slot = keyNum - 1;
-                    if (slot >= 0 && slot < 5)
+                    if (slot is >= 0 and < 5)
                     {
                         list.Add(slot);
                     }
@@ -1991,7 +2015,11 @@ namespace Infinity_TestMod
 
         private static void AddOrUpdateSkillset(string name, string combo, string delays, string waits, string frees)
         {
-            if (string.IsNullOrEmpty(name)) return;
+            if (string.IsNullOrEmpty(name))
+            {
+                return;
+            }
+
             int existingIdx = savedSkillsets.FindIndex(s => s.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase));
             if (existingIdx >= 0)
             {
@@ -2023,7 +2051,7 @@ namespace Infinity_TestMod
 
         private static void AddOrUpdateSkillset(string name, string combo, string delays, bool waitForSkill = false)
         {
-            string waits = string.Join(",", new bool[] { waitForSkill, waitForSkill, waitForSkill, waitForSkill, waitForSkill });
+            string waits = string.Join(",", [waitForSkill, waitForSkill, waitForSkill, waitForSkill, waitForSkill]);
             AddOrUpdateSkillset(name, combo, delays, waits, "false,false,false,false,false");
         }
 
@@ -2034,12 +2062,12 @@ namespace Infinity_TestMod
                 if (System.IO.File.Exists(_skillsetFilePath))
                 {
                     string json = System.IO.File.ReadAllText(_skillsetFilePath);
-                    savedSkillsets = Newtonsoft.Json.JsonConvert.DeserializeObject<System.Collections.Generic.List<SkillsetEntry>>(json) ?? new();
+                    savedSkillsets = Newtonsoft.Json.JsonConvert.DeserializeObject<List<SkillsetEntry>>(json) ?? [];
                     BeyondLog.Msg($"Loaded {savedSkillsets.Count} saved skillsets.");
                 }
                 else
                 {
-                    savedSkillsets = new();
+                    savedSkillsets = [];
                 }
             }
             catch (System.Exception ex)
@@ -2067,10 +2095,10 @@ namespace Infinity_TestMod
 
         private void DrawInterceptorWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, interceptorWindowRect, 500f);
-            float winWidth = 500f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, interceptorWindowRect, 500f);
+            const float winWidth = 500f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             string interceptorStatus = interceptActive ? "<color=red>STATUS: INTERCEPTING</color>" : "<color=green>STATUS: PASSIVE</color>";
             GUI.Label(new Rect(pad, 35, innerW - 130, 20), interceptorStatus, labelStyle);
@@ -2078,7 +2106,7 @@ namespace Infinity_TestMod
             interceptorLoggingActive = GUI.Toggle(new Rect(pad + innerW - 130, 35, 20, 20), interceptorLoggingActive, "");
             GUI.Label(new Rect(pad + innerW - 105, 35, 105, 20), "Log Allowed", labelStyle);
 
-            float btnW = (innerW - 10) / 3f;
+            const float btnW = (innerW - 10) / 3f;
             if (GUI.Button(new Rect(pad, 65, btnW, 35), "Block Packets", closeButtonStyle))
             {
                 interceptActive = true;
@@ -2091,7 +2119,7 @@ namespace Infinity_TestMod
                 LoggerInstance.Msg("Packet interception STOPPED.");
             }
 
-            if (GUI.Button(new Rect(pad + (btnW + 5) * 2, 65, btnW, 35), "Clear Logs", closeButtonStyle))
+            if (GUI.Button(new Rect(pad + ((btnW + 5) * 2), 65, btnW, 35), "Clear Logs", closeButtonStyle))
             {
                 lock (interceptedPacketsLog)
                 {
@@ -2118,7 +2146,7 @@ namespace Infinity_TestMod
             {
                 for (int i = 0; i < interceptedPacketsLog.Count; i++)
                 {
-                    GUI.Label(new Rect(10, 5 + i * 22, innerW - 40, 20), interceptedPacketsLog[i], logTextStyle);
+                    GUI.Label(new Rect(10, 5 + (i * 22), innerW - 40, 20), interceptedPacketsLog[i], logTextStyle);
                 }
             }
 
@@ -2129,18 +2157,18 @@ namespace Infinity_TestMod
                 showInterceptorWindow = false;
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(500f));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(500f));
+            ResizableWindow.EndScaling();
         }
 
         private void DrawSnifferWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, snifferWindowRect, 500f);
-            float winWidth = 500f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, snifferWindowRect, 500f);
+            const float winWidth = 500f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
-            float sniffBtnW = (innerW - 15) / 4f;
+            const float sniffBtnW = (innerW - 15) / 4f;
 
             string serverBtnText = snifferServerActive ? "Server: ON" : "Server: OFF";
             if (GUI.Button(new Rect(pad, 35, sniffBtnW, 35), serverBtnText, closeButtonStyle))
@@ -2158,7 +2186,7 @@ namespace Infinity_TestMod
 
             bool bothActive = snifferServerActive && snifferClientActive;
             string allBtnText = bothActive ? "All: ON" : "All: OFF";
-            if (GUI.Button(new Rect(pad + (sniffBtnW + 5) * 2, 35, sniffBtnW, 35), allBtnText, closeButtonStyle))
+            if (GUI.Button(new Rect(pad + ((sniffBtnW + 5) * 2), 35, sniffBtnW, 35), allBtnText, closeButtonStyle))
             {
                 if (bothActive)
                 {
@@ -2173,7 +2201,7 @@ namespace Infinity_TestMod
                 LoggerInstance.Msg($"Sniffer All: Server={snifferServerActive}, Client={snifferClientActive}");
             }
 
-            if (GUI.Button(new Rect(pad + (sniffBtnW + 5) * 3, 35, sniffBtnW, 35), "Clear", closeButtonStyle))
+            if (GUI.Button(new Rect(pad + ((sniffBtnW + 5) * 3), 35, sniffBtnW, 35), "Clear", closeButtonStyle))
             {
                 lock (snifferLog)
                 {
@@ -2189,7 +2217,7 @@ namespace Infinity_TestMod
             float sniffContentHeight = 210f;
             lock (snifferLog)
             {
-                sniffContentHeight = Mathf.Max(210f, snifferLog.Count * 26f + 10f);
+                sniffContentHeight = Mathf.Max(210f, (snifferLog.Count * 26f) + 10f);
             }
 
             snifferScrollPosition = GUI.BeginScrollView(
@@ -2202,7 +2230,7 @@ namespace Infinity_TestMod
             {
                 for (int i = 0; i < snifferLog.Count; i++)
                 {
-                    float yPos = 5 + i * 26;
+                    float yPos = 5 + (i * 26);
                     if (selectedSniffIndex == i)
                     {
                         GUI.Box(new Rect(5, yPos, innerW - 90, 22), "");
@@ -2228,8 +2256,8 @@ namespace Infinity_TestMod
             GUI.Label(new Rect(pad, 310, innerW, 20), "Selected Packet JSON Preview:", labelStyle);
 
             Vector2 previewSize = previewTextStyle != null ? previewTextStyle.CalcSize(new GUIContent(selectedPacketJson)) : Vector2.zero;
-            float minContentW = innerW - 4;
-            float minContentH = 120 - 4;
+            const float minContentW = innerW - 4;
+            const float minContentH = 120 - 4;
             float contentWidth = Mathf.Max(minContentW, previewSize.x + 20);
             float contentHeight = Mathf.Max(minContentH, previewSize.y + 20);
 
@@ -2261,20 +2289,20 @@ namespace Infinity_TestMod
                 showSnifferWindow = false;
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(winWidth));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
+            ResizableWindow.EndScaling();
         }
 
         private void DrawSenderWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, senderWindowRect, 500f);
-            float winWidth = 500f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, senderWindowRect, 500f);
+            const float winWidth = 500f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             GUI.Label(new Rect(pad, 35, innerW, 20), "Manual Inject (Send one packet)", labelStyle);
 
-            float Y = 65f;
+            const float Y = 65f;
 
             GUI.Label(new Rect(20, Y + 5, 40, 25), "Cmd:", labelStyle);
             senderCmdInput = GUI.TextField(new Rect(60, Y, 70, 35), senderCmdInput, textFieldStyle);
@@ -2294,7 +2322,7 @@ namespace Infinity_TestMod
                 string cmd = senderCmdInput.Trim();
                 string paramsRaw = senderParamsInput;
 
-                System.Collections.Generic.List<string> paramsList = new();
+                List<string> paramsList = [];
                 if (!string.IsNullOrEmpty(paramsRaw))
                 {
                     if (senderSingleString)
@@ -2351,23 +2379,23 @@ namespace Infinity_TestMod
                 showSenderWindow = false;
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(500f));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(500f));
+            ResizableWindow.EndScaling();
         }
 
         private void DrawReceiverWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, receiverWindowRect, 500f);
-            float winWidth = 500f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, receiverWindowRect, 500f);
+            const float winWidth = 500f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             GUI.Label(new Rect(pad, 35, innerW, 20), "Server Packet Injector (Fake Server -> Client)", labelStyle);
 
             GUI.Label(new Rect(pad, 55, innerW, 20), "Enter raw server JSON payload:", labelStyle);
 
             // Preset loaders
-            float presetBtnW = (innerW - 10) / 3f;
+            const float presetBtnW = (innerW - 10) / 3f;
             if (GUI.Button(new Rect(pad, 80, presetBtnW, 35), "Preset: rNotify", closeButtonStyle))
             {
                 GUI.FocusControl(null);
@@ -2382,17 +2410,17 @@ namespace Infinity_TestMod
                 receiverJsonInput = "{\"Cmd\":\"chatm\",\"msg\":\"Hello from the server!\",\"Name\":\"SERVER\",\"channel\":\"server\"}";
             }
 
-            if (GUI.Button(new Rect(pad + (presetBtnW + 5) * 2, 80, presetBtnW, 35), "Preset: Zone Chat", closeButtonStyle))
+            if (GUI.Button(new Rect(pad + ((presetBtnW + 5) * 2), 80, presetBtnW, 35), "Preset: Zone Chat", closeButtonStyle))
             {
                 GUI.FocusControl(null);
                 GUIUtility.keyboardControl = 0;
                 string name = "Loader";
-                try { if (Entity.mainPlayer != null) name = Entity.mainPlayer.Name; } catch { }
+                try { if (Entity.mainPlayer != null) { name = Entity.mainPlayer.Name; } } catch { }
                 receiverJsonInput = "{\"Cmd\":\"chatm\",\"msg\":\"Hello, zone!\",\"Name\":\"" + name + "\",\"channel\":\"zone\"}";
             }
 
-            float contentWidth = innerW - 4;
-            float contentHeight = 150f;
+            const float contentWidth = innerW - 4;
+            const float contentHeight = 150f;
 
             receiverScrollPosition = GUI.BeginScrollView(
                 new Rect(pad, 125, innerW, 120),
@@ -2408,7 +2436,7 @@ namespace Infinity_TestMod
 
             GUI.EndScrollView();
 
-            float btnW = (innerW - 10) / 3f;
+            const float btnW = (innerW - 10) / 3f;
 
             if (GUI.Button(new Rect(pad, 255, btnW, 35), "Inject", closeButtonStyle))
             {
@@ -2430,18 +2458,22 @@ namespace Infinity_TestMod
                 receiverJsonInput = "{\n  \"Cmd\": \"\",\n  \"Params\": {}\n}";
             }
 
-            if (GUI.Button(new Rect(pad + (btnW + 5) * 2, 255, btnW, 35), "Close", closeButtonStyle))
+            if (GUI.Button(new Rect(pad + ((btnW + 5) * 2), 255, btnW, 35), "Close", closeButtonStyle))
             {
                 showReceiverWindow = false;
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(winWidth));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
+            ResizableWindow.EndScaling();
         }
 
         public static (bool ok, string info) FakeServerPacket(string json)
         {
-            if (string.IsNullOrEmpty(json)) return (false, "empty JSON");
+            if (string.IsNullOrEmpty(json))
+            {
+                return (false, "empty JSON");
+            }
+
             try
             {
                 if (AEC.Instance != null)
@@ -2453,9 +2485,9 @@ namespace Infinity_TestMod
                     if (_wrapAndQueueResponseMethod != null)
                     {
                         byte[] data = System.Text.Encoding.UTF8.GetBytes(json);
-                        _wrapAndQueueResponseMethod.Invoke(AEC.Instance, new object[] { data });
+                        _wrapAndQueueResponseMethod.Invoke(AEC.Instance, [data]);
                         BeyondLog.Msg("[Packet Receiver] Successfully injected fake server packet.");
-                        Infinity_TestMod.Util.PacketLog.Write("s2c", json, synthetic: true);
+                        PacketLog.Write("s2c", json, synthetic: true);
                         return (true, "AEC Queue");
                     }
                     else
@@ -2479,19 +2511,19 @@ namespace Infinity_TestMod
 
         private void DrawFakeDevWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, fakeDevWindowRect, 320f);
-            float winWidth = 320f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, fakeDevWindowRect, 320f);
+            const float winWidth = 320f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             bool playerExists = false;
-            try { playerExists = (Entity.mainPlayer != null); } catch { }
+            try { playerExists = Entity.mainPlayer != null; } catch { }
 
             int currentLevel = -1;
-            try { if (playerExists) currentLevel = Entity.mainPlayer.AccessLevel; } catch { }
+            try { if (playerExists) { currentLevel = Entity.mainPlayer.AccessLevel; } } catch { }
 
             bool isMember = false;
-            try { if (playerExists) isMember = Entity.mainPlayer.UpgradeDays > 0; } catch { }
+            try { if (playerExists) { isMember = Entity.mainPlayer.UpgradeDays > 0; } } catch { }
 
             // 1. Membership section
             GUI.Label(new Rect(pad, 35, innerW, 20), "Membership:", labelStyle);
@@ -2521,23 +2553,23 @@ namespace Infinity_TestMod
 
             // 2. Access Levels section
             GUI.Label(new Rect(pad, 100, innerW, 20), "Access Levels (hasAccess checks):", labelStyle);
-            float btnW = (innerW - 16) / 5f;
+            const float btnW = (innerW - 16) / 5f;
             DrawFakeDevAccessTier(pad, btnW, "30", 30, currentLevel, playerExists);
             DrawFakeDevAccessTier(pad + btnW + 4, btnW, "40", 40, currentLevel, playerExists);
-            DrawFakeDevAccessTier(pad + (btnW + 4) * 2, btnW, "50", 50, currentLevel, playerExists);
-            DrawFakeDevAccessTier(pad + (btnW + 4) * 3, btnW, "60", 60, currentLevel, playerExists);
-            DrawFakeDevAccessTier(pad + (btnW + 4) * 4, btnW, "100", 100, currentLevel, playerExists);
+            DrawFakeDevAccessTier(pad + ((btnW + 4) * 2), btnW, "50", 50, currentLevel, playerExists);
+            DrawFakeDevAccessTier(pad + ((btnW + 4) * 3), btnW, "60", 60, currentLevel, playerExists);
+            DrawFakeDevAccessTier(pad + ((btnW + 4) * 4), btnW, "100", 100, currentLevel, playerExists);
 
             // 3. Actions: Dev UI, Reset, Close. Name Spoof moved to the Fun
             // window; Reset still clears any active name spoof for symmetry.
-            float actionBtnW = (innerW - 10) / 2f;
+            const float actionBtnW = (innerW - 10) / 2f;
             if (playerExists)
             {
                 if (GUI.Button(new Rect(pad, 180, actionBtnW, 35), "Open Dev UI", closeButtonStyle))
                 {
                     try
                     {
-                        new DevWindow(new System.Collections.Generic.List<string>()).Execute();
+                        new DevWindow([]).Execute();
                         LoggerInstance.Msg("Opened dev window.");
                     }
                     catch (System.Exception ex)
@@ -2582,19 +2614,19 @@ namespace Infinity_TestMod
                 showFakeDevWindow = false;
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(winWidth));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
+            ResizableWindow.EndScaling();
         }
 
         private void DrawFunWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, funWindowRect, 360f);
-            float winWidth = 360f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, funWindowRect, 360f);
+            const float winWidth = 360f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             bool playerExists = false;
-            try { playerExists = (Entity.mainPlayer != null); } catch { }
+            try { playerExists = Entity.mainPlayer != null; } catch { }
 
             float curY = 35f;
 
@@ -2604,13 +2636,18 @@ namespace Infinity_TestMod
             nameSpoofInput = GUI.TextField(new Rect(pad, curY, innerW, 30), nameSpoofInput, textFieldStyle);
             curY += 35f;
 
-            float btnW = (innerW - 10) / 2f;
+            const float btnW = (innerW - 10) / 2f;
             if (playerExists)
             {
                 if (GUI.Button(new Rect(pad, curY, btnW, 30), !string.IsNullOrEmpty(spoofedName) ? "Update Name" : "Apply Name", closeButtonStyle))
+                {
                     ApplyNameSpoof(nameSpoofInput);
+                }
+
                 if (GUI.Button(new Rect(pad + btnW + 10, curY, btnW, 30), "Clear Name", closeButtonStyle))
+                {
                     ClearNameSpoof();
+                }
             }
             else
             {
@@ -2624,14 +2661,16 @@ namespace Infinity_TestMod
             // 2. Gender flip — single toggle. Real gender stays for game logic
             // (pronouns, server-side checks); only the avatar rig flips.
             string realGender = "?";
-            try { if (Entity.mainPlayer != null) realGender = Entity.mainPlayer.GetGenderString(); } catch { }
+            try { if (Entity.mainPlayer != null) { realGender = Entity.mainPlayer.GetGenderString(); } } catch { }
             string genderLabel = genderSpoofActive
                 ? $"Flip Gender: ON (showing {(realGender == "M" ? "F" : (realGender == "F" ? "M" : "?"))})"
                 : $"Flip Gender: OFF (real: {realGender})";
             if (playerExists)
             {
                 if (GUI.Button(new Rect(pad, curY, innerW, 30), genderLabel, closeButtonStyle))
+                {
                     ToggleGenderSpoof();
+                }
             }
             else
             {
@@ -2673,19 +2712,26 @@ namespace Infinity_TestMod
 
             // Shared catalog panel — only this window's slots (1..5). Slot 6
             // (Monster→Pet) is owned by Extra Fun and renders its picker there.
-            if (catalogOpenSlot >= 1 && catalogOpenSlot <= 5)
+            if (catalogOpenSlot is >= 1 and <= 5)
+            {
                 curY = DrawCatalogPicker(curY, pad, innerW);
+            }
 
             if (GUI.Button(new Rect(pad, curY, innerW, 32), "Close", closeButtonStyle))
+            {
                 showFunWindow = false;
+            }
+
             curY += 40f;
 
             // Auto-size window to fit current content (collapsed vs catalog-open).
-            if (!Util.ResizableWindow.WasManuallyResized(9989))
+            if (!ResizableWindow.WasManuallyResized(9989))
+            {
                 funWindowRect.height = curY + 10f;
+            }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(winWidth));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
+            ResizableWindow.EndScaling();
         }
 
         // Extra Fun — sibling window for niche spoofs. Currently hosts the
@@ -2693,13 +2739,13 @@ namespace Infinity_TestMod
         // owns its own catalog slot (6 = Monsters bucket).
         private void DrawExtraFunWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, extraFunWindowRect, 360f);
-            float winWidth = 360f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, extraFunWindowRect, 360f);
+            const float winWidth = 360f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             bool playerExists = false;
-            try { playerExists = (Entity.mainPlayer != null); } catch { }
+            try { playerExists = Entity.mainPlayer != null; } catch { }
 
             float curY = 35f;
 
@@ -2732,7 +2778,10 @@ namespace Infinity_TestMod
                 selLabel = (jukeboxPickerOpen ? "▲" : "▼") + " (select a track)";
             }
             if (GUI.Button(new Rect(pad, curY, innerW, 26), selLabel, closeButtonStyle))
+            {
                 jukeboxPickerOpen = !jukeboxPickerOpen;
+            }
+
             curY += 30f;
 
             if (jukeboxPickerOpen)
@@ -2743,16 +2792,15 @@ namespace Infinity_TestMod
                 curY += 26f;
 
                 string filter = (jukeboxFilter ?? "").Trim();
-                List<MusicCatalog.TrackEntry> entries = MusicCatalog.Tracks.Values
+                List<MusicCatalog.TrackEntry> entries = [.. MusicCatalog.Tracks.Values
                     .Where(t => string.IsNullOrEmpty(filter)
                         || t.id.ToString().Contains(filter)
                         || (!string.IsNullOrEmpty(t.name)
                             && t.name.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) >= 0))
-                    .OrderBy(t => t.id)
-                    .ToList();
+                    .OrderBy(t => t.id)];
 
-                float listH = 160f;
-                float rowH = 22f;
+                const float listH = 160f;
+                const float rowH = 22f;
                 float contentH = entries.Count * rowH;
                 jukeboxScroll = GUI.BeginScrollView(
                     new Rect(pad, curY, innerW, listH),
@@ -2774,16 +2822,28 @@ namespace Infinity_TestMod
             }
 
             // Action row: Play (selected), Stop, Restore Area BGM.
-            float jbW = (innerW - 20) / 3f;
+            const float jbW = (innerW - 20) / 3f;
             if (GUI.Button(new Rect(pad, curY, jbW, 30), "Play", closeButtonStyle))
             {
-                if (jukeboxSelectedId > 0) Jukebox.Play(jukeboxSelectedId);
-                else BeyondLog.Warning("[Jukebox] no track selected");
+                if (jukeboxSelectedId > 0)
+                {
+                    Jukebox.Play(jukeboxSelectedId);
+                }
+                else
+                {
+                    BeyondLog.Warning("[Jukebox] no track selected");
+                }
             }
             if (GUI.Button(new Rect(pad + jbW + 10, curY, jbW, 30), "Stop", closeButtonStyle))
+            {
                 Jukebox.Stop();
-            if (GUI.Button(new Rect(pad + (jbW + 10) * 2, curY, jbW, 30), "Restore Area", closeButtonStyle))
+            }
+
+            if (GUI.Button(new Rect(pad + ((jbW + 10) * 2), curY, jbW, 30), "Restore Area", closeButtonStyle))
+            {
                 Jukebox.RestoreAreaBGM();
+            }
+
             curY += 36f;
 
             // Escape hatch — type an ID that isn't in the catalog yet (so
@@ -2794,9 +2854,13 @@ namespace Infinity_TestMod
             if (GUI.Button(new Rect(pad + innerW - 65, curY, 65, 22), "Go", closeButtonStyle))
             {
                 if (int.TryParse((jukeboxInput ?? "").Trim(), out int rawId))
+                {
                     Jukebox.Play(rawId);
+                }
                 else
+                {
                     BeyondLog.Warning($"[Jukebox] '{jukeboxInput}' is not a number");
+                }
             }
             curY += 30f;
 
@@ -2820,7 +2884,7 @@ namespace Infinity_TestMod
             // No AccessLevel gate at this layer; submit calls (sfAdd/sfSave)
             // go straight to the live server.
             // Real open — server gates sfInit, panels stay invisible.
-            float forgeW = (innerW - 10) / 2f;
+            const float forgeW = (innerW - 10) / 2f;
             if (GUI.Button(new Rect(pad, curY, forgeW, 30), "Open Skill Forge", closeButtonStyle))
             {
                 try
@@ -2850,17 +2914,25 @@ namespace Infinity_TestMod
             curY += 40f;
 
             // Catalog pickers for Extra Fun's slots (6, 7) — Fun handles 1..5.
-            if (catalogOpenSlot == 6 || catalogOpenSlot == 7)
+            if (catalogOpenSlot is 6 or 7)
+            {
                 curY = DrawCatalogPicker(curY, pad, innerW);
+            }
 
             if (GUI.Button(new Rect(pad, curY, innerW, 32), "Close", closeButtonStyle))
+            {
                 showExtraFunWindow = false;
+            }
+
             curY += 40f;
 
-            if (!Util.ResizableWindow.WasManuallyResized(9987))
+            if (!ResizableWindow.WasManuallyResized(9987))
+            {
                 extraFunWindowRect.height = curY + 10f;
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(winWidth));
-            Util.ResizableWindow.EndScaling();
+            }
+
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
+            ResizableWindow.EndScaling();
         }
 
         /// <summary>
@@ -2871,7 +2943,7 @@ namespace Infinity_TestMod
         /// </summary>
         private static float DrawCatalogPicker(float curY, float pad, float innerW)
         {
-            System.Collections.Generic.Dictionary<string, ItemCatalog.ItemEntry> bucket;
+            Dictionary<string, ItemCatalog.ItemEntry> bucket;
             System.Action<string> onSelect;
             string slotLabel;
             switch (catalogOpenSlot)
@@ -2890,7 +2962,7 @@ namespace Infinity_TestMod
                 $"{slotLabel} Catalog ({bucket.Count}) — filter:", labelStyle);
             curY += 22f;
 
-            float clearBtnW = 90f;
+            const float clearBtnW = 90f;
             float filterW = innerW - clearBtnW - 6f;
             catalogFilter = GUI.TextField(new Rect(pad, curY, filterW, 28), catalogFilter, textFieldStyle);
 
@@ -2923,14 +2995,16 @@ namespace Infinity_TestMod
             curY += 32f;
 
             string filt = catalogFilter?.ToLowerInvariant() ?? "";
-            List<ItemCatalog.ItemEntry> matches = new();
+            List<ItemCatalog.ItemEntry> matches = [];
             foreach (ItemCatalog.ItemEntry e in bucket.Values)
             {
                 string display = !string.IsNullOrEmpty(e.name) ? e.name : ItemCatalog.ParseFriendlyName(e.bundle);
                 if (filt.Length == 0
                     || (display?.ToLowerInvariant().Contains(filt) ?? false)
                     || (e.bundle?.ToLowerInvariant().Contains(filt) ?? false))
+                {
                     matches.Add(e);
+                }
             }
             matches.Sort((a, b) =>
             {
@@ -2939,10 +3013,10 @@ namespace Infinity_TestMod
                 return string.Compare(an, bn, System.StringComparison.OrdinalIgnoreCase);
             });
 
-            float listH = 180f;
+            const float listH = 180f;
             GUI.Box(new Rect(pad, curY, innerW, listH), "", containerBoxStyle ?? GUI.skin.box);
-            float rowH = 22f;
-            float contentH = System.Math.Max(listH - 8, matches.Count * rowH + 4);
+            const float rowH = 22f;
+            float contentH = System.Math.Max(listH - 8, (matches.Count * rowH) + 4);
             catalogScroll = GUI.BeginScrollView(
                 new Rect(pad, curY, innerW, listH),
                 catalogScroll,
@@ -2953,7 +3027,7 @@ namespace Infinity_TestMod
                 string display = !string.IsNullOrEmpty(e.name)
                     ? e.name
                     : ItemCatalog.ParseFriendlyName(e.bundle);
-                if (GUI.Button(new Rect(2, 2 + i * rowH, innerW - 28, rowH - 2), "  " + display, rowButtonStyle))
+                if (GUI.Button(new Rect(2, 2 + (i * rowH), innerW - 28, rowH - 2), "  " + display, rowButtonStyle))
                 {
                     onSelect?.Invoke(e.bundle);
                     GUI.FocusControl(null);
@@ -2992,9 +3066,14 @@ namespace Infinity_TestMod
             if (playerExists)
             {
                 if (GUI.Button(new Rect(pad, curY, btnW, 30), applyText, closeButtonStyle))
+                {
                     apply?.Invoke(input);
+                }
+
                 if (GUI.Button(new Rect(pad + btnW + 10, curY, btnW, 30), "Clear", closeButtonStyle))
+                {
                     clear?.Invoke();
+                }
             }
             else
             {
@@ -3003,7 +3082,7 @@ namespace Infinity_TestMod
                 GUI.Button(new Rect(pad + btnW + 10, curY, btnW, 30), "Clear", closeButtonStyle);
                 GUI.enabled = true;
             }
-            if (GUI.Button(new Rect(pad + (btnW + 10) * 2, curY, btnW, 30), browseText, closeButtonStyle))
+            if (GUI.Button(new Rect(pad + ((btnW + 10) * 2), curY, btnW, 30), browseText, closeButtonStyle))
             {
                 catalogOpenSlot = (catalogOpenSlot == slotKey) ? 0 : slotKey;
                 catalogScroll = Vector2.zero;
@@ -3014,7 +3093,11 @@ namespace Infinity_TestMod
 
         private static void ToggleGenderSpoof()
         {
-            if (Entity.mainPlayer == null) return;
+            if (Entity.mainPlayer == null)
+            {
+                return;
+            }
+
             if (!genderSpoofActive)
             {
                 // Activate: stash original, flip the enum field. Every
@@ -3037,19 +3120,34 @@ namespace Infinity_TestMod
         }
 
         private static void ApplyArmorSpoof(string desiredBundle)
-            => ApplyGearSpoof("Armor", desiredBundle, v => armorSpoofBundle = v, v => armorSpoofActive = v, v => armorSpoofInput = v);
+        {
+            ApplyGearSpoof("Armor", desiredBundle, v => armorSpoofBundle = v, v => armorSpoofActive = v, v => armorSpoofInput = v);
+        }
+
         private static void ClearArmorSpoof()
-            => ClearGearSpoof("Armor", v => armorSpoofBundle = v, v => armorSpoofActive = v);
+        {
+            ClearGearSpoof("Armor", v => armorSpoofBundle = v, v => armorSpoofActive = v);
+        }
 
         private static void ApplyHelmSpoof(string desiredBundle)
-            => ApplyGearSpoof("Helm", desiredBundle, v => helmSpoofBundle = v, v => helmSpoofActive = v, v => helmSpoofInput = v);
+        {
+            ApplyGearSpoof("Helm", desiredBundle, v => helmSpoofBundle = v, v => helmSpoofActive = v, v => helmSpoofInput = v);
+        }
+
         private static void ClearHelmSpoof()
-            => ClearGearSpoof("Helm", v => helmSpoofBundle = v, v => helmSpoofActive = v);
+        {
+            ClearGearSpoof("Helm", v => helmSpoofBundle = v, v => helmSpoofActive = v);
+        }
 
         private static void ApplyBackSpoof(string desiredBundle)
-            => ApplyGearSpoof("Cape", desiredBundle, v => backSpoofBundle = v, v => backSpoofActive = v, v => backSpoofInput = v);
+        {
+            ApplyGearSpoof("Cape", desiredBundle, v => backSpoofBundle = v, v => backSpoofActive = v, v => backSpoofInput = v);
+        }
+
         private static void ClearBackSpoof()
-            => ClearGearSpoof("Cape", v => backSpoofBundle = v, v => backSpoofActive = v);
+        {
+            ClearGearSpoof("Cape", v => backSpoofBundle = v, v => backSpoofActive = v);
+        }
 
         // Weapon spoof: bundle swap + temporary PrefabName/ItemType mutation
         // on Entity.mainPlayer.Weapon. Requires a catalog entry for the
@@ -3058,7 +3156,11 @@ namespace Infinity_TestMod
         // by WeaponSpoofState and restored on Clear.
         private static void ApplyWeaponSpoof(string desiredBundle)
         {
-            if (Entity.mainPlayer == null) return;
+            if (Entity.mainPlayer == null)
+            {
+                return;
+            }
+
             desiredBundle = (desiredBundle ?? "").Trim();
             if (desiredBundle.Length == 0)
             {
@@ -3100,7 +3202,11 @@ namespace Infinity_TestMod
         // Catalog-required: scale/offsets can't be synthesized.
         private static void ApplyPetSpoof(string desiredBundle)
         {
-            if (Entity.mainPlayer == null) return;
+            if (Entity.mainPlayer == null)
+            {
+                return;
+            }
+
             desiredBundle = (desiredBundle ?? "").Trim();
             if (desiredBundle.Length == 0)
             {
@@ -3143,7 +3249,9 @@ namespace Infinity_TestMod
             try
             {
                 if (Entity.mainPlayer?.Pet != null)
+                {
                     Entity.mainPlayer.EquipItem(Entity.mainPlayer.Pet);
+                }
             }
             catch { }
             BeyondLog.Msg("[PetSpoof] cleared.");
@@ -3156,7 +3264,11 @@ namespace Infinity_TestMod
         // becomes Combat. That's the game's rule; we don't fight it.
         private static void ApplyMonTransformSpoof(string desiredBundle)
         {
-            if (Entity.mainPlayer == null) return;
+            if (Entity.mainPlayer == null)
+            {
+                return;
+            }
+
             desiredBundle = (desiredBundle ?? "").Trim();
             if (desiredBundle.Length == 0)
             {
@@ -3170,7 +3282,11 @@ namespace Infinity_TestMod
             }
 
             float scale = (float)(cat.scale ?? 1.0);
-            if (scale <= 0f) scale = 1f;
+            if (scale <= 0f)
+            {
+                scale = 1f;
+            }
+
             AssetBundleData bundle = BundleBuilder.Build(desiredBundle, ItemCatalog.Monsters, null, null);
 
             try
@@ -3200,7 +3316,11 @@ namespace Infinity_TestMod
                                            System.Action<bool> setActive,
                                            System.Action<string> setInput)
         {
-            if (Entity.mainPlayer == null) return;
+            if (Entity.mainPlayer == null)
+            {
+                return;
+            }
+
             desiredBundle = (desiredBundle ?? "").Trim();
             if (desiredBundle.Length == 0)
             {
@@ -3228,7 +3348,7 @@ namespace Infinity_TestMod
 
         private void DrawFakeDevAccessTier(float x, float width, string label, int level, int currentLevel, bool playerExists)
         {
-            bool active = (currentLevel == level);
+            bool active = currentLevel == level;
             string text = active ? "▶ " + label : label;
             if (!playerExists)
             {
@@ -3254,14 +3374,21 @@ namespace Infinity_TestMod
 
         private static void ApplyNameSpoof(string desiredName)
         {
-            if (Entity.mainPlayer == null) return;
+            if (Entity.mainPlayer == null)
+            {
+                return;
+            }
+
             desiredName = (desiredName ?? "").Trim();
             if (desiredName.Length == 0)
             {
                 ClearNameSpoof();
                 return;
             }
-            if (desiredName.Length > 24) desiredName = desiredName.Substring(0, 24);
+            if (desiredName.Length > 24)
+            {
+                desiredName = desiredName[..24];
+            }
 
             spoofedName = desiredName;
             nameSpoofInput = desiredName;
@@ -3279,25 +3406,29 @@ namespace Infinity_TestMod
         private static void ClearNameSpoof()
         {
             spoofedName = "";
-            if (!string.IsNullOrEmpty(defaultPlayerName)) nameSpoofInput = defaultPlayerName;
+            if (!string.IsNullOrEmpty(defaultPlayerName))
+            {
+                nameSpoofInput = defaultPlayerName;
+            }
+
             try { Entity.mainPlayer?.RefreshNameplate(); } catch { }
             BeyondLog.Msg("Cleared local nameplate spoof.");
         }
 
         private void DrawShopLoaderWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, shopLoaderWindowRect, 280f);
-            float winWidth = 280f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, shopLoaderWindowRect, 280f);
+            const float winWidth = 280f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             bool playerExists = false;
-            try { playerExists = (Entity.mainPlayer != null); } catch { }
+            try { playerExists = Entity.mainPlayer != null; } catch { }
 
             GUI.Label(new Rect(pad, 35, innerW, 20), "Shop ID:", labelStyle);
             shopIdInput = GUI.TextField(new Rect(pad, 60, innerW, 35), shopIdInput, textFieldStyle);
 
-            float btnW = (innerW - 10) / 2f;
+            const float btnW = (innerW - 10) / 2f;
             if (playerExists)
             {
                 if (GUI.Button(new Rect(pad, 105, btnW, 35), "Load Shop", closeButtonStyle))
@@ -3355,24 +3486,24 @@ namespace Infinity_TestMod
                 showShopLoaderWindow = false;
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(280f));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(280f));
+            ResizableWindow.EndScaling();
         }
 
         private void DrawQuestLoaderWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, questLoaderWindowRect, 280f);
-            float winWidth = 280f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, questLoaderWindowRect, 280f);
+            const float winWidth = 280f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             bool playerExists = false;
-            try { playerExists = (Entity.mainPlayer != null); } catch { }
+            try { playerExists = Entity.mainPlayer != null; } catch { }
 
             GUI.Label(new Rect(pad, 35, innerW, 20), "Quest ID:", labelStyle);
             questIdInput = GUI.TextField(new Rect(pad, 60, innerW, 35), questIdInput, textFieldStyle);
 
-            float btnW = (innerW - 10) / 2f;
+            const float btnW = (innerW - 10) / 2f;
             if (playerExists)
             {
                 if (GUI.Button(new Rect(pad, 105, btnW, 35), "Load Quest", closeButtonStyle))
@@ -3381,7 +3512,7 @@ namespace Infinity_TestMod
                     {
                         try
                         {
-                            UIQuests.ShowQuestUI(new System.Collections.Generic.List<int> { questId }, QuestMode.Quest, null);
+                            UIQuests.ShowQuestUI([questId], QuestMode.Quest, null);
                             LoggerInstance.Msg($"Requested load quest: {questId}");
                         }
                         catch (System.Exception ex)
@@ -3428,16 +3559,16 @@ namespace Infinity_TestMod
                 showQuestLoaderWindow = false;
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(280f));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(280f));
+            ResizableWindow.EndScaling();
         }
 
         private void DrawQuestRunnerWindow(int windowID)
         {
-            Util.ResizableWindow.BeginScaling(windowID, questRunnerWindowRect, 640f);
-            float winWidth = 640f;
-            float pad = 20f;
-            float innerW = winWidth - pad * 2;
+            ResizableWindow.BeginScaling(windowID, questRunnerWindowRect, 640f);
+            const float winWidth = 640f;
+            const float pad = 20f;
+            const float innerW = winWidth - (pad * 2);
 
             // Row 1: inputs
             GUI.Label(new Rect(pad, 35 + 5, 70, 25), "Quest ID:", labelStyle);
@@ -3455,7 +3586,10 @@ namespace Infinity_TestMod
             string resolvedName = "?";
             if (int.TryParse(questRunnerIdInput, out int previewQid)
                 && Directory.Quests.TryGetValue(previewQid, out Directory.QuestEntry qe))
+            {
                 resolvedName = qe.name ?? "?";
+            }
+
             GUI.Label(new Rect(pad + 460, 35 + 5, 200, 25),
                 $"  ↳ {resolvedName}", logTextStyle);
 
@@ -3471,7 +3605,10 @@ namespace Infinity_TestMod
                         lock (questRunnerLog)
                         {
                             questRunnerLog.Add($"{System.DateTime.Now:HH:mm:ss}  {line}");
-                            if (questRunnerLog.Count > 200) questRunnerLog.RemoveAt(0);
+                            if (questRunnerLog.Count > 200)
+                            {
+                                questRunnerLog.RemoveAt(0);
+                            }
                         }
                     };
                     questRunner.Start(qid, iters,
@@ -3515,7 +3652,7 @@ namespace Infinity_TestMod
             // Row 4: per-objective progress (read live from in-process state).
             // When the runner is mid-flight (especially chain mode) show its
             // actual current quest, not the stale input field.
-            float yObj = 175;
+            const float yObj = 175;
             try
             {
                 int qid = questRunner.IsRunning && questRunner.QuestID > 0
@@ -3524,7 +3661,7 @@ namespace Infinity_TestMod
                 if (qid > 0)
                 {
                     Quest q = Quest.Get(qid);
-                    if (q != null && q.Turnins != null)
+                    if (q?.Turnins != null)
                     {
                         PlayerQuestData pq = Entity.mainPlayer?.Quests;
                         for (int i = 0; i < q.Turnins.Length && i < 6; i++)
@@ -3533,7 +3670,7 @@ namespace Infinity_TestMod
                             int have = pq?.getQuestObjective(t.QOID)?.Quantity ?? 0;
                             bool done = pq?.IsObjectiveComplete(t.QOID) ?? false;
                             string mark = done ? "<color=green>✓</color>" : " ";
-                            GUI.Label(new Rect(pad, yObj + i * 18, innerW, 18),
+                            GUI.Label(new Rect(pad, yObj + (i * 18), innerW, 18),
                                 $"  {mark} {t.QOType,-10} {t.Name}  [{have}/{t.Quantity}]  ref={t.RefIDs}",
                                 logTextStyle);
                         }
@@ -3548,7 +3685,7 @@ namespace Infinity_TestMod
             catch { /* layout-time read errors aren't worth surfacing */ }
 
             // Row 5: event log
-            float logY = 295;
+            const float logY = 295;
             GUI.Box(new Rect(pad, logY, innerW, 75), "", containerBoxStyle ?? GUI.skin.box);
             float logH;
             lock (questRunnerLog) { logH = System.Math.Max(65f, questRunnerLog.Count * 16f); }
@@ -3566,14 +3703,18 @@ namespace Infinity_TestMod
             GUI.EndScrollView();
 
             // ---- Chain selector row with dropdown + New/Edit/Run ----
-            List<string> chainNames = new(QuestChains.Names);
-            if (questChainPickerIndex >= chainNames.Count) questChainPickerIndex = 0;
+            List<string> chainNames = [.. QuestChains.Names];
+            if (questChainPickerIndex >= chainNames.Count)
+            {
+                questChainPickerIndex = 0;
+            }
+
             string currentChainName = chainNames.Count == 0
                 ? "(no chains)"
                 : chainNames[questChainPickerIndex];
             int currentEntryCount = chainNames.Count == 0 ? 0 : (QuestChains.Get(currentChainName)?.Count ?? 0);
 
-            if (_chainEditState == null) _chainEditState = new ChainEditState();
+            _chainEditState ??= new ChainEditState();
 
             // Row: [Chain: v dropdown button] [New] [Edit] [Run Chain] [progress]
             GUI.Label(new Rect(pad, 382, 48, 22), "Chain:", labelStyle);
@@ -3581,7 +3722,9 @@ namespace Infinity_TestMod
             // Dropdown toggle button
             if (GUI.Button(new Rect(pad + 50, 378, 188, 30),
                 $"{currentChainName}  ({currentEntryCount})  v", closeButtonStyle))
+            {
                 _showChainDropdown = !_showChainDropdown;
+            }
 
             if (GUI.Button(new Rect(pad + 244, 378, 44, 30), "New", closeButtonStyle))
             {
@@ -3612,7 +3755,10 @@ namespace Infinity_TestMod
                     lock (questRunnerLog)
                     {
                         questRunnerLog.Add($"{System.DateTime.Now:HH:mm:ss}  {line}");
-                        if (questRunnerLog.Count > 200) questRunnerLog.RemoveAt(0);
+                        if (questRunnerLog.Count > 200)
+                        {
+                            questRunnerLog.RemoveAt(0);
+                        }
                     }
                 };
                 questRunner.StartChain(currentChainName, QuestChains.Get(currentChainName));
@@ -3622,9 +3768,9 @@ namespace Infinity_TestMod
             // ---- Dropdown list (drawn on top, last in pass) ----
             if (_showChainDropdown && chainNames.Count > 0)
             {
-                float ddX = pad + 50, ddY = 409f;
-                float ddW = 188f, ddRowH = 24f;
-                float ddH = Mathf.Min(chainNames.Count * ddRowH + 4, 200f);
+                const float ddX = pad + 50, ddY = 409f;
+                const float ddW = 188f, ddRowH = 24f;
+                float ddH = Mathf.Min((chainNames.Count * ddRowH) + 4, 200f);
                 GUI.Box(new Rect(ddX - 2, ddY - 2, ddW + 4, ddH + 4), "");
                 _chainDropdownScroll = GUI.BeginScrollView(
                     new Rect(ddX, ddY, ddW, ddH),
@@ -3656,8 +3802,8 @@ namespace Infinity_TestMod
             {
                 // Covers the lower content (status, objectives, log) when open.
                 // Positioned just below the two input rows.
-                float pickerY = 125;
-                float pickerH = 290;
+                const float pickerY = 125;
+                const float pickerH = 290;
                 GUI.Box(new Rect(pad - 2, pickerY - 2, innerW + 4, pickerH + 4), "");
                 GUI.Label(new Rect(pad, pickerY + 5, 70, 25), "Filter:", labelStyle);
                 questPickerFilter = GUI.TextField(new Rect(pad + 60, pickerY, 260, 35), questPickerFilter, textFieldStyle);
@@ -3667,7 +3813,7 @@ namespace Infinity_TestMod
                 // Filtered list — only enumerate Directory entries that match
                 // (case-insensitive substring on id/name/storyline). Sorted by id.
                 string filt = questPickerFilter?.ToLowerInvariant() ?? "";
-                List<KeyValuePair<int, Directory.QuestEntry>> matches = new();
+                List<KeyValuePair<int, Directory.QuestEntry>> matches = [];
                 foreach (KeyValuePair<int, Directory.QuestEntry> kv in Directory.Quests)
                 {
                     if (filt.Length == 0
@@ -3680,8 +3826,8 @@ namespace Infinity_TestMod
                 }
                 matches.Sort((a, b) => a.Key.CompareTo(b.Key));
 
-                float rowH = 20f;
-                float contentH = System.Math.Max(pickerH - 50, matches.Count * rowH + 4);
+                const float rowH = 20f;
+                float contentH = System.Math.Max(pickerH - 50, (matches.Count * rowH) + 4);
                 questPickerScroll = GUI.BeginScrollView(
                     new Rect(pad, pickerY + 40, innerW, pickerH - 45),
                     questPickerScroll,
@@ -3700,8 +3846,8 @@ namespace Infinity_TestMod
                 GUI.EndScrollView();
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(winWidth));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
+            ResizableWindow.EndScaling();
         }
 
         // ------- Chain Editor logic + GUI (INJECTED) -------
@@ -3709,12 +3855,12 @@ namespace Infinity_TestMod
         {
             public string editingName;
             public string saveAsName = "";
-            public List<QuestChains.Entry> entries = new();
+            public List<QuestChains.Entry> entries = [];
             public int editingIdx = -1;
             public string errorMsg = null;
             public bool editingExisting = false;
             public Vector2 scroll = Vector2.zero;
-            public List<string> chainNames = new();
+            public List<string> chainNames = [];
             // Load dropdown
             public bool showLoadDropdown = false;
             public Vector2 loadDropScroll = Vector2.zero;
@@ -3722,22 +3868,22 @@ namespace Infinity_TestMod
 
             public void Open(List<string> allNames, string pick)
             {
-                chainNames = new List<string>(allNames);
+                chainNames = [.. allNames];
                 editingName = pick ?? "NewChain";
                 saveAsName = editingName;
                 entries = (pick != null && QuestChains.Get(pick) != null) ?
-                          QuestChains.Get(pick).Select(e => new QuestChains.Entry
+                          QuestChains.Get(pick).ConvertAll(e => new QuestChains.Entry
                           {
                               qid = e.qid,
                               area = e.area,
                               frame = e.frame,
                               pad = e.pad,
                               items = e.items
-                          }).ToList() :
-                          new List<QuestChains.Entry>();
+                          }) :
+                          [];
                 errorMsg = null;
-                editingExisting = (pick != null && QuestChains.Get(pick) != null);
-                editingIdx = (pick == null ? -1 : allNames.IndexOf(pick));
+                editingExisting = pick != null && QuestChains.Get(pick) != null;
+                editingIdx = pick == null ? -1 : allNames.IndexOf(pick);
                 showLoadDropdown = false;
                 loadSelectedIdx = editingIdx;
             }
@@ -3745,10 +3891,14 @@ namespace Infinity_TestMod
 
         private static void DrawChainEditorWindow(int windowID)
         {
-            if (_chainEditState == null) return;
-            Util.ResizableWindow.BeginScaling(windowID, _chainEditorWindowRect, 540f);
-            float p = 10f;
-            float W = 540f;
+            if (_chainEditState == null)
+            {
+                return;
+            }
+
+            ResizableWindow.BeginScaling(windowID, _chainEditorWindowRect, 540f);
+            const float p = 10f;
+            const float W = 540f;
             float H = _chainEditorWindowRect.height;
             float y = 28f;
 
@@ -3758,7 +3908,10 @@ namespace Infinity_TestMod
                 ? _chainEditState.chainNames[_chainEditState.loadSelectedIdx]
                 : "(select chain)";
             if (GUI.Button(new Rect(p + 42, y, 180, 26), loadLabel + "  v", closeButtonStyle))
+            {
                 _chainEditState.showLoadDropdown = !_chainEditState.showLoadDropdown;
+            }
+
             if (GUI.Button(new Rect(p + 228, y, 60, 26), "Load", closeButtonStyle))
             {
                 if (_chainEditState.loadSelectedIdx >= 0 && _chainEditState.loadSelectedIdx < _chainEditState.chainNames.Count)
@@ -3788,19 +3941,22 @@ namespace Infinity_TestMod
 
             // ---- Status / error ----
             if (_chainEditState.errorMsg != null)
-                GUI.Label(new Rect(p, y, W - p * 2, 20), _chainEditState.errorMsg, logTextStyle);
+            {
+                GUI.Label(new Rect(p, y, W - (p * 2), 20), _chainEditState.errorMsg, logTextStyle);
+            }
+
             y += 22f;
 
             // ---- Entries header ----
-            GUI.Label(new Rect(p, y, W - p * 2, 18), "Entries:   qid | area | frame | pad | iters | -", labelStyle);
+            GUI.Label(new Rect(p, y, W - (p * 2), 18), "Entries:   qid | area | frame | pad | iters | -", labelStyle);
             y += 20f;
 
             // ---- Entries scroll list ----
             float entrH = H - y - 44f;
             _chainEditState.scroll = GUI.BeginScrollView(
-                new Rect(p, y, W - p * 2, entrH),
+                new Rect(p, y, W - (p * 2), entrH),
                 _chainEditState.scroll,
-                new Rect(0, 0, W - p * 2 - 18, Mathf.Max(entrH - 4, _chainEditState.entries.Count * 32 + 36)));
+                new Rect(0, 0, W - (p * 2) - 18, Mathf.Max(entrH - 4, (_chainEditState.entries.Count * 32) + 36)));
             for (int i = 0; i < _chainEditState.entries.Count; i++)
             {
                 QuestChains.Entry ent = _chainEditState.entries[i];
@@ -3809,30 +3965,58 @@ namespace Infinity_TestMod
                 string sarea = GUI.TextField(new Rect(56, ey, 78, 26), ent.area ?? "", textFieldStyle); ent.area = sarea;
                 string sframe = GUI.TextField(new Rect(140, ey, 68, 26), ent.frame ?? "", textFieldStyle); ent.frame = sframe;
                 string spad = GUI.TextField(new Rect(214, ey, 58, 26), ent.pad ?? "Spawn", textFieldStyle); ent.pad = spad;
-                string sitems = GUI.TextField(new Rect(278, ey, 38, 26), ent.items.ToString(), textFieldStyle); int itemsval = ent.items; int.TryParse(sitems, out itemsval); ent.items = itemsval < 1 ? 1 : itemsval;
+                string sitems = GUI.TextField(new Rect(278, ey, 38, 26), ent.items.ToString(), textFieldStyle); int.TryParse(sitems, out int itemsval); ent.items = itemsval < 1 ? 1 : itemsval;
                 if (GUI.Button(new Rect(322, ey, 28, 26), "-", closeButtonStyle)) { _chainEditState.entries.RemoveAt(i); break; }
                 _chainEditState.entries[i] = ent;
             }
             if (GUI.Button(new Rect(0, _chainEditState.entries.Count * 32f, 28, 26), "+", closeButtonStyle))
+            {
                 _chainEditState.entries.Add(new QuestChains.Entry { qid = 1, area = "", frame = "", pad = "Spawn", items = 1 });
+            }
+
             GUI.EndScrollView();
             y += entrH + 6f;
 
             // ---- Bottom buttons: Save / Save As / Delete / Export / Import / Close ----
-            float bw = 72f;
-            if (GUI.Button(new Rect(p, y, bw, 28), _chainEditState.editingExisting ? "Update" : "Save", closeButtonStyle)) SaveEditedChain(false);
-            if (GUI.Button(new Rect(p + bw + 4, y, bw, 28), "Save As", closeButtonStyle)) SaveEditedChain(true);
+            const float bw = 72f;
+            if (GUI.Button(new Rect(p, y, bw, 28), _chainEditState.editingExisting ? "Update" : "Save", closeButtonStyle))
+            {
+                SaveEditedChain(false);
+            }
+
+            if (GUI.Button(new Rect(p + bw + 4, y, bw, 28), "Save As", closeButtonStyle))
+            {
+                SaveEditedChain(true);
+            }
+
             if (_chainEditState.editingExisting)
-                if (GUI.Button(new Rect(p + bw * 2 + 8, y, bw, 28), "Delete", closeButtonStyle)) DeleteEditedChain();
-            if (GUI.Button(new Rect(p + bw * 3 + 12, y, bw, 28), "Export", closeButtonStyle)) ExportChain();
-            if (GUI.Button(new Rect(p + bw * 4 + 16, y, bw, 28), "Import", closeButtonStyle)) ImportChain();
-            if (GUI.Button(new Rect(W - p - 58, y, 58, 28), "Close", closeButtonStyle)) _showChainEditor = false;
+            {
+                if (GUI.Button(new Rect(p + (bw * 2) + 8, y, bw, 28), "Delete", closeButtonStyle))
+                {
+                    DeleteEditedChain();
+                }
+            }
+
+            if (GUI.Button(new Rect(p + (bw * 3) + 12, y, bw, 28), "Export", closeButtonStyle))
+            {
+                ExportChain();
+            }
+
+            if (GUI.Button(new Rect(p + (bw * 4) + 16, y, bw, 28), "Import", closeButtonStyle))
+            {
+                ImportChain();
+            }
+
+            if (GUI.Button(new Rect(W - p - 58, y, 58, 28), "Close", closeButtonStyle))
+            {
+                _showChainEditor = false;
+            }
 
             // ---- Load dropdown (drawn on top of everything else) ----
             if (_chainEditState.showLoadDropdown && _chainEditState.chainNames.Count > 0)
             {
-                float ddY = 56f;
-                float ddH = Mathf.Min(_chainEditState.chainNames.Count * 24f + 4, 180f);
+                const float ddY = 56f;
+                float ddH = Mathf.Min((_chainEditState.chainNames.Count * 24f) + 4, 180f);
                 GUI.Box(new Rect(p + 40, ddY - 2, 184, ddH + 4), "");
                 _chainEditState.loadDropScroll = GUI.BeginScrollView(
                     new Rect(p + 42, ddY, 180, ddH),
@@ -3850,8 +4034,8 @@ namespace Infinity_TestMod
                 GUI.EndScrollView();
             }
 
-            GUI.DragWindow(Util.ResizableWindow.TitleBarDragRect(W, 26f));
-            Util.ResizableWindow.EndScaling();
+            GUI.DragWindow(ResizableWindow.TitleBarDragRect(W, 26f));
+            ResizableWindow.EndScaling();
         }
 
         private static void SaveEditedChain(bool saveAs)
@@ -3862,19 +4046,16 @@ namespace Infinity_TestMod
                 if (string.IsNullOrEmpty(nm)) { _chainEditState.errorMsg = saveAs ? "Save As name required" : "Chain name required"; return; }
                 if (_chainEditState.entries.Count == 0) { _chainEditState.errorMsg = "Add at least 1 entry"; return; }
                 foreach (QuestChains.Entry e in _chainEditState.entries)
+                {
                     if (e.qid <= 0) { _chainEditState.errorMsg = "qid must be a positive number"; return; }
+                }
 
                 string userDir = System.IO.Path.Combine(BeyondEnv.UserDataDirectory, "Beyond");
                 System.IO.Directory.CreateDirectory(userDir);
                 string chainFile = System.IO.Path.Combine(userDir, "chains.json");
 
                 // Read existing user file as JObject so we preserve unknown keys / comments
-                Newtonsoft.Json.Linq.JObject root;
-                if (System.IO.File.Exists(chainFile))
-                    root = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(chainFile));
-                else
-                    root = new Newtonsoft.Json.Linq.JObject();
-
+                JObject root = System.IO.File.Exists(chainFile) ? Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(chainFile)) : [];
                 root[nm] = EntriesToJArray(_chainEditState.entries);
                 System.IO.File.WriteAllText(chainFile,
                     root.ToString(Newtonsoft.Json.Formatting.Indented));
@@ -3885,7 +4066,7 @@ namespace Infinity_TestMod
                 _chainEditState.editingName = nm;
                 _chainEditState.saveAsName = nm;
                 _chainEditState.editingExisting = true;
-                _chainEditState.chainNames = new List<string>(QuestChains.Names);
+                _chainEditState.chainNames = [.. QuestChains.Names];
                 _chainEditState.loadSelectedIdx = _chainEditState.chainNames.IndexOf(nm);
                 _chainEditState.errorMsg = saveAs ? $"Saved as: {nm}" : $"Saved: {nm}";
             }
@@ -3908,7 +4089,7 @@ namespace Infinity_TestMod
                 {
                     System.IO.File.WriteAllText(chainFile, root.ToString(Newtonsoft.Json.Formatting.Indented));
                     QuestChains.Init();
-                    _chainEditState.chainNames = new List<string>(QuestChains.Names);
+                    _chainEditState.chainNames = [.. QuestChains.Names];
                     _chainEditState.loadSelectedIdx = _chainEditState.chainNames.Count > 0 ? 0 : -1;
                     _chainEditState.editingExisting = false;
                     _chainEditState.errorMsg = "Deleted!";
@@ -3933,14 +4114,21 @@ namespace Infinity_TestMod
                 string defaultDir = System.IO.Path.Combine(BeyondEnv.UserDataDirectory, "Beyond");
                 System.IO.Directory.CreateDirectory(defaultDir);
                 string path = ShowSaveFileDialog(defaultDir, nm + ".json");
-                if (path == null) return;  // user cancelled
+                if (path == null)
+                {
+                    return;  // user cancelled
+                }
 
                 // Ensure .json extension
                 if (!path.EndsWith(".json", System.StringComparison.OrdinalIgnoreCase))
+                {
                     path += ".json";
+                }
 
-                JObject obj = new();
-                obj[nm] = EntriesToJArray(_chainEditState.entries);
+                JObject obj = new()
+                {
+                    [nm] = EntriesToJArray(_chainEditState.entries)
+                };
                 System.IO.File.WriteAllText(path, obj.ToString(Newtonsoft.Json.Formatting.Indented));
                 _chainEditState.errorMsg = $"Exported to: {System.IO.Path.GetFileName(path)}";
             }
@@ -3958,24 +4146,30 @@ namespace Infinity_TestMod
                 string defaultDir = System.IO.Path.Combine(BeyondEnv.UserDataDirectory, "Beyond");
                 System.IO.Directory.CreateDirectory(defaultDir);
                 string path = ShowOpenFileDialog(defaultDir, "");
-                if (path == null) return;  // user cancelled
+                if (path == null)
+                {
+                    return;  // user cancelled
+                }
 
                 string imported = System.IO.File.ReadAllText(path);
                 JObject importObj = Newtonsoft.Json.Linq.JObject.Parse(imported);
 
                 string chainFile = System.IO.Path.Combine(defaultDir, "chains.json");
-                Newtonsoft.Json.Linq.JObject root;
-                if (System.IO.File.Exists(chainFile))
-                    root = Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(chainFile));
-                else
-                    root = new Newtonsoft.Json.Linq.JObject();
-
+                JObject root = System.IO.File.Exists(chainFile) ? Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(chainFile)) : [];
                 int count = 0;
                 string lastName = null;
                 foreach (JProperty prop in importObj.Properties())
                 {
-                    if (prop.Name.StartsWith("_")) continue;
-                    if (prop.Value is not Newtonsoft.Json.Linq.JArray) continue;
+                    if (prop.Name.StartsWith("_"))
+                    {
+                        continue;
+                    }
+
+                    if (prop.Value is not Newtonsoft.Json.Linq.JArray)
+                    {
+                        continue;
+                    }
+
                     root[prop.Name] = prop.Value;
                     lastName = prop.Name;
                     count++;
@@ -3985,11 +4179,15 @@ namespace Infinity_TestMod
                 System.IO.File.WriteAllText(chainFile, root.ToString(Newtonsoft.Json.Formatting.Indented));
                 QuestChains.Init();
 
-                _chainEditState.chainNames = new List<string>(QuestChains.Names);
+                _chainEditState.chainNames = [.. QuestChains.Names];
                 _chainEditState.loadSelectedIdx = lastName != null ? _chainEditState.chainNames.IndexOf(lastName) : 0;
 
                 // Auto-load the last imported chain into the editor
-                if (lastName != null) _chainEditState.Open(_chainEditState.chainNames, lastName);
+                if (lastName != null)
+                {
+                    _chainEditState.Open(_chainEditState.chainNames, lastName);
+                }
+
                 _chainEditState.errorMsg = $"Imported {count} chain(s) from {System.IO.Path.GetFileName(path)}";
             }
             catch (System.Exception ex)
@@ -4001,15 +4199,17 @@ namespace Infinity_TestMod
         // Shared helper: List<Entry> -> JArray
         private static Newtonsoft.Json.Linq.JArray EntriesToJArray(List<QuestChains.Entry> entries)
         {
-            JArray arr = new();
+            JArray arr = [];
             foreach (QuestChains.Entry ent in entries)
             {
-                JObject o = new();
-                o["qid"] = ent.qid;
-                o["area"] = ent.area ?? "";
-                o["frame"] = ent.frame ?? "";
-                o["pad"] = string.IsNullOrEmpty(ent.pad) ? "Spawn" : ent.pad;
-                o["items"] = ent.items < 1 ? 1 : ent.items;
+                JObject o = new()
+                {
+                    ["qid"] = ent.qid,
+                    ["area"] = ent.area ?? "",
+                    ["frame"] = ent.frame ?? "",
+                    ["pad"] = string.IsNullOrEmpty(ent.pad) ? "Spawn" : ent.pad,
+                    ["items"] = ent.items < 1 ? 1 : ent.items
+                };
                 arr.Add(o);
             }
             return arr;
@@ -4025,15 +4225,34 @@ namespace Infinity_TestMod
             try
             {
                 EventSystem es = UnityEngine.EventSystems.EventSystem.current;
-                if (es == null) return false;
+                if (es == null)
+                {
+                    return false;
+                }
+
                 GameObject sel = es.currentSelectedGameObject;
-                if (sel == null) return false;
-                if (sel.GetComponent<UnityEngine.UI.InputField>() != null) return true;
+                if (sel == null)
+                {
+                    return false;
+                }
+
+                if (sel.GetComponent<UnityEngine.UI.InputField>() != null)
+                {
+                    return true;
+                }
+
                 foreach (MonoBehaviour c in sel.GetComponents<UnityEngine.MonoBehaviour>())
                 {
-                    if (c == null) continue;
+                    if (c == null)
+                    {
+                        continue;
+                    }
+
                     string n = c.GetType().Name;
-                    if (n == "TMP_InputField" || n == "TMPro_InputField") return true;
+                    if (n is "TMP_InputField" or "TMPro_InputField")
+                    {
+                        return true;
+                    }
                 }
             }
             catch { }
@@ -4046,77 +4265,12 @@ namespace Infinity_TestMod
             float mouseY = Screen.height - Input.mousePosition.y;
             Vector2 imguiMousePos = new(mouseX, mouseY);
 
-            if (ToggleButtonRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            if (showWindow && windowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-            if (showWindow && showFakeDevWindow && fakeDevWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-            if (showWindow && showShopLoaderWindow && shopLoaderWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-            if (showWindow && showQuestLoaderWindow && questLoaderWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-            if (showWindow && showConfigWindow && configWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-            if (showWindow && showInterceptorWindow && interceptorWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            if (showWindow && showSnifferWindow && snifferWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            if (showWindow && showSenderWindow && senderWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            if (showWindow && showReceiverWindow && receiverWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            if (showWindow && showQuestRunnerWindow && questRunnerWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            if (showWindow && showFunWindow && funWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            if (showWindow && showRetroTestsWindow && retroTestsWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            if (showWindow && showSkillsetTestWindow && skillsetTestWindowRect.Contains(imguiMousePos))
-            {
-                return true;
-            }
-
-            return false;
+            return ToggleButtonRect.Contains(imguiMousePos) || (showWindow && windowRect.Contains(imguiMousePos)) || (showWindow && showFakeDevWindow && fakeDevWindowRect.Contains(imguiMousePos)) || (showWindow && showShopLoaderWindow && shopLoaderWindowRect.Contains(imguiMousePos)) || (showWindow && showQuestLoaderWindow && questLoaderWindowRect.Contains(imguiMousePos)) || (showWindow && showConfigWindow && configWindowRect.Contains(imguiMousePos)) || (showWindow && showInterceptorWindow && interceptorWindowRect.Contains(imguiMousePos)) || (showWindow && showSnifferWindow && snifferWindowRect.Contains(imguiMousePos)) || (showWindow && showSenderWindow && senderWindowRect.Contains(imguiMousePos)) || (showWindow && showReceiverWindow && receiverWindowRect.Contains(imguiMousePos)) || (showWindow && showQuestRunnerWindow && questRunnerWindowRect.Contains(imguiMousePos)) || (showWindow && showFunWindow && funWindowRect.Contains(imguiMousePos)) || (showWindow && showRetroTestsWindow && retroTestsWindowRect.Contains(imguiMousePos)) || (showWindow && showSkillsetTestWindow && skillsetTestWindowRect.Contains(imguiMousePos));
         }
 
         private static Texture2D CreateThemedButtonTexture(Color borderColor)
         {
-            int size = 128;
+            const int size = 128;
             Texture2D tex = new(size, size, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[size * size];
 
@@ -4124,7 +4278,7 @@ namespace Infinity_TestMod
             {
                 for (int x = 0; x < size; x++)
                 {
-                    int index = y * size + x;
+                    int index = (y * size) + x;
 
                     int distToEdgeX = Mathf.Min(x, size - 1 - x);
                     int distToEdgeY = Mathf.Min(y, size - 1 - y);
@@ -4190,7 +4344,7 @@ namespace Infinity_TestMod
                     }
                     else
                     {
-                        if (exclDist > 0f && exclDist < 2.5f)
+                        if (exclDist is > 0f and < 2.5f)
                         {
                             float tBorder = exclDist / 2.5f;
                             c = Color.Lerp(new Color(0.05f, 0.05f, 0.05f, 1f), c, tBorder);
@@ -4208,7 +4362,7 @@ namespace Infinity_TestMod
 
         private static Texture2D CreateThemedWindowTexture()
         {
-            int size = 128;
+            const int size = 128;
             Texture2D tex = new(size, size, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[size * size];
 
@@ -4216,7 +4370,7 @@ namespace Infinity_TestMod
             {
                 for (int x = 0; x < size; x++)
                 {
-                    int index = y * size + x;
+                    int index = (y * size) + x;
 
                     int distToEdgeX = Mathf.Min(x, size - 1 - x);
                     int distToEdgeY = Mathf.Min(y, size - 1 - y);
@@ -4244,7 +4398,7 @@ namespace Infinity_TestMod
 
         private static Texture2D CreateThemedButtonBgTexture(Color borderColor)
         {
-            int size = 64;
+            const int size = 64;
             Texture2D tex = new(size, size, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[size * size];
 
@@ -4287,7 +4441,7 @@ namespace Infinity_TestMod
 
         private static Texture2D CreateThemedTextFieldTexture()
         {
-            int size = 64;
+            const int size = 64;
             Texture2D tex = new(size, size, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[size * size];
 
@@ -4325,7 +4479,7 @@ namespace Infinity_TestMod
             Vector2 ab = b - a;
             Vector2 ap = p - a;
             float t = Mathf.Clamp01(Vector2.Dot(ap, ab) / Vector2.Dot(ab, ab));
-            return Vector2.Distance(p, a + t * ab);
+            return Vector2.Distance(p, a + (t * ab));
         }
 
         private static bool IsInExclamationMark(float x, float y, out float distance)
@@ -4349,7 +4503,11 @@ namespace Infinity_TestMod
 
         private static void ResolveCooldownFields()
         {
-            if (_cooldownFieldsResolved) return;
+            if (_cooldownFieldsResolved)
+            {
+                return;
+            }
+
             _cooldownFieldsResolved = true;
             const System.Reflection.BindingFlags Flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
             _fPendingCooldown = typeof(SkillSlotButton).GetField("pendingCooldown", Flags);
@@ -4361,7 +4519,11 @@ namespace Infinity_TestMod
 
         private static bool IsSkillOnCooldown(SkillSlotButton button)
         {
-            if (button == null) return false;
+            if (button == null)
+            {
+                return false;
+            }
+
             try
             {
                 ResolveCooldownFields();
@@ -4471,11 +4633,7 @@ namespace Infinity_TestMod
             if (GetOpenFileName(ofn))
             {
                 int nullIdx = ofn.lpstrFile.IndexOf('\0');
-                if (nullIdx >= 0)
-                {
-                    return ofn.lpstrFile.Substring(0, nullIdx);
-                }
-                return ofn.lpstrFile;
+                return nullIdx >= 0 ? ofn.lpstrFile[..nullIdx] : ofn.lpstrFile;
             }
             return null;
         }
@@ -4507,11 +4665,7 @@ namespace Infinity_TestMod
             if (GetSaveFileName(ofn))
             {
                 int nullIdx = ofn.lpstrFile.IndexOf('\0');
-                if (nullIdx >= 0)
-                {
-                    return ofn.lpstrFile.Substring(0, nullIdx);
-                }
-                return ofn.lpstrFile;
+                return nullIdx >= 0 ? ofn.lpstrFile[..nullIdx] : ofn.lpstrFile;
             }
             return null;
         }
@@ -4519,15 +4673,15 @@ namespace Infinity_TestMod
 
         public void SendStatusUpdate()
         {
-            var settings = new System.Collections.Generic.Dictionary<string, object>
+            Dictionary<string, object> settings = new()
             {
-                { "playerAccessLevel", (Entity.mainPlayer != null) ? Entity.mainPlayer.AccessLevel : 0 },
-                { "playerUpgradeDays", (Entity.mainPlayer != null) ? Entity.mainPlayer.UpgradeDays : 0 },
-                { "isMember", (Entity.mainPlayer != null) ? (Entity.mainPlayer.UpgradeDays > 0) : false },
+                { "playerAccessLevel", (Entity.mainPlayer?.AccessLevel) ?? 0 },
+                { "playerUpgradeDays", (Entity.mainPlayer?.UpgradeDays) ?? 0 },
+                { "isMember", Entity.mainPlayer?.UpgradeDays > 0 },
                 { "cameraZoom", CameraZoom.Multiplier },
                 { "autoSkipCutscenes", autoSkipCutscenes },
-                { "vsyncEnabled", UnityEngine.QualitySettings.vSyncCount > 0 },
-                { "uncapFrames", UnityEngine.Application.targetFrameRate == -1 },
+                { "vsyncEnabled", QualitySettings.vSyncCount > 0 },
+                { "uncapFrames", Application.targetFrameRate == -1 },
                 { "forceMergeShop", forceMergeShop },
                 { "autoskillsActive", autoskillsActive },
                 { "spoofedName", spoofedName },
@@ -4580,16 +4734,16 @@ namespace Infinity_TestMod
             try
             {
                 // Send Music Catalog
-                List<object> tracksList = new List<object>();
+                List<object> tracksList = [];
                 lock (MusicCatalog.Tracks)
                 {
-                    foreach (var kv in MusicCatalog.Tracks)
+                    foreach (KeyValuePair<int, MusicCatalog.TrackEntry> kv in MusicCatalog.Tracks)
                     {
                         tracksList.Add(new
                         {
-                            id = kv.Value.id,
-                            name = kv.Value.name,
-                            length = kv.Value.length
+                            kv.Value.id,
+                            kv.Value.name,
+                            kv.Value.length
                         });
                     }
                 }
@@ -4600,16 +4754,16 @@ namespace Infinity_TestMod
                 });
 
                 // Send Quest Directory
-                List<object> questsList = new List<object>();
+                List<object> questsList = [];
                 lock (Directory.Quests)
                 {
-                    foreach (var kv in Directory.Quests)
+                    foreach (KeyValuePair<int, Directory.QuestEntry> kv in Directory.Quests)
                     {
                         questsList.Add(new
                         {
                             id = kv.Key,
-                            name = kv.Value.name,
-                            storyline = kv.Value.storyline
+                            kv.Value.name,
+                            kv.Value.storyline
                         });
                     }
                 }
@@ -4620,21 +4774,21 @@ namespace Infinity_TestMod
                 });
 
                 // Send Quest Chains
-                Dictionary<string, List<object>> chainsDict = new Dictionary<string, List<object>>();
+                Dictionary<string, List<object>> chainsDict = [];
                 lock (QuestChains.All)
                 {
-                    foreach (var kv in QuestChains.All)
+                    foreach (KeyValuePair<string, List<QuestChains.Entry>> kv in QuestChains.All)
                     {
-                        List<object> entries = new List<object>();
-                        foreach (var e in kv.Value)
+                        List<object> entries = [];
+                        foreach (QuestChains.Entry e in kv.Value)
                         {
                             entries.Add(new
                             {
-                                qid = e.qid,
+                                e.qid,
                                 area = e.area ?? "",
                                 frame = e.frame ?? "",
                                 pad = e.pad ?? "Spawn",
-                                items = e.items
+                                e.items
                             });
                         }
                         chainsDict[kv.Key] = entries;
@@ -4647,41 +4801,53 @@ namespace Infinity_TestMod
                 });
 
                 // Send Item Catalog
-                List<object> helmsList = new List<object>();
+                List<object> helmsList = [];
                 lock (ItemCatalog.Helms)
                 {
-                    foreach (var kv in ItemCatalog.Helms)
-                        helmsList.Add(new { name = kv.Value.name, bundle = kv.Value.bundle });
+                    foreach (KeyValuePair<string, ItemCatalog.ItemEntry> kv in ItemCatalog.Helms)
+                    {
+                        helmsList.Add(new { kv.Value.name, kv.Value.bundle });
+                    }
                 }
-                List<object> armorsList = new List<object>();
+                List<object> armorsList = [];
                 lock (ItemCatalog.Armors)
                 {
-                    foreach (var kv in ItemCatalog.Armors)
-                        armorsList.Add(new { name = kv.Value.name, bundle = kv.Value.bundle });
+                    foreach (KeyValuePair<string, ItemCatalog.ItemEntry> kv in ItemCatalog.Armors)
+                    {
+                        armorsList.Add(new { kv.Value.name, kv.Value.bundle });
+                    }
                 }
-                List<object> backsList = new List<object>();
+                List<object> backsList = [];
                 lock (ItemCatalog.Backs)
                 {
-                    foreach (var kv in ItemCatalog.Backs)
-                        backsList.Add(new { name = kv.Value.name, bundle = kv.Value.bundle });
+                    foreach (KeyValuePair<string, ItemCatalog.ItemEntry> kv in ItemCatalog.Backs)
+                    {
+                        NewMethod(backsList, kv);
+                    }
                 }
-                List<object> weaponsList = new List<object>();
+                List<object> weaponsList = [];
                 lock (ItemCatalog.Weapons)
                 {
-                    foreach (var kv in ItemCatalog.Weapons)
-                        weaponsList.Add(new { name = kv.Value.name, bundle = kv.Value.bundle });
+                    foreach (KeyValuePair<string, ItemCatalog.ItemEntry> kv in ItemCatalog.Weapons)
+                    {
+                        weaponsList.Add(new { kv.Value.name, kv.Value.bundle });
+                    }
                 }
-                List<object> petsList = new List<object>();
+                List<object> petsList = [];
                 lock (ItemCatalog.Pets)
                 {
-                    foreach (var kv in ItemCatalog.Pets)
-                        petsList.Add(new { name = kv.Value.name, bundle = kv.Value.bundle });
+                    foreach (KeyValuePair<string, ItemCatalog.ItemEntry> kv in ItemCatalog.Pets)
+                    {
+                        petsList.Add(new { kv.Value.name, kv.Value.bundle });
+                    }
                 }
-                List<object> monstersList = new List<object>();
+                List<object> monstersList = [];
                 lock (ItemCatalog.Monsters)
                 {
-                    foreach (var kv in ItemCatalog.Monsters)
-                        monstersList.Add(new { name = kv.Value.name, bundle = kv.Value.bundle });
+                    foreach (KeyValuePair<string, ItemCatalog.ItemEntry> kv in ItemCatalog.Monsters)
+                    {
+                        monstersList.Add(new { kv.Value.name, kv.Value.bundle });
+                    }
                 }
                 LauncherServer.Send(new
                 {
@@ -4698,6 +4864,11 @@ namespace Infinity_TestMod
             {
                 LoggerInstance.Error($"[Launcher] SendCatalogs error: {ex.Message}");
             }
+        }
+
+        private static void NewMethod(List<object> backsList, KeyValuePair<string, ItemCatalog.ItemEntry> kv)
+        {
+            backsList.Add(new { kv.Value.name, kv.Value.bundle });
         }
 
         private void ProcessLauncherCommands()
@@ -4760,8 +4931,15 @@ namespace Infinity_TestMod
                                 // Active op: drive the game's transform on/off using
                                 // the current bundle. Setting the flag alone does
                                 // nothing — Entity.ApplyMonTransform must be invoked.
-                                if ((bool)val) ApplyMonTransformSpoof(monTransformBundle);
-                                else ClearMonTransformSpoof();
+                                if ((bool)val)
+                                {
+                                    ApplyMonTransformSpoof(monTransformBundle);
+                                }
+                                else
+                                {
+                                    ClearMonTransformSpoof();
+                                }
+
                                 break;
                             case "monTransformBundle":
                                 // Apply button: store the bundle and transform now.
@@ -4774,7 +4952,11 @@ namespace Infinity_TestMod
                                 // Active op: ToggleGenderSpoof flips the Gender field and
                                 // rebuilds the avatar. Only toggle when the requested
                                 // state differs from the current one.
-                                if ((bool)val != genderSpoofActive) ToggleGenderSpoof();
+                                if ((bool)val != genderSpoofActive)
+                                {
+                                    ToggleGenderSpoof();
+                                }
+
                                 break;
                             case "snifferServerActive": snifferServerActive = (bool)val; break;
                             case "snifferClientActive": snifferClientActive = (bool)val; break;
@@ -4792,7 +4974,11 @@ namespace Infinity_TestMod
                                 break;
                             case "skillsetEditCombo":
                                 skillsetEditCombo = (string)val;
-                                if (retroAutoskillsActive) activeComboList = ParseCombo(skillsetEditCombo);
+                                if (retroAutoskillsActive)
+                                {
+                                    activeComboList = ParseCombo(skillsetEditCombo);
+                                }
+
                                 break;
                             case "skillsetEditName": skillsetEditName = (string)val; break;
                             case "skillsetFileInput": skillsetFileInput = (string)val; break;
@@ -4808,7 +4994,9 @@ namespace Infinity_TestMod
                                         {
                                             retroDelayInputs[j] = delParts[j];
                                             if (float.TryParse(delParts[j], out float ms))
+                                            {
                                                 retroSkillDelays[j] = ms / 1000f;
+                                            }
                                         }
                                     }
                                 }
@@ -4821,7 +5009,9 @@ namespace Infinity_TestMod
                                     for (int j = 0; j < 5; j++)
                                     {
                                         if (j < waitParts.Length)
+                                        {
                                             bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                        }
                                     }
                                 }
                                 break;
@@ -4833,7 +5023,9 @@ namespace Infinity_TestMod
                                     for (int j = 0; j < 5; j++)
                                     {
                                         if (j < freeParts.Length)
+                                        {
                                             bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                        }
                                     }
                                 }
                                 break;
@@ -4843,7 +5035,7 @@ namespace Infinity_TestMod
                             case "hideMonsters": HudToggles.HideMonsters = (bool)val; break;
                             case "hideNPCs": HudToggles.HideNPCs = (bool)val; break;
                         }
-                        
+
                         SendStatusUpdate();
                     }
                     else if (type == "SkipCutscene")
@@ -4854,7 +5046,7 @@ namespace Infinity_TestMod
                             if (mgr != null)
                             {
                                 mgr.EndPressed();
-                                Util.CameraZoom.Reset();
+                                CameraZoom.Reset();
                                 LoggerInstance.Msg("Cutscene: skipped (zoom reset)");
                             }
                             else
@@ -4880,7 +5072,7 @@ namespace Infinity_TestMod
                     else if (type == "LoadQuest")
                     {
                         int questId = (int)cmd["QuestId"];
-                        UIQuests.ShowQuestUI(new System.Collections.Generic.List<int> { questId }, QuestMode.Quest, null);
+                        UIQuests.ShowQuestUI([questId], QuestMode.Quest, null);
                         LoggerInstance.Msg($"[Launcher] Loaded quest ID {questId}");
                     }
                     else if (type == "AcceptQuest")
@@ -4916,16 +5108,19 @@ namespace Infinity_TestMod
                         {
                             string packetCmd = (string)cmd["Cmd"];
                             JArray paramsArray = (JArray)cmd["Params"];
-                            List<string> paramsList = new();
+                            List<string> paramsList = [];
                             if (paramsArray != null)
                             {
-                                foreach (var item in paramsArray)
+                                foreach (JToken item in paramsArray)
                                 {
                                     string pStr = item.ToString();
                                     if (pStr.Equals("<charname>", System.StringComparison.OrdinalIgnoreCase) ||
                                         pStr.Equals("<username>", System.StringComparison.OrdinalIgnoreCase))
                                     {
-                                        if (Entity.mainPlayer != null) pStr = Entity.mainPlayer.Name;
+                                        if (Entity.mainPlayer != null)
+                                        {
+                                            pStr = Entity.mainPlayer.Name;
+                                        }
                                     }
                                     paramsList.Add(pStr);
                                 }
@@ -4949,7 +5144,7 @@ namespace Infinity_TestMod
                             if (_wrapAndQueueResponseMethod != null)
                             {
                                 byte[] bytes = System.Text.Encoding.UTF8.GetBytes(packet);
-                                _wrapAndQueueResponseMethod.Invoke(AEC.Instance, new object[] { bytes });
+                                _wrapAndQueueResponseMethod.Invoke(AEC.Instance, [bytes]);
                                 LoggerInstance.Msg($"[Launcher] Injected packet: {packet}");
                             }
                         }
@@ -4961,7 +5156,7 @@ namespace Infinity_TestMod
                         string area = (string)cmd["Area"];
                         string frame = (string)cmd["Frame"];
                         string pad = (string)cmd["Pad"];
-                        
+
                         questRunnerLog.Clear();
                         questRunner.OnLog = line =>
                         {
@@ -4969,11 +5164,14 @@ namespace Infinity_TestMod
                             lock (questRunnerLog)
                             {
                                 questRunnerLog.Add(formatted);
-                                if (questRunnerLog.Count > 200) questRunnerLog.RemoveAt(0);
+                                if (questRunnerLog.Count > 200)
+                                {
+                                    questRunnerLog.RemoveAt(0);
+                                }
                             }
                             LauncherServer.Send(new { Type = "QuestRunnerLog", Message = formatted });
                         };
-                        
+
                         questRunner?.Start(qid, iters, area, frame, pad);
                     }
                     else if (type == "StopQuestRunner")
@@ -5036,7 +5234,7 @@ namespace Infinity_TestMod
                     {
                         try
                         {
-                            new DevWindow(new System.Collections.Generic.List<string>()).Execute();
+                            new DevWindow([]).Execute();
                             LoggerInstance.Msg("[Launcher] Opened dev window.");
                         }
                         catch (System.Exception ex)
@@ -5121,15 +5319,22 @@ namespace Infinity_TestMod
                                 for (int j = 0; j < 5; j++)
                                 {
                                     if (j < waitParts.Length)
+                                    {
                                         bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                    }
                                     else
+                                    {
                                         retroSkillWaits[j] = false;
+                                    }
                                 }
                             }
                             else
                             {
                                 bool globalWait = savedSkillsets[index].WaitForSkill;
-                                for (int j = 0; j < 5; j++) retroSkillWaits[j] = globalWait;
+                                for (int j = 0; j < 5; j++)
+                                {
+                                    retroSkillWaits[j] = globalWait;
+                                }
                             }
 
                             // Parse frees
@@ -5139,14 +5344,21 @@ namespace Infinity_TestMod
                                 for (int j = 0; j < 5; j++)
                                 {
                                     if (j < freeParts.Length)
+                                    {
                                         bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                    }
                                     else
+                                    {
                                         retroSkillFrees[j] = false;
+                                    }
                                 }
                             }
                             else
                             {
-                                for (int j = 0; j < 5; j++) retroSkillFrees[j] = false;
+                                for (int j = 0; j < 5; j++)
+                                {
+                                    retroSkillFrees[j] = false;
+                                }
                             }
 
                             // Parse delays
@@ -5157,7 +5369,9 @@ namespace Infinity_TestMod
                                 {
                                     retroDelayInputs[j] = delParts[j];
                                     if (float.TryParse(delParts[j], out float ms))
+                                    {
                                         retroSkillDelays[j] = ms / 1000f;
+                                    }
                                 }
                             }
 
@@ -5165,7 +5379,7 @@ namespace Infinity_TestMod
                             {
                                 activeComboList = ParseCombo(skillsetEditCombo);
                             }
-                            
+
                             SendStatusUpdate();
                         }
                     }
@@ -5190,7 +5404,9 @@ namespace Infinity_TestMod
                                         {
                                             retroDelayInputs[j] = delParts[j];
                                             if (float.TryParse(delParts[j], out float ms))
+                                            {
                                                 retroSkillDelays[j] = ms / 1000f;
+                                            }
                                         }
                                     }
                                 }
@@ -5206,21 +5422,32 @@ namespace Infinity_TestMod
                                         for (int j = 0; j < 5; j++)
                                         {
                                             if (j < waitParts.Length)
+                                            {
                                                 bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                            }
                                             else
+                                            {
                                                 retroSkillWaits[j] = false;
+                                            }
                                         }
                                     }
                                     else
                                     {
                                         bool.TryParse(rawWait, out bool globalWait);
-                                        for (int j = 0; j < 5; j++) retroSkillWaits[j] = globalWait;
+                                        for (int j = 0; j < 5; j++)
+                                        {
+                                            retroSkillWaits[j] = globalWait;
+                                        }
+
                                         waitStr = string.Join(",", retroSkillWaits);
                                     }
                                 }
                                 else
                                 {
-                                    for (int j = 0; j < 5; j++) retroSkillWaits[j] = false;
+                                    for (int j = 0; j < 5; j++)
+                                    {
+                                        retroSkillWaits[j] = false;
+                                    }
                                 }
 
                                 string freeStr = "false,false,false,false,false";
@@ -5231,14 +5458,21 @@ namespace Infinity_TestMod
                                     for (int j = 0; j < 5; j++)
                                     {
                                         if (j < freeParts.Length)
+                                        {
                                             bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                        }
                                         else
+                                        {
                                             retroSkillFrees[j] = false;
+                                        }
                                     }
                                 }
                                 else
                                 {
-                                    for (int j = 0; j < 5; j++) retroSkillFrees[j] = false;
+                                    for (int j = 0; j < 5; j++)
+                                    {
+                                        retroSkillFrees[j] = false;
+                                    }
                                 }
 
                                 if (retroAutoskillsActive)
@@ -5291,7 +5525,9 @@ namespace Infinity_TestMod
                                                     {
                                                         retroDelayInputs[j] = delParts[j];
                                                         if (float.TryParse(delParts[j], out float ms))
+                                                        {
                                                             retroSkillDelays[j] = ms / 1000f;
+                                                        }
                                                     }
                                                 }
                                             }
@@ -5306,21 +5542,32 @@ namespace Infinity_TestMod
                                                     for (int j = 0; j < 5; j++)
                                                     {
                                                         if (j < waitParts.Length)
+                                                        {
                                                             bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                                        }
                                                         else
+                                                        {
                                                             retroSkillWaits[j] = false;
+                                                        }
                                                     }
                                                 }
                                                 else
                                                 {
                                                     bool.TryParse(rawWait, out bool globalWait);
-                                                    for (int j = 0; j < 5; j++) retroSkillWaits[j] = globalWait;
+                                                    for (int j = 0; j < 5; j++)
+                                                    {
+                                                        retroSkillWaits[j] = globalWait;
+                                                    }
+
                                                     waitStr = string.Join(",", retroSkillWaits);
                                                 }
                                             }
                                             else
                                             {
-                                                for (int j = 0; j < 5; j++) retroSkillWaits[j] = false;
+                                                for (int j = 0; j < 5; j++)
+                                                {
+                                                    retroSkillWaits[j] = false;
+                                                }
                                             }
 
                                             string freeStr = "false,false,false,false,false";
@@ -5331,14 +5578,21 @@ namespace Infinity_TestMod
                                                 for (int j = 0; j < 5; j++)
                                                 {
                                                     if (j < freeParts.Length)
+                                                    {
                                                         bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                                    }
                                                     else
+                                                    {
                                                         retroSkillFrees[j] = false;
+                                                    }
                                                 }
                                             }
                                             else
                                             {
-                                                for (int j = 0; j < 5; j++) retroSkillFrees[j] = false;
+                                                for (int j = 0; j < 5; j++)
+                                                {
+                                                    retroSkillFrees[j] = false;
+                                                }
                                             }
 
                                             if (retroAutoskillsActive)
@@ -5396,7 +5650,7 @@ namespace Infinity_TestMod
                                 string chainFile = System.IO.Path.Combine(userDir, "chains.json");
                                 JObject root = System.IO.File.Exists(chainFile)
                                     ? JObject.Parse(System.IO.File.ReadAllText(chainFile))
-                                    : new JObject();
+                                    : [];
                                 root[name] = entries;
                                 System.IO.File.WriteAllText(chainFile, root.ToString(Newtonsoft.Json.Formatting.Indented));
                                 QuestChains.Init();
@@ -5446,7 +5700,10 @@ namespace Infinity_TestMod
                                 lock (questRunnerLog)
                                 {
                                     questRunnerLog.Add(formatted);
-                                    if (questRunnerLog.Count > 200) questRunnerLog.RemoveAt(0);
+                                    if (questRunnerLog.Count > 200)
+                                    {
+                                        questRunnerLog.RemoveAt(0);
+                                    }
                                 }
                                 LauncherServer.Send(new { Type = "QuestRunnerLog", Message = formatted });
                             };

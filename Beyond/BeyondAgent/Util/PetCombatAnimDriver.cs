@@ -2,23 +2,27 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     /// <summary>
+    /// <para>
     /// While the player is in combat, cycles random animation clips on the
     /// spoofed pet's Animator. The pet GO is just the monster prefab with
     /// Walk/FollowerGameObject bolted on, so its original Animator + clip
     /// list ride along.
-    ///
+    /// </para>
+    /// <para>
     /// Why Playables, not Animator.Play(name): Animator.Play resolves by
     /// AnimatorController STATE name, not clip name. AQW prefabs frequently
     /// have state names that don't match their clip names, so Play silently
     /// no-ops and the rig freezes mid-pose. AnimationPlayableUtilities.PlayClip
     /// drives the Animator directly with a clip Playable, bypassing the
     /// state machine entirely — works for every clip regardless of naming.
-    ///
+    /// </para>
+    /// <para>
     /// On combat-exit we destroy the graph and Rebind() so the controller's
     /// default state (idle/walk) takes over again.
+    /// </para>
     /// </summary>
     public static class PetCombatAnimDriver
     {
@@ -33,7 +37,7 @@ namespace Infinity_TestMod.Util
 
         public static void Tick()
         {
-            if (!TestMod.petCombatAnimActive) { ResetIfTracking(); return; }
+            if (!BeyondAgentClass.petCombatAnimActive) { ResetIfTracking(); return; }
             if (Entity.mainPlayer == null) { ResetIfTracking(); return; }
 
             GameObject pet = Entity.mainPlayer.petGO;
@@ -46,24 +50,33 @@ namespace Infinity_TestMod.Util
                 _anim = pet.GetComponentInChildren<Animator>();
                 _clips = null;
                 _lastClipIdx = -1;
-                if (_anim != null && _anim.runtimeAnimatorController != null)
+                if (_anim?.runtimeAnimatorController != null)
                 {
-                    _clips = new List<AnimationClip>();
+                    _clips = [];
                     foreach (AnimationClip c in _anim.runtimeAnimatorController.animationClips)
                     {
-                        if (c == null || string.IsNullOrEmpty(c.name)) continue;
+                        if (c == null || string.IsNullOrEmpty(c.name))
+                        {
+                            continue;
+                        }
                         // Skip stun + death clips — they freeze the rig or
                         // play the death pose, which defeats the cycle.
                         string n = c.name.ToLowerInvariant();
                         if (n.Contains("stun") || n.Contains("death") || n.Contains("die"))
+                        {
                             continue;
+                        }
+
                         _clips.Add(c);
                     }
                 }
                 _wasInCombat = false;
             }
 
-            if (_anim == null || _clips == null || _clips.Count == 0) return;
+            if (_anim == null || _clips == null || _clips.Count == 0)
+            {
+                return;
+            }
 
             bool inCombat = false;
             try { inCombat = Entity.mainPlayer.currentState == Entity.State.Combat; } catch { }
@@ -74,7 +87,10 @@ namespace Infinity_TestMod.Util
                 {
                     int idx = Random.Range(0, _clips.Count);
                     if (_clips.Count > 1 && idx == _lastClipIdx)
+                    {
                         idx = (idx + 1) % _clips.Count;
+                    }
+
                     _lastClipIdx = idx;
                     AnimationClip clip = _clips[idx];
                     PlayClip(clip);
@@ -110,14 +126,22 @@ namespace Infinity_TestMod.Util
 
         private static void DestroyGraph()
         {
-            if (!_graphValid) return;
-            try { if (_graph.IsValid()) _graph.Destroy(); } catch { }
+            if (!_graphValid)
+            {
+                return;
+            }
+
+            try { if (_graph.IsValid()) { _graph.Destroy(); } } catch { }
             _graphValid = false;
         }
 
         private static void ResetIfTracking()
         {
-            if (_trackedPet == null && _anim == null && !_graphValid) return;
+            if (_trackedPet == null && _anim == null && !_graphValid)
+            {
+                return;
+            }
+
             DestroyGraph();
             if (_wasInCombat && _anim != null)
             {

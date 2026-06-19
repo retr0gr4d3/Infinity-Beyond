@@ -1,4 +1,4 @@
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Gender flip is implemented in TestMod.ToggleGenderSpoof by directly
     // mutating Entity.mainPlayer.Gender (the enum field) — that's the

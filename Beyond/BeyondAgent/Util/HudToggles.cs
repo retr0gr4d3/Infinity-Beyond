@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     // Cluster of tiny "always on" view toggles surfaced as icon buttons next
     // to the main `!` HUD icon: hide UI, hide other players / monsters / NPCs,
@@ -32,6 +32,7 @@ namespace Infinity_TestMod.Util
         // VFX/projectiles spawned during a skill cast, still cheap (one scene
         // scan of a few hundred renderers per refresh).
         private const int RefreshFrames = 5;
+
         private static int _frameCounter;
 
         // Reflection handles for the auxiliary GameObjects that hang off each
@@ -42,7 +43,7 @@ namespace Infinity_TestMod.Util
         // popup are property-backed (we noticed `<...>k__BackingField` in the
         // dump), so they're addressable via field too.
         private static readonly string[] EntityAuxFieldNames =
-        {
+        [
             // The main visual rig — turns out MonsterAnimationControl and
             // PlayerAnimationControl often sit on a controller GameObject
             // that isn't the same as the rig itself. eGO (entity GO) and
@@ -56,23 +57,34 @@ namespace Infinity_TestMod.Util
             "<auraPopUp>k__BackingField",
             "<popup>k__BackingField",
             "monTransformGO",
-        };
+        ];
+
         private static FieldInfo[] _entityAuxFields;
         private static bool _auxFieldsResolved;
 
         private static FieldInfo[] ResolveAuxFields()
         {
-            if (_auxFieldsResolved) return _entityAuxFields;
+            if (_auxFieldsResolved)
+            {
+                return _entityAuxFields;
+            }
+
             _auxFieldsResolved = true;
             const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-            List<FieldInfo> list = new();
+            List<FieldInfo> list = [];
             foreach (string name in EntityAuxFieldNames)
             {
                 FieldInfo f = typeof(Entity).GetField(name, Flags);
-                if (f != null) list.Add(f);
-                else BeyondLog.Warning($"[HudToggles] Entity field not found: {name}");
+                if (f != null)
+                {
+                    list.Add(f);
+                }
+                else
+                {
+                    BeyondLog.Warning($"[HudToggles] Entity field not found: {name}");
+                }
             }
-            _entityAuxFields = list.ToArray();
+            _entityAuxFields = [.. list];
             return _entityAuxFields;
         }
 
@@ -80,7 +92,7 @@ namespace Infinity_TestMod.Util
         // Stash + disable every scene Canvas. IMGUI (our mod menu + the `!`
         // button) bypasses Canvas so our own UI stays visible — by design,
         // otherwise you can't untoggle.
-        private static readonly Dictionary<Canvas, bool> _canvasOriginalEnabled = new();
+        private static readonly Dictionary<Canvas, bool> _canvasOriginalEnabled = [];
 
         private static void RefreshHideUI()
         {
@@ -89,12 +101,23 @@ namespace Infinity_TestMod.Util
                 Canvas[] all = Resources.FindObjectsOfTypeAll<Canvas>();
                 foreach (Canvas c in all)
                 {
-                    if (c == null) continue;
+                    if (c == null)
+                    {
+                        continue;
+                    }
                     // Scene-only: prefabs in Resources have an invalid scene
                     // handle. Disabling those would write into the prefab
                     // template and persist across the toggle's lifetime.
-                    if (!c.gameObject.scene.IsValid()) continue;
-                    if (_canvasOriginalEnabled.ContainsKey(c)) continue;
+                    if (!c.gameObject.scene.IsValid())
+                    {
+                        continue;
+                    }
+
+                    if (_canvasOriginalEnabled.ContainsKey(c))
+                    {
+                        continue;
+                    }
+
                     _canvasOriginalEnabled[c] = c.enabled;
                     c.enabled = false;
                 }
@@ -109,7 +132,7 @@ namespace Infinity_TestMod.Util
         {
             foreach (KeyValuePair<Canvas, bool> kv in _canvasOriginalEnabled)
             {
-                if (kv.Key != null) kv.Key.enabled = kv.Value;
+                kv.Key?.enabled = kv.Value;
             }
             _canvasOriginalEnabled.Clear();
         }
@@ -120,8 +143,9 @@ namespace Infinity_TestMod.Util
         // restores its visuals while leaving the others hidden. The Canvas
         // map here is separate from the Hide-UI one (_canvasOriginalEnabled)
         // so the two toggle restorations don't fight over the same keys.
-        private static readonly Dictionary<Renderer, bool> _rendererOriginal = new();
-        private static readonly Dictionary<Canvas, bool> _entityAuxCanvasOriginal = new();
+        private static readonly Dictionary<Renderer, bool> _rendererOriginal = [];
+
+        private static readonly Dictionary<Canvas, bool> _entityAuxCanvasOriginal = [];
 
         private static void RefreshEntityHide()
         {
@@ -133,18 +157,29 @@ namespace Infinity_TestMod.Util
                 // null and get dropped naturally.
                 foreach (KeyValuePair<Renderer, bool> kv in _rendererOriginal)
                 {
-                    if (kv.Key != null) kv.Key.enabled = kv.Value;
+                    kv.Key?.enabled = kv.Value;
                 }
                 _rendererOriginal.Clear();
                 foreach (KeyValuePair<Canvas, bool> kv in _entityAuxCanvasOriginal)
                 {
-                    if (kv.Key != null) kv.Key.enabled = kv.Value;
+                    kv.Key?.enabled = kv.Value;
                 }
                 _entityAuxCanvasOriginal.Clear();
 
-                if (HideOtherPlayers) HideOtherPlayersImpl();
-                if (HideMonsters) HideMonstersImpl();
-                if (HideNPCs) HideNPCsImpl();
+                if (HideOtherPlayers)
+                {
+                    HideOtherPlayersImpl();
+                }
+
+                if (HideMonsters)
+                {
+                    HideMonstersImpl();
+                }
+
+                if (HideNPCs)
+                {
+                    HideNPCsImpl();
+                }
             }
             catch (Exception ex)
             {
@@ -160,9 +195,21 @@ namespace Infinity_TestMod.Util
             PlayerAnimationControl[] ctrls = Resources.FindObjectsOfTypeAll<PlayerAnimationControl>();
             foreach (PlayerAnimationControl ctrl in ctrls)
             {
-                if (ctrl == null) continue;
-                if (!ctrl.gameObject.scene.IsValid()) continue;
-                if (mainPlayer != null && ReferenceEquals(ctrl.character, mainPlayer)) continue;
+                if (ctrl == null)
+                {
+                    continue;
+                }
+
+                if (!ctrl.gameObject.scene.IsValid())
+                {
+                    continue;
+                }
+
+                if (mainPlayer != null && ReferenceEquals(ctrl.character, mainPlayer))
+                {
+                    continue;
+                }
+
                 HideRenderersUnder(ctrl.gameObject);
                 HideEntityAuxiliaries(ctrl.character);
             }
@@ -182,8 +229,16 @@ namespace Infinity_TestMod.Util
             foreach (MonsterAnimationControl ctrl in ctrls)
             {
                 total++;
-                if (ctrl == null) continue;
-                if (!ctrl.gameObject.scene.IsValid()) continue;
+                if (ctrl == null)
+                {
+                    continue;
+                }
+
+                if (!ctrl.gameObject.scene.IsValid())
+                {
+                    continue;
+                }
+
                 hit++;
                 HideRenderersUnder(ctrl.gameObject);
                 HideEntityAuxiliaries(ctrl.character);
@@ -198,8 +253,16 @@ namespace Infinity_TestMod.Util
             foreach (NPCQuestHead head in heads)
             {
                 total++;
-                if (head == null) continue;
-                if (!head.gameObject.scene.IsValid()) continue;
+                if (head == null)
+                {
+                    continue;
+                }
+
+                if (!head.gameObject.scene.IsValid())
+                {
+                    continue;
+                }
+
                 inScene++;
                 // NPCQuestHead also lives in the HUD (over the player
                 // portrait). Anything with a Canvas ancestor is UI — skip
@@ -230,7 +293,10 @@ namespace Infinity_TestMod.Util
                     fallback++;
                 }
                 HideRenderersUnder(rigGo);
-                if (character != null) HideEntityAuxiliaries(character);
+                if (character != null)
+                {
+                    HideEntityAuxiliaries(character);
+                }
             }
             DiagLog($"HideNPCs: heads total={total} inScene={inScene} uiSkipped={uiSkipped} eacHits={eacHits} fallback={fallback}");
         }
@@ -240,7 +306,11 @@ namespace Infinity_TestMod.Util
         private static void DiagLog(string msg)
         {
             _diagFrameAccum++;
-            if (_diagFrameAccum < 60) return;
+            if (_diagFrameAccum < 60)
+            {
+                return;
+            }
+
             _diagFrameAccum = 0;
             BeyondLog.Msg($"[HudToggles] {msg}");
         }
@@ -252,22 +322,38 @@ namespace Infinity_TestMod.Util
         // hidden players — handy side effect.
         private static void HideEntityAuxiliaries(object entity)
         {
-            if (entity == null) return;
+            if (entity == null)
+            {
+                return;
+            }
+
             FieldInfo[] fields = ResolveAuxFields();
             foreach (FieldInfo f in fields)
             {
                 GameObject go;
                 try { go = f.GetValue(entity) as GameObject; }
                 catch { continue; }
-                if (go == null) continue;
+                if (go == null)
+                {
+                    continue;
+                }
+
                 HideRenderersUnder(go);
                 // Nameplates render through Canvas, not Renderer. Disable any
                 // Canvases under the aux GO too — sprite-based popups also
                 // sometimes wrap their visuals in a Canvas for sorting.
                 foreach (Canvas c in go.GetComponentsInChildren<Canvas>(includeInactive: true))
                 {
-                    if (c == null) continue;
-                    if (_entityAuxCanvasOriginal.ContainsKey(c)) continue;
+                    if (c == null)
+                    {
+                        continue;
+                    }
+
+                    if (_entityAuxCanvasOriginal.ContainsKey(c))
+                    {
+                        continue;
+                    }
+
                     _entityAuxCanvasOriginal[c] = c.enabled;
                     c.enabled = false;
                 }
@@ -279,8 +365,16 @@ namespace Infinity_TestMod.Util
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>(includeInactive: true);
             foreach (Renderer r in renderers)
             {
-                if (r == null) continue;
-                if (_rendererOriginal.ContainsKey(r)) continue;
+                if (r == null)
+                {
+                    continue;
+                }
+
+                if (_rendererOriginal.ContainsKey(r))
+                {
+                    continue;
+                }
+
                 _rendererOriginal[r] = r.enabled;
                 r.enabled = false;
             }
@@ -295,6 +389,7 @@ namespace Infinity_TestMod.Util
         // HP bar lives (familiar muscle-memory zone). Children are
         // counter-rotated so icons and cooldown numbers stay upright.
         private const float VerticalBarMarginX = 24f;
+
         private const float VerticalBarMarginY = 24f;
 
         private static Quaternion _skillsOriginalRotation;
@@ -303,13 +398,17 @@ namespace Infinity_TestMod.Util
         private static Vector2 _skillsOriginalAnchorMax;
         private static Vector2 _skillsOriginalAnchoredPos;
         private static bool _skillsRotated;
-        private static readonly List<Transform> _counterRotatedChildren = new();
+        private static readonly List<Transform> _counterRotatedChildren = [];
 
         public static void ApplyVerticalSkills()
         {
             try
             {
-                if (UISkillSlots.Instance == null) return;
+                if (UISkillSlots.Instance == null)
+                {
+                    return;
+                }
+
                 Transform root = UISkillSlots.Instance.transform;
                 RectTransform rect = root as RectTransform;
 
@@ -366,7 +465,7 @@ namespace Infinity_TestMod.Util
                     }
                     foreach (Transform c in _counterRotatedChildren)
                     {
-                        if (c != null) c.localRotation = Quaternion.identity;
+                        c?.localRotation = Quaternion.identity;
                     }
                     _counterRotatedChildren.Clear();
                     _skillsRotated = false;
@@ -389,35 +488,60 @@ namespace Infinity_TestMod.Util
 
             if (!anyHideOn && hadHidden)
             {
-                if (_canvasOriginalEnabled.Count > 0) RestoreHideUI();
+                if (_canvasOriginalEnabled.Count > 0)
+                {
+                    RestoreHideUI();
+                }
+
                 if (_rendererOriginal.Count > 0)
                 {
                     foreach (KeyValuePair<Renderer, bool> kv in _rendererOriginal)
-                        if (kv.Key != null) kv.Key.enabled = kv.Value;
+                    {
+                        kv.Key?.enabled = kv.Value;
+                    }
+
                     _rendererOriginal.Clear();
                 }
                 if (_entityAuxCanvasOriginal.Count > 0)
                 {
                     foreach (KeyValuePair<Canvas, bool> kv in _entityAuxCanvasOriginal)
-                        if (kv.Key != null) kv.Key.enabled = kv.Value;
+                    {
+                        kv.Key?.enabled = kv.Value;
+                    }
+
                     _entityAuxCanvasOriginal.Clear();
                 }
                 _frameCounter = 0;
                 return;
             }
 
-            if (!anyHideOn) return;
+            if (!anyHideOn)
+            {
+                return;
+            }
 
             _frameCounter++;
-            if (_frameCounter < RefreshFrames) return;
+            if (_frameCounter < RefreshFrames)
+            {
+                return;
+            }
+
             _frameCounter = 0;
 
-            if (HideUI) RefreshHideUI();
-            else if (_canvasOriginalEnabled.Count > 0) RestoreHideUI();
+            if (HideUI)
+            {
+                RefreshHideUI();
+            }
+            else if (_canvasOriginalEnabled.Count > 0)
+            {
+                RestoreHideUI();
+            }
 
             if (HideOtherPlayers || HideMonsters || HideNPCs
                 || _rendererOriginal.Count > 0 || _entityAuxCanvasOriginal.Count > 0)
+            {
                 RefreshEntityHide();
+            }
         }
     }
 }

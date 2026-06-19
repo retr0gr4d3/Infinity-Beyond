@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // SpawnBubble parents the speech bubble to the nameplate of the player it
     // looks up by name. When chat is spoofed, that lookup fails (no player
@@ -13,14 +13,26 @@ namespace Infinity_TestMod.Patches
     {
         public static void Prefix(ref string nameTitleCase)
         {
-            if (string.IsNullOrEmpty(TestMod.spoofedName))
+            if (string.IsNullOrEmpty(BeyondAgentClass.spoofedName))
+            {
                 return;
-            if (Entity.mainPlayer == null) return;
-            string realName = Entity.mainPlayer.Name;
-            if (string.IsNullOrEmpty(realName) || string.IsNullOrEmpty(nameTitleCase)) return;
+            }
 
-            if (string.Equals(nameTitleCase, TestMod.spoofedName, System.StringComparison.OrdinalIgnoreCase))
+            if (Entity.mainPlayer == null)
+            {
+                return;
+            }
+
+            string realName = Entity.mainPlayer.Name;
+            if (string.IsNullOrEmpty(realName) || string.IsNullOrEmpty(nameTitleCase))
+            {
+                return;
+            }
+
+            if (string.Equals(nameTitleCase, BeyondAgentClass.spoofedName, System.StringComparison.OrdinalIgnoreCase))
+            {
                 nameTitleCase = realName;
+            }
         }
     }
 
@@ -34,15 +46,26 @@ namespace Infinity_TestMod.Patches
     {
         public static void Prefix(ResponseChat rc)
         {
-            if (string.IsNullOrEmpty(TestMod.spoofedName))
+            if (string.IsNullOrEmpty(BeyondAgentClass.spoofedName))
+            {
                 return;
-            if (rc == null || Entity.mainPlayer == null) return;
+            }
+
+            if (rc == null || Entity.mainPlayer == null)
+            {
+                return;
+            }
 
             string realName = Entity.mainPlayer.Name;
-            if (string.IsNullOrEmpty(realName)) return;
+            if (string.IsNullOrEmpty(realName))
+            {
+                return;
+            }
 
             if (rc.Name == realName)
-                rc.Name = TestMod.spoofedName;
+            {
+                rc.Name = BeyondAgentClass.spoofedName;
+            }
         }
     }
 }

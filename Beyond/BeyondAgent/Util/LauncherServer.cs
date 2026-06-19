@@ -1,13 +1,13 @@
+using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
 using System.Text;
 using System.Threading;
-using Newtonsoft.Json;
 using UnityEngine;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     // Named-pipe server for the launcher client. One launcher per game process,
     // so the pipe name is per-session: the launcher mints a unique name, spawns
@@ -42,25 +42,32 @@ namespace Infinity_TestMod.Util
 
         private static string _pipeName;
         private static Conn _active;
-        private static readonly object _connLock = new object();
+        private static readonly object _connLock = new();
         private static Thread _listenThread;
-        private static readonly ConcurrentQueue<string> _incomingQueue = new ConcurrentQueue<string>();
+        private static readonly ConcurrentQueue<string> _incomingQueue = new();
         private static bool _isRunning;
 
         private static readonly string PingLine = JsonConvert.SerializeObject(new { Type = "Ping" }) + "\n";
 
         public static bool IsConnected
         {
-            get { Conn c = _active; return c != null && c.Pipe.IsConnected; }
+            get { Conn c = _active; return c?.Pipe.IsConnected == true; }
         }
 
         public static void Start()
         {
-            if (_isRunning) return;
+            if (_isRunning)
+            {
+                return;
+            }
+
             _isRunning = true;
 
             _pipeName = Environment.GetEnvironmentVariable(EnvPipeName);
-            if (string.IsNullOrWhiteSpace(_pipeName)) _pipeName = DefaultPipeName;
+            if (string.IsNullOrWhiteSpace(_pipeName))
+            {
+                _pipeName = DefaultPipeName;
+            }
 
             _listenThread = new Thread(ListenLoop)
             {
@@ -78,7 +85,7 @@ namespace Infinity_TestMod.Util
             lock (_connLock) { old = _active; _active = null; }
             Teardown(old);
 
-            if (_listenThread != null && _listenThread.IsAlive)
+            if (_listenThread?.IsAlive == true)
             {
                 _listenThread.Join(1000);
             }
@@ -113,7 +120,7 @@ namespace Infinity_TestMod.Util
                     lock (_connLock) { old = _active; _active = null; }
                     Teardown(old);
 
-                    Conn conn = new Conn
+                    Conn conn = new()
                     {
                         Pipe = pipe,
                         Outbound = new BlockingCollection<string>(OutboundCapacity),
@@ -128,8 +135,8 @@ namespace Infinity_TestMod.Util
                     // Initial sync — enqueued, flushed by the write thread.
                     try
                     {
-                        TestMod.activeInstance?.SendStatusUpdate();
-                        TestMod.activeInstance?.SendCatalogs();
+                        BeyondAgentClass.activeInstance?.SendStatusUpdate();
+                        BeyondAgentClass.activeInstance?.SendCatalogs();
                     }
                     catch (Exception ex)
                     {
@@ -139,7 +146,11 @@ namespace Infinity_TestMod.Util
                 catch (Exception ex)
                 {
                     try { pipe?.Dispose(); } catch { }
-                    if (!_isRunning) break;
+                    if (!_isRunning)
+                    {
+                        break;
+                    }
+
                     Debug.LogError($"[LauncherServer] Accept loop error, recovering: {ex.Message}");
                     Thread.Sleep(500);
                 }
@@ -156,9 +167,16 @@ namespace Infinity_TestMod.Util
                 while (_isRunning && IsActive(conn) && conn.Pipe.IsConnected)
                 {
                     string line = reader.ReadLine();
-                    if (line == null) break; // peer closed / died
+                    if (line == null)
+                    {
+                        break; // peer closed / died
+                    }
+
                     conn.LastRxTicks = DateTime.UtcNow.Ticks;
-                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        continue;
+                    }
 
                     // Pings keep LastRxTicks fresh; the command processor ignores
                     // unknown types, so enqueuing them is harmless.
@@ -174,7 +192,10 @@ namespace Infinity_TestMod.Util
                 try { reader?.Dispose(); } catch { }
                 bool wasActive = Detach(conn);
                 Teardown(conn);
-                if (wasActive) Debug.Log("[LauncherServer] Launcher disconnected.");
+                if (wasActive)
+                {
+                    Debug.Log("[LauncherServer] Launcher disconnected.");
+                }
             }
         }
 
@@ -188,10 +209,12 @@ namespace Infinity_TestMod.Util
                     // Inbound-activity watchdog (PipeStream has no ReadTimeout):
                     // if the peer has gone silent past the heartbeat window, it's
                     // dead — tear down so the launcher reconnects.
-                    if (DateTime.UtcNow.Ticks - conn.LastRxTicks > ReadStaleMs * TimeSpan.TicksPerMillisecond) break;
+                    if (DateTime.UtcNow.Ticks - conn.LastRxTicks > ReadStaleMs * TimeSpan.TicksPerMillisecond)
+                    {
+                        break;
+                    }
 
-                    string msg;
-                    if (!conn.Outbound.TryTake(out msg, IdlePingMs))
+                    if (!conn.Outbound.TryTake(out string msg, IdlePingMs))
                     {
                         msg = PingLine; // idle => heartbeat
                     }
@@ -214,9 +237,16 @@ namespace Infinity_TestMod.Util
 
         public static void Send(object payload)
         {
-            if (payload == null) return;
+            if (payload == null)
+            {
+                return;
+            }
+
             Conn conn = _active;
-            if (conn == null) return;
+            if (conn == null)
+            {
+                return;
+            }
 
             string json;
             try { json = JsonConvert.SerializeObject(payload) + "\n"; }
@@ -255,9 +285,13 @@ namespace Infinity_TestMod.Util
 
         private static void Teardown(Conn conn)
         {
-            if (conn == null) return;
+            if (conn == null)
+            {
+                return;
+            }
+
             try { conn.Outbound.CompleteAdding(); } catch { }
-            try { if (conn.Pipe.IsConnected) conn.Pipe.Disconnect(); } catch { }
+            try { if (conn.Pipe.IsConnected) { conn.Pipe.Disconnect(); } } catch { }
             try { conn.Pipe.Dispose(); } catch { }
         }
     }

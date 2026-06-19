@@ -1,7 +1,7 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     /// <summary>
     /// Static surface holding the most recent server-side quest signals.
@@ -25,7 +25,11 @@ namespace Infinity_TestMod.Patches
     {
         public static void Postfix(ResponseQuestComplete __instance)
         {
-            if (__instance == null) return;
+            if (__instance == null)
+            {
+                return;
+            }
+
             RuntimeEvents.LastCompleteQid = __instance.ID;
             RuntimeEvents.LastCompleteSuccess = __instance.Success;
             RuntimeEvents.LastCompleteTime = Time.time;
@@ -37,7 +41,11 @@ namespace Infinity_TestMod.Patches
     {
         public static void Postfix(ResponseNotify __instance)
         {
-            if (__instance == null) return;
+            if (__instance == null)
+            {
+                return;
+            }
+
             RuntimeEvents.LastNotifyMsg = __instance.msg ?? "";
             RuntimeEvents.LastNotifyTime = Time.time;
         }

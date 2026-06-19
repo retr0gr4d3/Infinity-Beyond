@@ -27,9 +27,12 @@ namespace Launcher
                 // Anonymous job (no name) so nothing else can open it and keep
                 // it alive past our process.
                 s_jobHandle = CreateJobObject(IntPtr.Zero, null);
-                if (s_jobHandle == IntPtr.Zero) return;
+                if (s_jobHandle == IntPtr.Zero)
+                {
+                    return;
+                }
 
-                var extended = new JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+                JOBOBJECT_EXTENDED_LIMIT_INFORMATION extended = new()
                 {
                     BasicLimitInformation = new JOBOBJECT_BASIC_LIMIT_INFORMATION
                     {
@@ -63,8 +66,7 @@ namespace Launcher
         // the game's own child processes inherit job membership too.
         public static bool AddProcess(IntPtr processHandle)
         {
-            if (!s_ready || s_jobHandle == IntPtr.Zero || processHandle == IntPtr.Zero) return false;
-            return AssignProcessToJobObject(s_jobHandle, processHandle);
+            return s_ready && s_jobHandle != nint.Zero && processHandle != nint.Zero && AssignProcessToJobObject(s_jobHandle, processHandle);
         }
 
         private enum JobObjectInfoType

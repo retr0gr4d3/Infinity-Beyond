@@ -1,7 +1,7 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
+using System.Collections.ObjectModel;
 
 namespace Launcher.ViewModels
 {
@@ -46,7 +46,7 @@ namespace Launcher.ViewModels
         [ObservableProperty] private string _runnerFrame = "";
         [ObservableProperty] private string _runnerPad = "Spawn";
 
-        public ObservableCollection<string> QuestRunnerLogs { get; } = new ObservableCollection<string>();
+        public ObservableCollection<string> QuestRunnerLogs { get; } = [];
 
         [RelayCommand]
         private void StartQuestRunner()
@@ -74,11 +74,14 @@ namespace Launcher.ViewModels
         private void OnQuestRunnerLogReceived(string message)
         {
             QuestRunnerLogs.Insert(0, message);
-            if (QuestRunnerLogs.Count > 200) QuestRunnerLogs.RemoveAt(QuestRunnerLogs.Count - 1);
+            if (QuestRunnerLogs.Count > 200)
+            {
+                QuestRunnerLogs.RemoveAt(QuestRunnerLogs.Count - 1);
+            }
         }
 
         // --- Quest directory ---
-        public ObservableCollection<QuestDirectoryEntry> QuestDirectory { get; } = new();
+        public ObservableCollection<QuestDirectoryEntry> QuestDirectory { get; } = [];
 
         [ObservableProperty] private QuestDirectoryEntry? _selectedQuestDirectory;
 
@@ -89,7 +92,7 @@ namespace Launcher.ViewModels
             QuestDirectory.Clear();
             if (msg["Quests"] is JArray arr)
             {
-                foreach (var t in arr)
+                foreach (JToken t in arr)
                 {
                     QuestDirectory.Add(new QuestDirectoryEntry
                     {

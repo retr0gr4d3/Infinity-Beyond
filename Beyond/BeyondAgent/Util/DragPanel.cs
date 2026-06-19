@@ -2,7 +2,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     // Generic "make a uGUI panel draggable" component. Attach to a RectTransform
     // and pointer drags on that RectTransform's empty space move it around.
@@ -27,8 +27,12 @@ namespace Infinity_TestMod.Util
 
         public void OnDrag(PointerEventData e)
         {
-            if (_rt == null) return;
-            float scale = (_canvas != null && _canvas.scaleFactor > 0f) ? _canvas.scaleFactor : 1f;
+            if (_rt == null)
+            {
+                return;
+            }
+
+            float scale = (_canvas?.scaleFactor > 0f) ? _canvas.scaleFactor : 1f;
             _rt.anchoredPosition += e.delta / scale;
         }
 
@@ -54,7 +58,11 @@ namespace Infinity_TestMod.Util
 
         public static bool AttachToWindowRoot(Component source, string logTag)
         {
-            if (source == null) return false;
+            if (source == null)
+            {
+                return false;
+            }
+
             RectTransform start = source.transform as RectTransform;
             if (start == null)
             {
@@ -62,8 +70,16 @@ namespace Infinity_TestMod.Util
                 return false;
             }
             RectTransform target = FindWindowRoot(start);
-            if (target.GetComponent<DragPanel>() != null) return false; // already attached, no log
-            if (DumpHierarchyOnAttach) LogAncestorChain(start, logTag);
+            if (target.GetComponent<DragPanel>() != null)
+            {
+                return false; // already attached, no log
+            }
+
+            if (DumpHierarchyOnAttach)
+            {
+                LogAncestorChain(start, logTag);
+            }
+
             target.gameObject.AddComponent<DragPanel>();
             BeyondLog.Msg($"[{logTag}] drag handler attached to '{target.name}'");
             return true;
@@ -79,8 +95,11 @@ namespace Infinity_TestMod.Util
                 RectTransform rt = t as RectTransform;
                 int rtKids = rt != null ? CountRectTransformChildren(t) : -1;
                 bool isCanvas = t.GetComponent<Canvas>() != null;
-                sb.Append($"\n  [{depth}] '{t.name}' rt={(rt != null)} rtKids={rtKids}{(isCanvas ? " <-Canvas" : "")}");
-                if (isCanvas) break;
+                sb.Append($"\n  [{depth}] '{t.name}' rt={rt != null} rtKids={rtKids}{(isCanvas ? " <-Canvas" : "")}");
+                if (isCanvas)
+                {
+                    break;
+                }
             }
             BeyondLog.Msg(sb.ToString());
         }
@@ -91,10 +110,26 @@ namespace Infinity_TestMod.Util
             while (true)
             {
                 Transform parent = current.parent;
-                if (parent == null) break;
-                if (parent.GetComponent<Canvas>() != null) break; // hit the canvas
-                if (!(parent is RectTransform parentRt)) break;
-                if (CountRectTransformChildren(parent) > 1) break; // shared container
+                if (parent == null)
+                {
+                    break;
+                }
+
+                if (parent.GetComponent<Canvas>() != null)
+                {
+                    break; // hit the canvas
+                }
+
+                if (parent is not RectTransform parentRt)
+                {
+                    break;
+                }
+
+                if (CountRectTransformChildren(parent) > 1)
+                {
+                    break; // shared container
+                }
+
                 current = parentRt;
             }
             return current;
@@ -105,7 +140,10 @@ namespace Infinity_TestMod.Util
             int n = 0;
             for (int i = 0; i < t.childCount; i++)
             {
-                if (t.GetChild(i) is RectTransform) n++;
+                if (t.GetChild(i) is RectTransform)
+                {
+                    n++;
+                }
             }
             return n;
         }

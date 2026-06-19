@@ -1,7 +1,7 @@
-using Infinity_TestMod.Util;
+using BeyondAgent.Util;
 using System.Collections.Generic;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Shared helper for gear spoof patches: builds an AssetBundleData for the
     // target Filename with correct version metadata.

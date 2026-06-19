@@ -70,7 +70,10 @@ namespace Launcher.Views
             }
         }
 
-        private void OnClose(object? sender, RoutedEventArgs e) => Host?.Close();
+        private void OnClose(object? sender, RoutedEventArgs e)
+        {
+            Host?.Close();
+        }
 
         private static void ToggleMaximize(Window window)
         {

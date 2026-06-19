@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     /// <summary>
     /// Win32 native cursor helpers. P/Invoke into user32 is guarded so that on non-Windows
@@ -24,12 +24,14 @@ namespace Infinity_TestMod.Util
         private const int IDC_ARROW = 32512;
 
         // Cached after the first probe so we don't pay the exception cost every frame.
-        private static readonly bool _available = ProbeAvailability();
 
         private static bool ProbeAvailability()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
                 return false;
+            }
+
             try
             {
                 // A successful load with IDC_ARROW confirms user32 is actually resolvable.
@@ -42,19 +44,42 @@ namespace Infinity_TestMod.Util
         }
 
         /// <summary>True if user32 cursor APIs are usable on this runtime.</summary>
-        public static bool IsSupported => _available;
+        public static bool IsSupported { get; } = ProbeAvailability();
 
         private static void TrySet(int cursorId)
         {
-            if (!_available) return;
+            if (!IsSupported)
+            {
+                return;
+            }
+
             try { SetCursor(LoadCursor(IntPtr.Zero, cursorId)); }
             catch { /* ignore — cursor is purely cosmetic */ }
         }
 
-        public static void SetNWSE() => TrySet(IDC_SIZENWSE);
-        public static void SetNESW() => TrySet(IDC_SIZENESW);
-        public static void SetHorizontal() => TrySet(IDC_SIZEWE);
-        public static void SetVertical() => TrySet(IDC_SIZENS);
-        public static void SetArrow() => TrySet(IDC_ARROW);
+        public static void SetNWSE()
+        {
+            TrySet(IDC_SIZENWSE);
+        }
+
+        public static void SetNESW()
+        {
+            TrySet(IDC_SIZENESW);
+        }
+
+        public static void SetHorizontal()
+        {
+            TrySet(IDC_SIZEWE);
+        }
+
+        public static void SetVertical()
+        {
+            TrySet(IDC_SIZENS);
+        }
+
+        public static void SetArrow()
+        {
+            TrySet(IDC_ARROW);
+        }
     }
 }

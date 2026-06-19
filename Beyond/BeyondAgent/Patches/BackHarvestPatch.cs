@@ -1,7 +1,7 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Cape harvester. BackLoader.GetBundleData reads player.Back.Bundle; we
     // catalog that on construction so the spoof picker has options.
@@ -12,9 +12,17 @@ namespace Infinity_TestMod.Patches
         {
             try
             {
-                if (p == null || p.character == null) return;
+                if (p == null || p.character == null)
+                {
+                    return;
+                }
+
                 EquipItem item = p.character.Back;
-                if (item == null || item.Bundle == null) return;
+                if (item == null || item.Bundle == null)
+                {
+                    return;
+                }
+
                 string name = (item as Item)?.Name ?? "";
                 ItemCatalog.RecordBack(item.ID, name, item.Bundle, item.PrefabName);
             }

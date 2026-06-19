@@ -3,7 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     /// <summary>
     /// Always-on persistent JSONL log of every observed packet. Format matches
@@ -39,8 +39,10 @@ namespace Infinity_TestMod.Util
                 LogPath = Path.Combine(dir, "packets.jsonl");
                 _fh = new StreamWriter(
                     new FileStream(LogPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite),
-                    new UTF8Encoding(false));
-                _fh.AutoFlush = true;
+                    new UTF8Encoding(false))
+                {
+                    AutoFlush = true
+                };
                 BeyondLog.Msg($"[PacketLog] writing to {LogPath}");
             }
             catch (Exception ex)
@@ -57,14 +59,22 @@ namespace Infinity_TestMod.Util
         /// </summary>
         public static void Write(string direction, string rawJson, bool synthetic = false)
         {
-            if (!Enabled || _fh == null || string.IsNullOrEmpty(rawJson)) return;
+            if (!Enabled || _fh == null || string.IsNullOrEmpty(rawJson))
+            {
+                return;
+            }
+
             double ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
             // Dedup: skip if identical bytes arrived within 50ms (real
             // back-to-back packets at higher rates can repeat, but never
             // with byte-for-byte equality unless something's firing twice).
             lock (_lock)
             {
-                if (_lastRaw == rawJson && (ts - _lastTs) < 0.05) return;
+                if (_lastRaw == rawJson && (ts - _lastTs) < 0.05)
+                {
+                    return;
+                }
+
                 _lastRaw = rawJson;
                 _lastTs = ts;
             }
@@ -73,7 +83,11 @@ namespace Infinity_TestMod.Util
               .Append(ts.ToString("F3", CultureInfo.InvariantCulture))
               .Append(",\"dir\":\"").Append(direction)
               .Append("\",\"ok\":true,\"pkt\":").Append(rawJson);
-            if (synthetic) sb.Append(",\"src\":\"mod\"");
+            if (synthetic)
+            {
+                sb.Append(",\"src\":\"mod\"");
+            }
+
             sb.Append('}');
             lock (_lock)
             {

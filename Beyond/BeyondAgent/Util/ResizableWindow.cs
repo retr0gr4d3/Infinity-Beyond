@@ -1,9 +1,8 @@
-using UnityEngine;
 using System.Collections.Generic;
-using System;
+using UnityEngine;
 
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     public static class ResizableWindow
     {
@@ -14,17 +13,17 @@ namespace Infinity_TestMod.Util
         private static float _newWidthAfterDrag = -1f;
         private static float _dragStartMouseX = 0f;
         private static float _dragStartWidth = 0f;
-        private static readonly HashSet<int> _userResized = new();
+        private static readonly HashSet<int> _userResized = [];
 
-        private static readonly Dictionary<int, float> _baseWidths = new();
-        private static readonly Dictionary<int, float> _baseHeights = new();
+        private static readonly Dictionary<int, float> _baseWidths = [];
+        private static readonly Dictionary<int, float> _baseHeights = [];
 
         private static Vector2 _parentMousePosition = Vector2.zero;
 
         // Cached resize-grip style — allocated once, colours swapped per-call.
         private static GUIStyle _gripStyle;
-        private static readonly Color _gripDefault = new Color(0.28f, 0.31f, 0.37f, 1.0f);
-        private static readonly Color _gripHover  = new Color(0.47f, 0.52f, 0.62f, 1.0f);
+        private static readonly Color _gripDefault = new(0.28f, 0.31f, 0.37f, 1.0f);
+        private static readonly Color _gripHover = new(0.47f, 0.52f, 0.62f, 1.0f);
 
         // Per-window wrapper state. GUI.Window defers callbacks until after all
         // windows are registered in the same OnGUI pass, so a single static slot
@@ -38,20 +37,27 @@ namespace Infinity_TestMod.Util
             public GUI.WindowFunction Inner;
         }
 
-        private static readonly Dictionary<int, WrapState> _wrapStates = new();
+        private static readonly Dictionary<int, WrapState> _wrapStates = [];
 
-        public static bool WasManuallyResized(int windowId) => _userResized.Contains(windowId);
+        public static bool WasManuallyResized(int windowId)
+        {
+            return _userResized.Contains(windowId);
+        }
 
         public static Rect TitleBarDragRect(float windowWidth, float titleHeight = 30f)
         {
-            float inset = CornerSize;
+            const float inset = CornerSize;
             // Exclude the rightmost 28 pixels to ensure the drag rect does not overlap the resize button
             return new Rect(inset, 0, Mathf.Max(0f, windowWidth - inset - 28f), titleHeight);
         }
 
         // Deprecated: kept as no-ops to avoid compilation errors
-        public static float BeginScaling(int windowId, Rect currentRect, float defaultWidth) => 1.0f;
-        public static void EndScaling() {}
+        public static float BeginScaling(int windowId, Rect currentRect, float defaultWidth)
+        {
+            return 1.0f;
+        }
+
+        public static void EndScaling() { }
 
         public static Rect HandleResize(int windowId, Rect windowRect)
         {
@@ -107,13 +113,13 @@ namespace Infinity_TestMod.Util
             float scale = screenRect.width / baseW;
 
             Matrix4x4 oldMat = GUI.matrix;
-            
+
             // Set scaling matrix
             GUI.matrix = oldMat * Matrix4x4.Scale(new Vector3(scale, scale, 1f));
-            
+
             // Compute scaled rect for GUI.Window
-            Rect scaledRect = new Rect(screenRect.x / scale, screenRect.y / scale, baseW, screenRect.height / scale);
-            
+            Rect scaledRect = new(screenRect.x / scale, screenRect.y / scale, baseW, screenRect.height / scale);
+
             Rect newScaledRect;
 
             _wrapStates[id] = new WrapState
@@ -125,18 +131,11 @@ namespace Infinity_TestMod.Util
                 Inner = func,
             };
 
-            if (style != null)
-            {
-                newScaledRect = GUI.Window(id, scaledRect, WrapperCallback, title, style);
-            }
-            else
-            {
-                newScaledRect = GUI.Window(id, scaledRect, WrapperCallback, title);
-            }
-            
+            newScaledRect = style != null ? GUI.Window(id, scaledRect, WrapperCallback, title, style) : GUI.Window(id, scaledRect, WrapperCallback, title);
+
             // Restore matrix
             GUI.matrix = oldMat;
-            
+
             // If currently drag-resizing this window, override the returned width and height
             if (_resizingId == id && _newWidthAfterDrag > 0f)
             {
@@ -157,8 +156,8 @@ namespace Infinity_TestMod.Util
             if (evt != null)
             {
                 Vector2 localMouse = evt.mousePosition;
-                Rect handleRect = new Rect(baseW - 20f, localH - 20f, 20f, 20f);
-                
+                Rect handleRect = new(baseW - 20f, localH - 20f, 20f, 20f);
+
                 if (evt.type == EventType.MouseDown && handleRect.Contains(localMouse))
                 {
                     _resizingId = id;
@@ -169,7 +168,7 @@ namespace Infinity_TestMod.Util
                     GUIUtility.hotControl = _activeControlId;
                     evt.Use();
                 }
-                
+
                 if (_resizingId == id)
                 {
                     if (evt.type == EventType.MouseDrag)
@@ -177,12 +176,12 @@ namespace Infinity_TestMod.Util
                         // Calculate change relative to initial mouse down point to prevent snapping on click
                         float deltaX = _parentMousePosition.x - _dragStartMouseX;
                         float newWidth = _dragStartWidth + deltaX;
-                        
+
                         // Enforce reasonable minimum and maximum scaling sizes
                         float minW = Mathf.Max(50f, baseW * 0.4f);
                         float maxW = Mathf.Min(Screen.width, baseW * 3.0f);
                         newWidth = Mathf.Clamp(newWidth, minW, maxW);
-                        
+
                         _newWidthAfterDrag = newWidth;
                         _userResized.Add(id);
                         evt.Use();
@@ -204,7 +203,9 @@ namespace Infinity_TestMod.Util
         private static void WrapperCallback(int winId)
         {
             if (!_wrapStates.TryGetValue(winId, out WrapState state))
+            {
                 return;
+            }
 
             HandleResizeEvents(winId, state.BaseW, state.LocalH, state.Scale, state.ScreenRect);
             state.Inner(winId);
@@ -213,17 +214,16 @@ namespace Infinity_TestMod.Util
 
         private static void DrawResizeBoxVisual(float baseW, float localH)
         {
-            Rect handleRect = new Rect(baseW - 20f, localH - 20f, 20f, 20f);
+            Rect handleRect = new(baseW - 20f, localH - 20f, 20f, 20f);
 
             // Lazily create the cached grip style once.
-            if (_gripStyle == null)
+            _gripStyle ??= new GUIStyle
             {
-                _gripStyle = new GUIStyle();
-                _gripStyle.alignment = TextAnchor.LowerRight;
-                _gripStyle.fontSize = 11;
-                _gripStyle.fontStyle = FontStyle.Bold;
-                _gripStyle.padding = new RectOffset(0, 4, 0, 4);
-            }
+                alignment = TextAnchor.LowerRight,
+                fontSize = 11,
+                fontStyle = FontStyle.Bold,
+                padding = new RectOffset(0, 4, 0, 4)
+            };
 
             bool isHovering = handleRect.Contains(Event.current.mousePosition);
             _gripStyle.normal.textColor = isHovering ? _gripHover : _gripDefault;

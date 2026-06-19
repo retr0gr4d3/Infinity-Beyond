@@ -9,11 +9,10 @@ namespace Launcher.ViewModels
     {
         [ObservableProperty] private string _shopId = "";
 
-        private bool _forceMergeShop;
         public bool ForceMergeShop
         {
-            get => _forceMergeShop;
-            set => UpdateSetting(ref _forceMergeShop, value, "forceMergeShop");
+            get;
+            set => UpdateSetting(ref field, value, "forceMergeShop");
         }
 
         [RelayCommand]

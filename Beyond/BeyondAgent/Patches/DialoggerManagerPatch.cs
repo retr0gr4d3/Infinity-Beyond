@@ -1,6 +1,7 @@
+using BeyondAgent.Util;
 using HarmonyLib;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Auto-skip cutscenes by calling Dialogger_Manager.EndPressed() right
     // after StartCutscene fires. EndPressed is the same path the in-game
@@ -18,8 +19,16 @@ namespace Infinity_TestMod.Patches
     {
         private static void Postfix(Dialogger_Manager __instance)
         {
-            if (!TestMod.autoSkipCutscenes) return;
-            if (__instance == null) return;
+            if (!BeyondAgentClass.autoSkipCutscenes)
+            {
+                return;
+            }
+
+            if (__instance == null)
+            {
+                return;
+            }
+
             BeyondCoroutines.Start(EndNextFrame(__instance));
         }
 
@@ -29,7 +38,7 @@ namespace Infinity_TestMod.Patches
             try
             {
                 mgr.EndPressed();
-                Util.CameraZoom.Reset();
+                CameraZoom.Reset();
                 BeyondLog.Msg("[CutsceneSkip] auto-skipped (zoom reset)");
             }
             catch (System.Exception ex)

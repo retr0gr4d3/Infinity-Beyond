@@ -1,10 +1,10 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Every gameplay window (ItemShop, MergeShop, UIQuests, UIQuestDetail,
     // UIQuestComplete, UIInventory, SkillForge, EnhWindow, EnhCompare,
@@ -34,39 +34,61 @@ namespace Infinity_TestMod.Patches
     [HarmonyPatch]
     public static class UIWindowDraggablePatch
     {
-        private static readonly HashSet<string> ExcludedTypeNames = new()
-        {
+        private static readonly HashSet<string> ExcludedTypeNames =
+        [
             "ItemPreview",
             "ItemPreviewNew",
             "itemDrop",
             "NPCEdit",
-        };
+        ];
 
         // Harmony calls this to resolve which methods to patch.
         // Returns each UIWindow-derived type's own OnEnable (the declared
         // one if it has one, otherwise the inherited base method).
         private static IEnumerable<MethodBase> TargetMethods()
         {
-            HashSet<MethodBase> seen = new();
+            HashSet<MethodBase> seen = [];
             const BindingFlags InstanceAll = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
             foreach (Type t in typeof(UIWindow).Assembly.GetTypes())
             {
-                if (t == null) continue;
-                if (!typeof(UIWindow).IsAssignableFrom(t)) continue;
+                if (t == null)
+                {
+                    continue;
+                }
+
+                if (!typeof(UIWindow).IsAssignableFrom(t))
+                {
+                    continue;
+                }
                 // Walk up the chain to find the most-derived declared OnEnable
                 // for THIS type. GetMethod alone gives us the inherited method
                 // when nothing is declared, which is exactly what we want.
                 MethodInfo m = t.GetMethod("OnEnable", InstanceAll, null, System.Type.EmptyTypes, null);
-                if (m == null) continue;
-                if (seen.Add(m)) yield return m;
+                if (m == null)
+                {
+                    continue;
+                }
+
+                if (seen.Add(m))
+                {
+                    yield return m;
+                }
             }
         }
 
         private static void Postfix(UIWindow __instance)
         {
-            if (__instance == null) return;
+            if (__instance == null)
+            {
+                return;
+            }
+
             string typeName = __instance.GetType().Name;
-            if (ExcludedTypeNames.Contains(typeName)) return;
+            if (ExcludedTypeNames.Contains(typeName))
+            {
+                return;
+            }
+
             DragPanel.AttachToWindowRoot(__instance, $"UIWindowDraggable:{typeName}");
         }
     }

@@ -1,5 +1,4 @@
-
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     /// <summary>
     /// Loads + plays an arbitrary soundtrack by ID. Mirrors what

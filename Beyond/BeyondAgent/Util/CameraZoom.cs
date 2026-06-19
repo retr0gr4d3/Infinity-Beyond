@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     // Scales the gameplay camera's orthographic size by a multiplier.
     //
@@ -51,10 +51,21 @@ namespace Infinity_TestMod.Util
             _fHalfH = typeof(CameraFollow).GetField("camHalfHeight", Flags);
             _fHalfW = typeof(CameraFollow).GetField("camHalfWidth", Flags);
 
-            List<string> missing = new();
-            if (_fCam == null) missing.Add("cam");
-            if (_fHalfH == null) missing.Add("camHalfHeight");
-            if (_fHalfW == null) missing.Add("camHalfWidth");
+            List<string> missing = [];
+            if (_fCam == null)
+            {
+                missing.Add("cam");
+            }
+
+            if (_fHalfH == null)
+            {
+                missing.Add("camHalfHeight");
+            }
+
+            if (_fHalfW == null)
+            {
+                missing.Add("camHalfWidth");
+            }
 
             _fieldsResolved = missing.Count == 0;
             if (!_fieldsResolved)
@@ -68,7 +79,10 @@ namespace Infinity_TestMod.Util
             try
             {
                 Camera cam = Camera.main;
-                if (cam == null) return;
+                if (cam == null)
+                {
+                    return;
+                }
 
                 // Find the CameraFollow that drives the main camera so we can
                 // keep its confiner half-extents in sync. Null is fine — we
@@ -126,17 +140,27 @@ namespace Infinity_TestMod.Util
         // or fields didn't resolve) — Apply then zooms Camera.main alone.
         private static CameraFollow ResolveFollow(Camera main)
         {
-            if (!_fieldsResolved) return null;
+            if (!_fieldsResolved)
+            {
+                return null;
+            }
             // Game's Unity build lacks FindObjectSortMode, so the non-obsolete
             // FindObjectsByType overload won't bind. FindObjectsOfType is the only
             // option here — suppress the deprecation warning for this call.
 #pragma warning disable CS0618
             CameraFollow[] all = Object.FindObjectsOfType<CameraFollow>();
 #pragma warning restore CS0618
-            if (all == null || all.Length == 0) return null;
+            if (all == null || all.Length == 0)
+            {
+                return null;
+            }
+
             foreach (CameraFollow f in all)
             {
-                if (_fCam.GetValue(f) as Camera == main) return f;
+                if ((_fCam.GetValue(f) as Camera) == main)
+                {
+                    return f;
+                }
             }
             return null;
         }

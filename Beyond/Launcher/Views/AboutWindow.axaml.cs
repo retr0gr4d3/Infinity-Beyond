@@ -16,15 +16,15 @@ namespace Launcher.Views
         {
             InitializeComponent();
 
-            var asm = Assembly.GetExecutingAssembly();
+            Assembly asm = Assembly.GetExecutingAssembly();
 
-            var version = asm.GetName().Version;
+            Version? version = asm.GetName().Version;
             if (version != null && this.FindControl<TextBlock>("VersionText") is { } versionText)
             {
                 versionText.Text = $"Version {version.Major}.{version.Minor}.{version.Build}";
             }
 
-            var buildDate = asm.GetCustomAttributes<AssemblyMetadataAttribute>()
+            string? buildDate = asm.GetCustomAttributes<AssemblyMetadataAttribute>()
                                .FirstOrDefault(a => a.Key == "BuildDate")?.Value;
             if (!string.IsNullOrEmpty(buildDate) && this.FindControl<TextBlock>("BuildDateText") is { } buildText)
             {

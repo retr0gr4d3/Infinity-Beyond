@@ -1,17 +1,19 @@
-using Infinity_TestMod.Patches;
+using BeyondAgent.Patches;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
-namespace Infinity_TestMod.Util
+namespace BeyondAgent.Util
 {
     /// <summary>
+    /// <para>
     /// End-to-end quest automation. Drives one quest ID repeatedly through
     /// accept → hunt (kill/collect via target+autoskills) → turn-in, halting
     /// on any mismatch and surfacing the reason.
-    ///
+    /// </para>
+    /// <para>
     /// Reads all progress from live in-process state — no packet replay:
     ///   - Quest defs:        Quest.Get(qid).Turnins[]
     ///   - Current progress:  Entity.mainPlayer.Quests.IsObjectiveComplete(qoid)
@@ -19,9 +21,11 @@ namespace Infinity_TestMod.Util
     ///   - Combat:            piggybacks on TestMod.autoskillsActive
     ///   - Mob enumeration:   Area.currentArea.GetMonstersInFrame()
     ///   - Requests:          RequestQuestAccept / RequestTryQuestComplete
-    ///
+    /// </para>
+    /// <para>
     /// Designed to be ticked from BeyondMod.OnUpdate so it lives on the main
     /// Unity thread (no marshalling needed for any of the game-side calls).
+    /// </para>
     /// </summary>
     public class QuestRunner
     {
@@ -97,11 +101,11 @@ namespace Infinity_TestMod.Util
         public string LastError { get; private set; } = "";
         public string StatusLine { get; private set; } = "idle";
 
-        float _stateEnteredAt;
-        float _lastProgressAt;
-        int _lastProgressSum;
+        private float _stateEnteredAt;
+        private float _lastProgressAt;
+        private int _lastProgressSum;
         // Save autoskills state so we don't fight the user's manual toggle.
-        bool _autoskillsWasOn;
+        private bool _autoskillsWasOn;
 
         // Logs are surfaced via this callback to the GUI's event list.
         public Action<string> OnLog;
@@ -109,16 +113,20 @@ namespace Infinity_TestMod.Util
         // --- public API ---
 
         public bool IsRunning =>
-            State != RunState.Idle && State != RunState.Done && State != RunState.Failed;
+            State is not RunState.Idle and not RunState.Done and not RunState.Failed;
 
         public void Start(int questId, int iterations, string targetArea = "", string targetFrame = "", string targetPad = "Spawn")
         {
-            if (IsRunning) return;
+            if (IsRunning)
+            {
+                return;
+            }
+
             ChainEntries = null;
             ChainName = "";
             ChainIndex = 0;
             BindEntry(questId, iterations, targetArea, targetFrame, targetPad);
-            _autoskillsWasOn = TestMod.autoskillsActive;
+            _autoskillsWasOn = BeyondAgentClass.autoskillsActive;
             string travelNote =
                 !string.IsNullOrEmpty(TargetArea) ? $", tfer to {TargetArea}/{TargetFrame}/{TargetPad}" :
                 !string.IsNullOrEmpty(TargetFrame) ? $", hop to {TargetFrame}/{TargetPad}" : "";
@@ -130,7 +138,11 @@ namespace Infinity_TestMod.Util
 
         public void StartChain(string chainName, List<QuestChains.Entry> entries)
         {
-            if (IsRunning) return;
+            if (IsRunning)
+            {
+                return;
+            }
+
             if (entries == null || entries.Count == 0)
             {
                 Fail("chain is empty");
@@ -141,12 +153,12 @@ namespace Infinity_TestMod.Util
             ChainIndex = 0;
             QuestChains.Entry first = entries[0];
             BindEntry(first.qid, first.items, first.area, first.frame, first.pad);
-            _autoskillsWasOn = TestMod.autoskillsActive;
+            _autoskillsWasOn = BeyondAgentClass.autoskillsActive;
             Log($"[start] chain '{chainName}' ({entries.Count} entries) — first: {first}");
             EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
         }
 
-        void BindEntry(int qid, int items, string area, string frame, string pad)
+        private void BindEntry(int qid, int items, string area, string frame, string pad)
         {
             QuestID = qid;
             Iterations = Math.Max(1, items);
@@ -159,7 +171,11 @@ namespace Infinity_TestMod.Util
 
         public void Stop()
         {
-            if (!IsRunning) return;
+            if (!IsRunning)
+            {
+                return;
+            }
+
             Log("[stop] user requested");
             StopAutoskills();
             EnterState(RunState.Idle);
@@ -190,7 +206,7 @@ namespace Infinity_TestMod.Util
 
         // --- state handlers ---
 
-        void TickAccept()
+        private void TickAccept()
         {
             if (Entity.mainPlayer == null)
             {
@@ -222,7 +238,7 @@ namespace Infinity_TestMod.Util
             EnterState(RunState.AwaitingAccepted);
         }
 
-        void TickAwaitAccepted()
+        private void TickAwaitAccepted()
         {
             if (IsQuestAccepted(QuestID))
             {
@@ -245,7 +261,7 @@ namespace Infinity_TestMod.Util
             }
         }
 
-        void TickCooldown()
+        private void TickCooldown()
         {
             float remaining = InterIterCooldown - StateAge();
             if (remaining > 0f)
@@ -275,7 +291,7 @@ namespace Infinity_TestMod.Util
             EnterState(RunState.Done);
         }
 
-        void TickTravel()
+        private void TickTravel()
         {
             string hereArea = Area.currentArea?.Name ?? "";
             string hereFrame = Entity.mainPlayer?.Frame ?? "";
@@ -293,14 +309,14 @@ namespace Infinity_TestMod.Util
                     {
                         string name = Entity.mainPlayer?.Name ?? "";
                         // tfer params: [charname, area, instance("0" = any), frame, pad]
-                        Request pkt = new("tfer", new List<string>
-                        {
+                        Request pkt = new("tfer",
+                        [
                             name,
                             TargetArea,
                             "0",
                             TargetFrame ?? "",
                             TargetPad ?? "Spawn",
-                        });
+                        ]);
                         AEC.Instance.sendRequest(pkt);
                         _tferSent = true;
                         Log($"  tfer({TargetArea}, {TargetFrame}, {TargetPad})");
@@ -328,7 +344,11 @@ namespace Infinity_TestMod.Util
             // for ~10-15s during which acceptQuest gets dropped server-side.
             if (_tferSent)
             {
-                if (_areaFirstMatchedAt < 0f) _areaFirstMatchedAt = Time.time;
+                if (_areaFirstMatchedAt < 0f)
+                {
+                    _areaFirstMatchedAt = Time.time;
+                }
+
                 float settled = Time.time - _areaFirstMatchedAt;
                 if (settled < PostTferSettleSec)
                 {
@@ -355,7 +375,11 @@ namespace Infinity_TestMod.Util
             if (string.IsNullOrEmpty(TargetFrame)
                 || string.Equals(hereFrame, TargetFrame, StringComparison.OrdinalIgnoreCase))
             {
-                if (_frameFirstMatchedAt < 0f) _frameFirstMatchedAt = Time.time;
+                if (_frameFirstMatchedAt < 0f)
+                {
+                    _frameFirstMatchedAt = Time.time;
+                }
+
                 float settled = Time.time - _frameFirstMatchedAt;
                 if (!string.IsNullOrEmpty(TargetFrame) && settled < PostCellHopSettleSec)
                 {
@@ -377,7 +401,9 @@ namespace Infinity_TestMod.Util
             {
                 _pickedGotoPad = FindGotoPad(TargetFrame);
                 if (_pickedGotoPad != null)
+                {
                     Log($"  walking to Goto pad → {TargetFrame} at world {_pickedGotoPad.transform.position}");
+                }
             }
             if (_pickedGotoPad != null)
             {
@@ -411,22 +437,22 @@ namespace Infinity_TestMod.Util
             }
             StatusLine = $"traveling {hereFrame} → {TargetFrame}/{TargetPad}  ({StateAge():0.0}s)";
         }
-        bool _traveSent;
-        bool _tferSent;
-        bool _cellHopBudgetReset;
+        private bool _traveSent;
+        private bool _tferSent;
+        private bool _cellHopBudgetReset;
         // Time at which Area.currentArea.Name first matched TargetArea. Used
         // to enforce PostTferSettleSec so we don't try to acceptQuest mid-
         // cutscene. -1 = not matched yet this travel session.
-        float _areaFirstMatchedAt = -1f;
+        private float _areaFirstMatchedAt = -1f;
         // Time at which Entity.mainPlayer.Frame first matched TargetFrame.
         // Used to enforce PostCellHopSettleSec so we don't engage mid-walk.
-        float _frameFirstMatchedAt = -1f;
+        private float _frameFirstMatchedAt = -1f;
         // Resolved MapGoToCell pad GameObject we're walking toward in stage 2.
         // Reset each time we enter Traveling; null = haven't found one yet
         // / no pad exists for this target (will fall back to moveToCell).
-        UnityEngine.GameObject _pickedGotoPad;
+        private UnityEngine.GameObject _pickedGotoPad;
 
-        void TickHunt()
+        private void TickHunt()
         {
             Quest q = Quest.Get(QuestID);
             if (q == null)
@@ -469,7 +495,7 @@ namespace Infinity_TestMod.Util
                 try
                 {
                     GameObject go = tgt.getGameObject();
-                    Targetable tb = (go != null) ? go.GetComponent<Targetable>() : null;
+                    Targetable tb = go?.GetComponent<Targetable>();
                     if (tb != null)
                     {
                         tb.ClickMe();
@@ -510,7 +536,7 @@ namespace Infinity_TestMod.Util
             CheckHuntTimeout();
         }
 
-        void CheckHuntTimeout()
+        private void CheckHuntTimeout()
         {
             if (Time.time - _lastProgressAt > HuntTimeoutNoProgress)
             {
@@ -518,7 +544,7 @@ namespace Infinity_TestMod.Util
             }
         }
 
-        void TickTurnIn()
+        private void TickTurnIn()
         {
             try
             {
@@ -532,9 +558,9 @@ namespace Infinity_TestMod.Util
             _turnInSentAt = Time.time;
             EnterState(RunState.AwaitingComplete);
         }
-        float _turnInSentAt;
+        private float _turnInSentAt;
 
-        void TickAwaitComplete()
+        private void TickAwaitComplete()
         {
             // Real success signal: ResponseQuestComplete.Execute fired for our
             // quest with Success=true. Captured by Harmony patch into
@@ -588,28 +614,24 @@ namespace Infinity_TestMod.Util
         // True if either area or frame differs from current — covers both
         // stages of TickTravel. Either branch alone (just area, just frame)
         // is also valid and handled there.
-        bool NeedsCellHop()
+        private bool NeedsCellHop()
         {
             string hereArea = Area.currentArea?.Name ?? "";
             string hereFrame = Entity.mainPlayer?.Frame ?? "";
-            if (!string.IsNullOrEmpty(TargetArea) && !AreaMatches(hereArea, TargetArea)) return true;
-            if (!string.IsNullOrEmpty(TargetFrame)
-                && !string.Equals(hereFrame, TargetFrame, StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
+            return (!string.IsNullOrEmpty(TargetArea) && !AreaMatches(hereArea, TargetArea)) || (!string.IsNullOrEmpty(TargetFrame)
+                && !string.Equals(hereFrame, TargetFrame, StringComparison.OrdinalIgnoreCase));
         }
 
         // Areas come back from the server with an instance suffix appended
         // (e.g. "lair-3", "battleon-545454", "infinityportal-7"). The chain
         // entry only knows the base name. Treat them as equal if the
         // current area equals the target or starts with "target-".
-        static bool AreaMatches(string here, string target)
+        private static bool AreaMatches(string here, string target)
         {
-            if (string.IsNullOrEmpty(target)) return true;
-            if (string.IsNullOrEmpty(here)) return false;
-            return here == target || here.StartsWith(target + "-");
+            return string.IsNullOrEmpty(target) || (!string.IsNullOrEmpty(here) && (here == target || here.StartsWith(target + "-")));
         }
 
-        bool IsQuestAccepted(int id)
+        private bool IsQuestAccepted(int id)
         {
             try
             {
@@ -621,23 +643,42 @@ namespace Infinity_TestMod.Util
             }
         }
 
-        QuestTurninItem NextIncompleteObjective(Quest q)
+        private QuestTurninItem NextIncompleteObjective(Quest q)
         {
-            if (q?.Turnins == null) return null;
+            if (q?.Turnins == null)
+            {
+                return null;
+            }
+
             PlayerQuestData pq = Entity.mainPlayer?.Quests;
-            if (pq == null) return null;
+            if (pq == null)
+            {
+                return null;
+            }
+
             foreach (QuestTurninItem t in q.Turnins)
             {
-                if (!pq.IsObjectiveComplete(t.QOID)) return t;
+                if (!pq.IsObjectiveComplete(t.QOID))
+                {
+                    return t;
+                }
             }
             return null;
         }
 
-        int SumObjectiveProgress(Quest q)
+        private int SumObjectiveProgress(Quest q)
         {
-            if (q?.Turnins == null) return 0;
+            if (q?.Turnins == null)
+            {
+                return 0;
+            }
+
             PlayerQuestData pq = Entity.mainPlayer?.Quests;
-            if (pq == null) return 0;
+            if (pq == null)
+            {
+                return 0;
+            }
+
             int sum = 0;
             foreach (QuestTurninItem t in q.Turnins)
             {
@@ -646,9 +687,12 @@ namespace Infinity_TestMod.Util
             return sum;
         }
 
-        Monster PickBestHostile(QuestTurninItem obj)
+        private Monster PickBestHostile(QuestTurninItem obj)
         {
-            if (Area.currentArea == null || Entity.mainPlayer == null) return null;
+            if (Area.currentArea == null || Entity.mainPlayer == null)
+            {
+                return null;
+            }
 
             // Killcount objectives ref a MonID. For Turnin/item objectives
             // we can't reliably resolve "which mob drops this item" without
@@ -656,7 +700,7 @@ namespace Infinity_TestMod.Util
             // fall back to "any hostile in frame" — works for the common
             // case where the player parked next to the right respawn point.
             int? requiredMonId = null;
-            if (obj.QOType == QuestObjectiveType.Killcount && obj.RefArray != null && obj.RefArray.Length > 0
+            if (obj.QOType == QuestObjectiveType.Killcount && obj.RefArray?.Length > 0
                 && int.TryParse(obj.RefArray[0], out int parsed))
             {
                 requiredMonId = parsed;
@@ -692,7 +736,10 @@ namespace Infinity_TestMod.Util
             {
                 return null;
             }
-            if (candidates == null) return null;
+            if (candidates == null)
+            {
+                return null;
+            }
 
             IEnumerable<Monster> alive = candidates.Where(m =>
                 m != null
@@ -704,8 +751,12 @@ namespace Infinity_TestMod.Util
             // Nearest by Combat's own range semantics — IsInSight first,
             // then distance. Reusing the game's comparer keeps targeting
             // consistent with what a manual-clicking player would pick.
-            List<Monster> list = alive.ToList();
-            if (list.Count == 0) return null;
+            List<Monster> list = [.. alive];
+            if (list.Count == 0)
+            {
+                return null;
+            }
+
             list.Sort(new TargetDistanceComparer(Entity.mainPlayer));
             return list[0];
         }
@@ -714,26 +765,36 @@ namespace Infinity_TestMod.Util
         // Resolved lazily on first WalkToward call — public field on most
         // entity controllers; we probe via reflection so we don't need a
         // hard reference to the game's internal mover type.
-        static System.Reflection.FieldInfo _moverTargetPosField;
-        static bool _moverProbed;
+        private static System.Reflection.FieldInfo _moverTargetPosField;
+        private static bool _moverProbed;
 
         // Find a MapGoToCell pad (the in-world cell-transition trigger)
         // whose TargetCell matches the given target frame, case-insensitive.
         // Returns the pad's GameObject so we can read transform.position and
         // walk the player onto it; null if no such pad exists in the current
         // scene (e.g. wrong area, or pad gated by a quest we haven't done).
-        static UnityEngine.GameObject FindGotoPad(string targetFrame)
+        private static UnityEngine.GameObject FindGotoPad(string targetFrame)
         {
-            if (string.IsNullOrEmpty(targetFrame)) return null;
+            if (string.IsNullOrEmpty(targetFrame))
+            {
+                return null;
+            }
+
             try
             {
                 MapGoToCell[] pads = UnityEngine.Object.FindObjectsByType<MapGoToCell>(
                     UnityEngine.FindObjectsSortMode.None);
                 foreach (MapGoToCell p in pads)
                 {
-                    if (p == null) continue;
+                    if (p == null)
+                    {
+                        continue;
+                    }
+
                     if (string.Equals(p.TargetCell ?? "", targetFrame, StringComparison.OrdinalIgnoreCase))
+                    {
                         return p.gameObject;
+                    }
                 }
             }
             catch { }
@@ -746,26 +807,38 @@ namespace Infinity_TestMod.Util
         // method: it sets eMover.targetPosition AND MovementController.
         // Direction (the unit vector toward the target), without which the
         // mover knows where to go but has no walking vector.
-        static System.Reflection.MethodInfo _walkVectorMethod;
-        static bool _walkVectorProbed;
+        private static System.Reflection.MethodInfo _walkVectorMethod;
+        private static bool _walkVectorProbed;
 
         // Walk toward a WORLD-space point. Converts to the local space of
         // the player's parent transform — same conversion ClickableWalk
         // does for mouse-click-to-walk (see decomp ClickableWalk.cs:69).
         // Without this conversion, WalkVector's direction vector points
         // nowhere useful and the character sits still.
-        void WalkTowardWorld(UnityEngine.Vector3 worldPos)
+        private void WalkTowardWorld(UnityEngine.Vector3 worldPos)
         {
             try
             {
-                if (Entity.mainPlayer == null) return;
+                if (Entity.mainPlayer == null)
+                {
+                    return;
+                }
+
                 EnsureWalkVectorProbed();
-                if (_walkVectorMethod == null) return;
+                if (_walkVectorMethod == null)
+                {
+                    return;
+                }
+
                 GameObject playerGO = Entity.mainPlayer.getGameObject();
-                if (playerGO == null || playerGO.transform.parent == null) return;
+                if (playerGO == null || playerGO.transform.parent == null)
+                {
+                    return;
+                }
+
                 UnityEngine.Vector3 local = playerGO.transform.parent.InverseTransformPoint(worldPos);
                 Vector2 v = new(local.x, local.y);
-                _walkVectorMethod.Invoke(Entity.mainPlayer, new object[] { v });
+                _walkVectorMethod.Invoke(Entity.mainPlayer, [v]);
             }
             catch (Exception ex)
             {
@@ -773,9 +846,13 @@ namespace Infinity_TestMod.Util
             }
         }
 
-        void EnsureWalkVectorProbed()
+        private void EnsureWalkVectorProbed()
         {
-            if (_walkVectorProbed) return;
+            if (_walkVectorProbed)
+            {
+                return;
+            }
+
             _walkVectorProbed = true;
             try
             {
@@ -784,7 +861,7 @@ namespace Infinity_TestMod.Util
                     System.Reflection.BindingFlags.Public |
                     System.Reflection.BindingFlags.NonPublic,
                     binder: null,
-                    types: new[] { typeof(UnityEngine.Vector2) },
+                    types: [typeof(Vector2)],
                     modifiers: null);
             }
             catch { }
@@ -793,13 +870,16 @@ namespace Infinity_TestMod.Util
                 : "  walker: Player.WalkVector(Vector2) not found — walk disabled");
         }
 
-        void WalkToward(Entity tgt)
+        private void WalkToward(Entity tgt)
         {
             try
             {
                 GameObject playerGO = Entity.mainPlayer?.getGameObject();
                 GameObject targetGO = tgt?.getGameObject();
-                if (playerGO == null || targetGO == null) return;
+                if (playerGO == null || targetGO == null)
+                {
+                    return;
+                }
 
                 // Find the movement updater component on the player. The
                 // exact type may be ClientMovementController, EntityMovement-
@@ -808,7 +888,11 @@ namespace Infinity_TestMod.Util
                 {
                     foreach (Component comp in playerGO.GetComponents<UnityEngine.Component>())
                     {
-                        if (comp == null) continue;
+                        if (comp == null)
+                        {
+                            continue;
+                        }
+
                         FieldInfo f = comp.GetType().GetField("targetPosition",
                             System.Reflection.BindingFlags.Public |
                             System.Reflection.BindingFlags.NonPublic |
@@ -825,10 +909,17 @@ namespace Infinity_TestMod.Util
                         ? $"  walker: {_moverCompType.Name}.targetPosition"
                         : "  walker: no targetPosition field found — walk disabled");
                 }
-                if (_moverTargetPosField == null) return;
+                if (_moverTargetPosField == null)
+                {
+                    return;
+                }
 
                 Component mover = playerGO.GetComponent(_moverCompType);
-                if (mover == null) return;
+                if (mover == null)
+                {
+                    return;
+                }
+
                 _moverTargetPosField.SetValue(mover, targetGO.transform.position);
             }
             catch (Exception ex)
@@ -836,22 +927,25 @@ namespace Infinity_TestMod.Util
                 Log($"  WalkToward error: {ex.Message}");
             }
         }
-        static System.Type _moverCompType;
+        private static System.Type _moverCompType;
 
-        void EnsureAutoskillsOn()
+        private void EnsureAutoskillsOn()
         {
-            if (!TestMod.autoskillsActive) TestMod.autoskillsActive = true;
+            if (!BeyondAgentClass.autoskillsActive)
+            {
+                BeyondAgentClass.autoskillsActive = true;
+            }
         }
 
-        void StopAutoskills()
+        private void StopAutoskills()
         {
             // Restore user's autoskills toggle to whatever they had before
             // we started. If they had it off, leave it off — they shouldn't
             // discover the bot left their character spinning.
-            TestMod.autoskillsActive = _autoskillsWasOn;
+            BeyondAgentClass.autoskillsActive = _autoskillsWasOn;
         }
 
-        void EnterState(RunState s)
+        private void EnterState(RunState s)
         {
             State = s;
             _stateEnteredAt = Time.time;
@@ -871,9 +965,12 @@ namespace Infinity_TestMod.Util
             }
         }
 
-        float StateAge() => Time.time - _stateEnteredAt;
+        private float StateAge()
+        {
+            return Time.time - _stateEnteredAt;
+        }
 
-        void Fail(string why)
+        private void Fail(string why)
         {
             LastError = why;
             StatusLine = $"FAIL: {why}";
@@ -882,7 +979,7 @@ namespace Infinity_TestMod.Util
             EnterState(RunState.Failed);
         }
 
-        void Log(string line)
+        private void Log(string line)
         {
             try { OnLog?.Invoke(line); } catch { }
             BeyondLog.Msg($"[QuestRunner] {line}");

@@ -1,7 +1,7 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
+using System.Collections.ObjectModel;
 
 namespace Launcher.ViewModels
 {
@@ -10,60 +10,45 @@ namespace Launcher.ViewModels
     public partial class MainWindowViewModel
     {
         // --- Cosmetic toggles ---
-        private bool _helmSpoofActive;
         public bool HelmSpoofActive
         {
-            get => _helmSpoofActive;
-            set => UpdateSetting(ref _helmSpoofActive, value, "helmSpoofActive");
+            get;
+            set => UpdateSetting(ref field, value, "helmSpoofActive");
         }
-
-        private bool _armorSpoofActive;
         public bool ArmorSpoofActive
         {
-            get => _armorSpoofActive;
-            set => UpdateSetting(ref _armorSpoofActive, value, "armorSpoofActive");
+            get;
+            set => UpdateSetting(ref field, value, "armorSpoofActive");
         }
-
-        private bool _backSpoofActive;
         public bool BackSpoofActive
         {
-            get => _backSpoofActive;
-            set => UpdateSetting(ref _backSpoofActive, value, "backSpoofActive");
+            get;
+            set => UpdateSetting(ref field, value, "backSpoofActive");
         }
-
-        private bool _weaponSpoofActive;
         public bool WeaponSpoofActive
         {
-            get => _weaponSpoofActive;
-            set => UpdateSetting(ref _weaponSpoofActive, value, "weaponSpoofActive");
+            get;
+            set => UpdateSetting(ref field, value, "weaponSpoofActive");
         }
-
-        private bool _petSpoofActive;
         public bool PetSpoofActive
         {
-            get => _petSpoofActive;
-            set => UpdateSetting(ref _petSpoofActive, value, "petSpoofActive");
+            get;
+            set => UpdateSetting(ref field, value, "petSpoofActive");
         }
-
-        private bool _monTransformActive;
         public bool MonTransformActive
         {
-            get => _monTransformActive;
-            set => UpdateSetting(ref _monTransformActive, value, "monTransformActive");
+            get;
+            set => UpdateSetting(ref field, value, "monTransformActive");
         }
-
-        private bool _petCombatAnimActive;
         public bool PetCombatAnimActive
         {
-            get => _petCombatAnimActive;
-            set => UpdateSetting(ref _petCombatAnimActive, value, "petCombatAnimActive");
+            get;
+            set => UpdateSetting(ref field, value, "petCombatAnimActive");
         }
-
-        private bool _genderSpoofActive;
         public bool GenderSpoofActive
         {
-            get => _genderSpoofActive;
-            set => UpdateSetting(ref _genderSpoofActive, value, "genderSpoofActive");
+            get;
+            set => UpdateSetting(ref field, value, "genderSpoofActive");
         }
 
         // --- Bundle / name fields ---
@@ -145,13 +130,13 @@ namespace Launcher.ViewModels
         }
 
         // --- Catalogs ---
-        public ObservableCollection<CatalogEntry> HelmsCatalog { get; } = new();
-        public ObservableCollection<CatalogEntry> ArmorsCatalog { get; } = new();
-        public ObservableCollection<CatalogEntry> BacksCatalog { get; } = new();
-        public ObservableCollection<CatalogEntry> WeaponsCatalog { get; } = new();
-        public ObservableCollection<CatalogEntry> PetsCatalog { get; } = new();
-        public ObservableCollection<CatalogEntry> MonstersCatalog { get; } = new();
-        public ObservableCollection<JukeboxTrack> JukeboxTracks { get; } = new();
+        public ObservableCollection<CatalogEntry> HelmsCatalog { get; } = [];
+        public ObservableCollection<CatalogEntry> ArmorsCatalog { get; } = [];
+        public ObservableCollection<CatalogEntry> BacksCatalog { get; } = [];
+        public ObservableCollection<CatalogEntry> WeaponsCatalog { get; } = [];
+        public ObservableCollection<CatalogEntry> PetsCatalog { get; } = [];
+        public ObservableCollection<CatalogEntry> MonstersCatalog { get; } = [];
+        public ObservableCollection<JukeboxTrack> JukeboxTracks { get; } = [];
 
         [ObservableProperty] private CatalogEntry? _selectedHelmCatalog;
         [ObservableProperty] private CatalogEntry? _selectedArmorCatalog;
@@ -184,7 +169,7 @@ namespace Launcher.ViewModels
             collection.Clear();
             if (token is JArray arr)
             {
-                foreach (var t in arr)
+                foreach (JToken t in arr)
                 {
                     collection.Add(new CatalogEntry
                     {
@@ -200,7 +185,7 @@ namespace Launcher.ViewModels
             JukeboxTracks.Clear();
             if (msg["Tracks"] is JArray arr)
             {
-                foreach (var t in arr)
+                foreach (JToken t in arr)
                 {
                     JukeboxTracks.Add(new JukeboxTrack
                     {

@@ -1,7 +1,7 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Passive monster catalog feeder. Every Monster constructed in the world
     // gets its bundle, linkage (= prefab name) and scale recorded. Powers the
@@ -16,7 +16,11 @@ namespace Infinity_TestMod.Patches
         {
             try
             {
-                if (b == null || b.Bundle == null || string.IsNullOrEmpty(b.strLinkage)) return;
+                if (b == null || b.Bundle == null || string.IsNullOrEmpty(b.strLinkage))
+                {
+                    return;
+                }
+
                 ItemCatalog.RecordMonster(b.MonID, b.strMonName ?? "", b.Bundle, b.strLinkage, b.Scale);
             }
             catch { }

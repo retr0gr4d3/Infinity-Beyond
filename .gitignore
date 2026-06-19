@@ -40,7 +40,9 @@ UserData/
 *.log
 
 # Agent build directory
-build/
+*build*
+*bin*
+*obj*
 
 # Deployed binaries in root folder
 /*.exe
@@ -52,3 +54,5 @@ build/
 
 # Keep solution files
 !/Beyond/Beyond.sln
+
+BeyondLauncher*

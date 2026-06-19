@@ -1,21 +1,29 @@
+using BeyondAgent.Util;
 using HarmonyLib;
-using Infinity_TestMod.Util;
 
-namespace Infinity_TestMod.Patches
+namespace BeyondAgent.Patches
 {
     // Weapon harvester. WeaponLoader.GetBundleData reads player.Weapon.Bundle;
     // we catalog it on construction along with PrefabName and ItemType so the
     // spoof can later reproduce the prefab lookup and hold-pose selection.
-    [HarmonyPatch(typeof(WeaponLoader), MethodType.Constructor, new System.Type[] { typeof(HumanoidAvatar) })]
+    [HarmonyPatch(typeof(WeaponLoader), MethodType.Constructor, [typeof(HumanoidAvatar)])]
     public static class WeaponHarvestPatch
     {
         public static void Postfix(HumanoidAvatar p)
         {
             try
             {
-                if (p == null || p.character == null) return;
+                if (p == null || p.character == null)
+                {
+                    return;
+                }
+
                 EquipItem item = p.character.Weapon;
-                if (item == null || item.Bundle == null) return;
+                if (item == null || item.Bundle == null)
+                {
+                    return;
+                }
+
                 string name = (item as Item)?.Name ?? "";
                 ItemCatalog.RecordWeapon(item.ID, name, item.Bundle, item.PrefabName, (int)item.ItemType);
             }
@@ -59,7 +67,11 @@ namespace Infinity_TestMod.Patches
         /// </summary>
         public static void Apply(EquipItem item, string newPrefab, iType newType)
         {
-            if (item == null) return;
+            if (item == null)
+            {
+                return;
+            }
+
             if (mutatedItem != item)
             {
                 // Different EquipItem instance � restore the previous one
@@ -75,7 +87,11 @@ namespace Infinity_TestMod.Patches
 
         public static void Restore()
         {
-            if (mutatedItem == null) return;
+            if (mutatedItem == null)
+            {
+                return;
+            }
+
             try
             {
                 mutatedItem.PrefabName = origPrefab;
@@ -95,15 +111,25 @@ namespace Infinity_TestMod.Patches
 
         public static void Postfix(WeaponLoader __instance, ref AssetBundleData __result)
         {
-            if (!TestMod.weaponSpoofActive || string.IsNullOrWhiteSpace(TestMod.weaponSpoofBundle))
+            if (!BeyondAgentClass.weaponSpoofActive || string.IsNullOrWhiteSpace(BeyondAgentClass.weaponSpoofBundle))
+            {
                 return;
+            }
+
             try
             {
                 HumanoidAvatar avt = _avtRef(__instance);
-                if (avt == null || avt.character == null) return;
-                if (avt.character != Entity.mainPlayer) return;
+                if (avt == null || avt.character == null)
+                {
+                    return;
+                }
 
-                __result = BundleBuilder.Build(TestMod.weaponSpoofBundle, ItemCatalog.Weapons, avt.character.Weapon?.Bundle, __result);
+                if (avt.character != Entity.mainPlayer)
+                {
+                    return;
+                }
+
+                __result = BundleBuilder.Build(BeyondAgentClass.weaponSpoofBundle, ItemCatalog.Weapons, avt.character.Weapon?.Bundle, __result);
             }
             catch (System.Exception ex)
             {
@@ -117,20 +143,39 @@ namespace Infinity_TestMod.Patches
     // server-side weapon swaps (the new EquipItem flows through here).
     // If the catalog doesn't have an entry for the target bundle we can't
     // pick a sane PrefabName/ItemType � leave the live values alone and log.
-    [HarmonyPatch(typeof(WeaponLoader), MethodType.Constructor, new System.Type[] { typeof(HumanoidAvatar) })]
+    [HarmonyPatch(typeof(WeaponLoader), MethodType.Constructor, [typeof(HumanoidAvatar)])]
     public static class WeaponSpoofReapplyPatch
     {
         public static void Postfix(HumanoidAvatar p)
         {
-            if (!TestMod.weaponSpoofActive || string.IsNullOrWhiteSpace(TestMod.weaponSpoofBundle))
+            if (!BeyondAgentClass.weaponSpoofActive || string.IsNullOrWhiteSpace(BeyondAgentClass.weaponSpoofBundle))
+            {
                 return;
+            }
+
             try
             {
-                if (p == null || p.character == null) return;
-                if (p.character != Entity.mainPlayer) return;
+                if (p == null || p.character == null)
+                {
+                    return;
+                }
+
+                if (p.character != Entity.mainPlayer)
+                {
+                    return;
+                }
+
                 EquipItem weapon = p.character.Weapon;
-                if (weapon == null) return;
-                if (!ItemCatalog.Weapons.TryGetValue(TestMod.weaponSpoofBundle, out ItemCatalog.ItemEntry cat)) return;
+                if (weapon == null)
+                {
+                    return;
+                }
+
+                if (!ItemCatalog.Weapons.TryGetValue(BeyondAgentClass.weaponSpoofBundle, out ItemCatalog.ItemEntry cat))
+                {
+                    return;
+                }
+
                 WeaponSpoofState.Apply(weapon, cat.prefab, (iType)cat.itemType);
             }
             catch (System.Exception ex)
