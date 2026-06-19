@@ -8,7 +8,7 @@
     <AssemblyName>BeyondLauncher</AssemblyName>
     <Company>Retr0gr4d3</Company>
     <Product>Beyond</Product>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <ApplicationIcon>Assets\Beyond.ico</ApplicationIcon>
