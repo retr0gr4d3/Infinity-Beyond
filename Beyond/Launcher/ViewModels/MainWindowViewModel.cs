@@ -38,7 +38,7 @@ namespace Launcher.ViewModels
             set => UpdateSetting(ref field, value, "autoSkipCutscenes");
         }
 
-        public bool IsVsyncEnabled
+        public bool IsVSyncEnabled
         {
             get;
             set
@@ -58,7 +58,7 @@ namespace Launcher.ViewModels
             {
                 if (value)
                 {
-                    IsVsyncEnabled = false;
+                    IsVSyncEnabled = false;
                 }
                 UpdateSetting(ref field, value, "uncapFrames");
             }
@@ -228,7 +228,7 @@ namespace Launcher.ViewModels
 
                 if (settings.TryGetValue("vsyncEnabled", out val))
                 {
-                    IsVsyncEnabled = (bool)val;
+                    IsVSyncEnabled = (bool)val;
                 }
 
                 if (settings.TryGetValue("uncapFrames", out val))

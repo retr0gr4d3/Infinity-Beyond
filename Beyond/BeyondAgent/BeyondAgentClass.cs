@@ -385,6 +385,10 @@ namespace BeyondAgent
                 }
             }
 
+            // VSync on by default. Snapshot reports state from QualitySettings.vSyncCount,
+            // so forcing it here makes the launcher toggle start checked and the game match.
+            QualitySettings.vSyncCount = 1;
+
             LauncherServer.Start();
             LoggerInstance.Msg("Alpha Testing Mod Menu Initialized successfully!");
             PacketLog.Init();
@@ -4890,7 +4894,7 @@ namespace BeyondAgent
                             case "autoSkipCutscenes": autoSkipCutscenes = (bool)val; break;
                             case "vsyncEnabled":
                                 UnityEngine.QualitySettings.vSyncCount = (bool)val ? 1 : 0;
-                                LoggerInstance.Msg($"Framerate: Vsync {(UnityEngine.QualitySettings.vSyncCount > 0 ? "ON" : "OFF")}");
+                                LoggerInstance.Msg($"Framerate: VSync {(UnityEngine.QualitySettings.vSyncCount > 0 ? "ON" : "OFF")}");
                                 break;
                             case "uncapFrames":
                                 bool uncap = (bool)val;
@@ -4903,7 +4907,7 @@ namespace BeyondAgent
                                 {
                                     UnityEngine.Application.targetFrameRate = defaultTargetFrameRate;
                                 }
-                                LoggerInstance.Msg($"Framerate: Uncap {(uncap ? "ON" : "OFF")} (TargetFrameRate={UnityEngine.Application.targetFrameRate}, Vsync={UnityEngine.QualitySettings.vSyncCount})");
+                                LoggerInstance.Msg($"Framerate: Uncap {(uncap ? "ON" : "OFF")} (TargetFrameRate={UnityEngine.Application.targetFrameRate}, VSync={UnityEngine.QualitySettings.vSyncCount})");
                                 break;
                             case "forceMergeShop": forceMergeShop = (bool)val; break;
                             case "autoskillsActive": autoskillsActive = (bool)val; break;

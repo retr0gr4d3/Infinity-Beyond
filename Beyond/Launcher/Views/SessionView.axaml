@@ -113,8 +113,8 @@
                                     <StackPanel Spacing="6">
                                         <TextBlock Text="Framerate Tools" FontSize="11" Foreground="#C5C7D0"/>
                                         <Grid ColumnDefinitions="*,Auto">
-                                            <TextBlock Text="Vsync" VerticalAlignment="Center" FontSize="12" Foreground="#E2E4E9"/>
-                                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsVsyncEnabled}"/>
+                                            <TextBlock Text="VSync" VerticalAlignment="Center" FontSize="12" Foreground="#E2E4E9"/>
+                                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsVSyncEnabled}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBlock Text="Uncap Frames" VerticalAlignment="Center" FontSize="12" Foreground="#E2E4E9"/>
