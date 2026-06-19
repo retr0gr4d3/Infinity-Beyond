@@ -12,7 +12,7 @@
 
     <UserControl.Styles>
         <Style Selector="TextBlock.SectionHeader">
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="Margin" Value="0,0,0,15"/>
@@ -34,13 +34,18 @@
             <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
         <Style Selector="TextBox:focus">
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
+        </Style>
+        <Style Selector="ColorPicker TextBox">
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="6,3"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
         <Style Selector="Button">
-            <Setter Property="Background" Value="#003B46"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentDimBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -49,34 +54,43 @@
             <Setter Property="Padding" Value="14,8"/>
         </Style>
         <Style Selector="Button:pointerover">
-            <Setter Property="Background" Value="#00E5FF"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
-            <Setter Property="Foreground" Value="#0F0F11"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentContrastBrush}"/>
         </Style>
         <Style Selector="Button.Accent">
-            <Setter Property="Background" Value="#003B46"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentDimBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="Button.Accent:pointerover">
-            <Setter Property="Background" Value="#00E5FF"/>
-            <Setter Property="Foreground" Value="#0F0F11"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentContrastBrush}"/>
+        </Style>
+        <!-- Override Fluent's grey content-presenter hover fill with the accent. -->
+        <Style Selector="Button:not(.Danger):not(.CloseTab):not(.Link):pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="Button.Danger">
-            <Setter Property="Background" Value="#2D1C1C"/>
-            <Setter Property="BorderBrush" Value="#FF5252"/>
-            <Setter Property="Foreground" Value="#FF5252"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondDangerDimBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondDangerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondDangerBrush}"/>
         </Style>
         <Style Selector="Button.Danger:pointerover">
-            <Setter Property="Background" Value="#FF5252"/>
-            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondDangerBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondDangerContrastBrush}"/>
+        </Style>
+        <!-- Fluent's grey content-presenter hover fill hides the red above; override it. -->
+        <Style Selector="Button.Danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BeyondDangerBrush}"/>
         </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="*, 1.5*" Margin="40">
-        <!-- Left Column: Add Account Form -->
+        <!-- Left Column: Unified Configuration Panel -->
         <Border Grid.Column="0" Background="#141418" BorderBrush="#202026" BorderThickness="1" CornerRadius="8" Padding="25" VerticalAlignment="Top" Margin="0,0,20,0">
             <StackPanel>
+                <!-- Add Account Section -->
                 <TextBlock Text="ADD GAME ACCOUNT" Classes="SectionHeader"/>
 
                 <TextBlock Text="USERNAME" Classes="Label"/>
@@ -92,10 +106,34 @@
 
                 <Separator Height="1" Background="#202026" Margin="0,20"/>
 
+                <!-- Game Directory Section -->
                 <TextBlock Text="GAME DIRECTORY" Classes="Label"/>
                 <Grid ColumnDefinitions="*, Auto" Margin="0,0,0,10">
                     <TextBox Grid.Column="0" Text="{Binding GameDirectory, Mode=TwoWay}" PlaceholderText="Select game folder..." Margin="0"/>
                     <Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseDirectoryCommand}" Margin="8,0,0,0" Padding="12,8"/>
+                </Grid>
+
+                <Separator Height="1" Background="#202026" Margin="0,20"/>
+
+                <!-- Appearance Section -->
+                <TextBlock Text="APPEARANCE" Classes="SectionHeader"/>
+                <TextBlock Text="Personalize the app's colors." Foreground="#8F909A" FontSize="11" Margin="0,0,0,16"/>
+
+                <Grid ColumnDefinitions="*, *, Auto" ColumnSpacing="20">
+                    <!-- Accent Color Picker -->
+                    <StackPanel Grid.Column="0" Spacing="6" ToolTip.Tip="Buttons, highlights, sliders and glow">
+                        <TextBlock Text="Accent" Foreground="#E2E4E9" FontSize="12" FontWeight="SemiBold"/>
+                        <ColorPicker Color="{Binding AccentColor, Mode=TwoWay}" HorizontalAlignment="Left"/>
+                    </StackPanel>
+
+                    <!-- Danger Color Picker -->
+                    <StackPanel Grid.Column="1" Spacing="6" ToolTip.Tip="Remove, close and Configurator buttons">
+                        <TextBlock Text="Danger" Foreground="#E2E4E9" FontSize="12" FontWeight="SemiBold"/>
+                        <ColorPicker Color="{Binding DangerColor, Mode=TwoWay}" HorizontalAlignment="Left"/>
+                    </StackPanel>
+
+                    <!-- Single Reset Button -->
+                    <Button Grid.Column="2" Content="Reset" Command="{Binding ResetCommand}" VerticalAlignment="Bottom"/>
                 </Grid>
             </StackPanel>
         </Border>

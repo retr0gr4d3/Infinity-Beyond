@@ -10,7 +10,7 @@
             PointerPressed="OnDragPressed" DoubleTapped="OnTitleBarDoubleTapped">
         <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Stretch">
             <!-- Title (click-through so the whole strip stays draggable) -->
-            <TextBlock Grid.Column="0" Text="{Binding #Root.Title}" Foreground="#00E5FF" FontSize="11"
+            <TextBlock Grid.Column="0" Text="{Binding #Root.Title}" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="11"
                        FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,0,0"
                        IsHitTestVisible="False"/>
 

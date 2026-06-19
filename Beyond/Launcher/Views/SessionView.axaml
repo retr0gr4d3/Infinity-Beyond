@@ -79,8 +79,8 @@
                                     <Grid ColumnDefinitions="*,Auto" Background="Transparent">
                                         <TextBlock Text="Quick Actions" Classes="Header" VerticalAlignment="Center" Margin="0"/>
                                         <Panel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,4,0">
-                                            <TextBlock Text="▲" Foreground="#00E5FF" FontSize="10" IsVisible="{Binding #ToggleQuickActions.IsChecked}"/>
-                                            <TextBlock Text="▼" Foreground="#00E5FF" FontSize="10" IsVisible="{Binding !#ToggleQuickActions.IsChecked}"/>
+                                            <TextBlock Text="▲" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding #ToggleQuickActions.IsChecked}"/>
+                                            <TextBlock Text="▼" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding !#ToggleQuickActions.IsChecked}"/>
                                         </Panel>
                                     </Grid>
                                 </ToggleButton>
@@ -94,7 +94,7 @@
                                         </Grid>
                                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                             <Slider Minimum="0.5" Maximum="3.0" Value="{Binding CameraZoom}" HorizontalAlignment="Stretch" Grid.Column="0"/>
-                                            <TextBlock Text="{Binding CameraZoom, StringFormat='{}{0:0.0}x'}" Width="35" FontSize="11" Foreground="#00E5FF" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="1"/>
+                                            <TextBlock Text="{Binding CameraZoom, StringFormat='{}{0:0.0}x'}" Width="35" FontSize="11" Foreground="{DynamicResource BeyondAccentBrush}" VerticalAlignment="Center" HorizontalAlignment="Right" Grid.Column="1"/>
                                         </Grid>
                                     </StackPanel>
 
@@ -131,8 +131,8 @@
                                     <Grid ColumnDefinitions="*,Auto" Background="Transparent">
                                         <TextBlock Text="Launcher Modules" Classes="Header" VerticalAlignment="Center" Margin="0"/>
                                         <Panel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,4,0">
-                                            <TextBlock Text="▲" Foreground="#00E5FF" FontSize="10" IsVisible="{Binding #ToggleLauncherModules.IsChecked}"/>
-                                            <TextBlock Text="▼" Foreground="#00E5FF" FontSize="10" IsVisible="{Binding !#ToggleLauncherModules.IsChecked}"/>
+                                            <TextBlock Text="▲" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding #ToggleLauncherModules.IsChecked}"/>
+                                            <TextBlock Text="▼" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding !#ToggleLauncherModules.IsChecked}"/>
                                         </Panel>
                                     </Grid>
                                 </ToggleButton>
@@ -154,8 +154,8 @@
                                     <Grid ColumnDefinitions="*,Auto" Background="Transparent">
                                         <TextBlock Text="Packet Tools Suite" Classes="Header" VerticalAlignment="Center" Margin="0"/>
                                         <Panel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,4,0">
-                                            <TextBlock Text="▲" Foreground="#00E5FF" FontSize="10" IsVisible="{Binding #TogglePacketTools.IsChecked}"/>
-                                            <TextBlock Text="▼" Foreground="#00E5FF" FontSize="10" IsVisible="{Binding !#TogglePacketTools.IsChecked}"/>
+                                            <TextBlock Text="▲" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding #TogglePacketTools.IsChecked}"/>
+                                            <TextBlock Text="▼" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding !#TogglePacketTools.IsChecked}"/>
                                         </Panel>
                                     </Grid>
                                 </ToggleButton>
@@ -175,8 +175,8 @@
                                     <Grid ColumnDefinitions="*,Auto" Background="Transparent">
                                         <TextBlock Text="Event Terminal Logs" Classes="Header" VerticalAlignment="Center" Margin="0"/>
                                         <Panel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,4,0">
-                                            <TextBlock Text="▲" Foreground="#00E5FF" FontSize="10" IsVisible="{Binding #ToggleEventLogs.IsChecked}"/>
-                                            <TextBlock Text="▼" Foreground="#00E5FF" FontSize="10" IsVisible="{Binding !#ToggleEventLogs.IsChecked}"/>
+                                            <TextBlock Text="▲" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding #ToggleEventLogs.IsChecked}"/>
+                                            <TextBlock Text="▼" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding !#ToggleEventLogs.IsChecked}"/>
                                         </Panel>
                                     </Grid>
                                 </ToggleButton>
@@ -197,7 +197,7 @@
                 <Border Grid.Row="1" Background="#2D1C1C" BorderBrush="#FF5252" BorderThickness="1" CornerRadius="8" Padding="25" Margin="15" VerticalAlignment="Center" IsVisible="{Binding IsMelonLoaderDetected}">
                     <StackPanel Spacing="12" HorizontalAlignment="Center">
                         <TextBlock Text="⚠ MODIFICATIONS DISABLED" Foreground="#FF5252" FontSize="13" FontWeight="Black" HorizontalAlignment="Center" LetterSpacing="0.5"/>
-                        <TextBlock Text="Beyond has disabled its built in modifications as MelonLoader was detected." Foreground="#E2E4E9" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="300" LineHeight="16"/>
+                        <TextBlock Text="Beyond has disabled its built-in modifications as MelonLoader was detected." Foreground="#E2E4E9" FontSize="11" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="300" LineHeight="16"/>
                     </StackPanel>
                 </Border>
 
@@ -217,7 +217,7 @@
                           Padding="0" Focusable="False"
                           HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
                           ToolTip.Tip="Toggle Control Panel">
-                <TextBlock Text="⇋" FontSize="14" FontWeight="Bold" Foreground="#00E5FF"/>
+                <TextBlock Text="⇋" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource BeyondAccentBrush}"/>
             </ToggleButton>
         </Border>
 

@@ -24,7 +24,7 @@
                     <TextBlock Text="Membership Status" Classes="Header" Margin="0"/>
                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
                         <TextBlock Text="Status:" VerticalAlignment="Center" FontSize="12" Foreground="#8F909A"/>
-                        <TextBlock Grid.Column="1" Text="{Binding MembershipText}" VerticalAlignment="Center" FontSize="12" Foreground="#00E5FF" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="1" Text="{Binding MembershipText}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource BeyondAccentBrush}" FontWeight="Bold"/>
                     </Grid>
                     <Button Content="Toggle Membership" Command="{Binding ToggleMembershipCommand}" HorizontalAlignment="Stretch" Classes="Accent"/>
                 </StackPanel>
@@ -36,7 +36,7 @@
                     <TextBlock Text="Access Levels (hasAccess checks)" Classes="Header" Margin="0"/>
                     <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,5">
                         <TextBlock Text="Current Level:" VerticalAlignment="Center" FontSize="12" Foreground="#8F909A"/>
-                        <TextBlock Grid.Column="1" Text="{Binding PlayerAccessLevel}" VerticalAlignment="Center" FontSize="12" Foreground="#00E5FF" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="1" Text="{Binding PlayerAccessLevel}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource BeyondAccentBrush}" FontWeight="Bold"/>
                     </Grid>
                     <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="6">
                         <Button Grid.Column="0" Content="30" Command="{Binding SetAccessLevelCommand}" CommandParameter="30"/>

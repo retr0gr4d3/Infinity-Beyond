@@ -9,8 +9,47 @@
         <local:ViewLocator/>
     </Application.DataTemplates>
 
+    <!-- ===================================================================
+         App accent colour — owned entirely by Beyond, independent of the OS
+         personalization (system) accent. `BeyondAccentColor` is the single
+         source of truth; `BeyondAccentBrush` tracks it via DynamicResource so
+         rewriting the colour at runtime (the Configurator ColorPicker) repaints
+         every control that references the brush. Nothing here touches Windows.
+         =================================================================== -->
+    <Application.Resources>
+        <!-- BeyondAccentColor is the source of truth. The Dim (dark fill behind
+             buttons/toggles) and Light (hover highlight) shades are DERIVED from it
+             by ThemeManager at runtime, so picking a new accent recolours them too.
+             Defaults below match the cyan accent for design-time / pre-init. -->
+        <Color x:Key="BeyondAccentColor">#00E5FF</Color>
+        <Color x:Key="BeyondAccentDimColor">#003B46</Color>
+        <Color x:Key="BeyondAccentLightColor">#6BF3FF</Color>
+        <!-- Readable text/icon colour to sit ON the accent fill (button hover etc).
+             ThemeManager picks dark or light per accent luminance. -->
+        <Color x:Key="BeyondAccentContrastColor">#0F0F11</Color>
+        <SolidColorBrush x:Key="BeyondAccentBrush" Color="{DynamicResource BeyondAccentColor}"/>
+        <SolidColorBrush x:Key="BeyondAccentDimBrush" Color="{DynamicResource BeyondAccentDimColor}"/>
+        <SolidColorBrush x:Key="BeyondAccentLightBrush" Color="{DynamicResource BeyondAccentLightColor}"/>
+        <SolidColorBrush x:Key="BeyondAccentContrastBrush" Color="{DynamicResource BeyondAccentContrastColor}"/>
+
+        <!-- Danger palette (Remove / Configurator / tab-close). User-customisable via
+             its own ColorPicker; Dim (resting fill) + Contrast (text on the fill) are
+             derived by ThemeManager just like the accent. -->
+        <Color x:Key="BeyondDangerColor">#FF5252</Color>
+        <Color x:Key="BeyondDangerDimColor">#2D1C1C</Color>
+        <Color x:Key="BeyondDangerContrastColor">#FFFFFF</Color>
+        <SolidColorBrush x:Key="BeyondDangerBrush" Color="{DynamicResource BeyondDangerColor}"/>
+        <SolidColorBrush x:Key="BeyondDangerDimBrush" Color="{DynamicResource BeyondDangerDimColor}"/>
+        <SolidColorBrush x:Key="BeyondDangerContrastBrush" Color="{DynamicResource BeyondDangerContrastColor}"/>
+
+        <!-- Glow BoxShadows are built from the accent at runtime by ThemeManager
+             (a BoxShadow's colour can't be a DynamicResource on its own). -->
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+        <!-- ColorPicker controls ship their own (Fluent) theme, not bundled by FluentTheme. -->
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml"/>
 
         <!-- ===================================================================
              Shared neon-cyberpunk theme. Defined once at the application level
@@ -71,7 +110,7 @@
 
         <!-- Section header. -->
         <Style Selector="TextBlock.Header">
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Margin" Value="0,5,0,3"/>
@@ -79,10 +118,10 @@
 
         <!-- Buttons. -->
         <Style Selector="Button">
-            <Setter Property="Background" Value="#003B46"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentDimBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -91,18 +130,24 @@
             <Setter Property="Padding" Value="6,4"/>
         </Style>
         <Style Selector="Button:pointerover">
-            <Setter Property="Background" Value="#00E5FF"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
-            <Setter Property="Foreground" Value="#0F0F11"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentContrastBrush}"/>
         </Style>
         <Style Selector="Button.Accent">
-            <Setter Property="Background" Value="#003B46"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentDimBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="Button.Accent:pointerover">
-            <Setter Property="Background" Value="#00E5FF"/>
-            <Setter Property="Foreground" Value="#0F0F11"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentContrastBrush}"/>
+        </Style>
+        <!-- Fluent paints its own grey hover fill on the button's content presenter,
+             which hides the control Background. Override it so accent/plain buttons
+             actually hover in the accent colour. Special buttons keep their own look. -->
+        <Style Selector="Button:not(.Danger):not(.CloseTab):not(.Link):not(.TitleBarButton):not(.AboutBadge):pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
 
         <!-- Toggle pill (used by the sniffer / interceptor toolbars). -->
@@ -117,39 +162,39 @@
             <Setter Property="Padding" Value="8,4"/>
         </Style>
         <Style Selector="ToggleButton:checked">
-            <Setter Property="Background" Value="#003B46"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentDimBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
 
         <!-- Sidebar Collapse Toggle Button Specific Styles -->
         <Style Selector="ToggleButton#CollapseButton">
             <Setter Property="Background" Value="#141418"/>
             <Setter Property="BorderBrush" Value="#202026"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0,1,1,1"/>
         </Style>
         <Style Selector="ToggleButton#CollapseButton /template/ ContentPresenter">
             <Setter Property="Background" Value="#141418"/>
             <Setter Property="BorderBrush" Value="#202026"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0,1,1,1"/>
         </Style>
         <Style Selector="ToggleButton#CollapseButton:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#1C1D24"/>
             <Setter Property="BorderBrush" Value="#2A2A32"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="ToggleButton#CollapseButton:checked /template/ ContentPresenter">
             <Setter Property="Background" Value="#141418"/>
             <Setter Property="BorderBrush" Value="#202026"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
             <Setter Property="BorderThickness" Value="0,1,1,1"/>
         </Style>
         <Style Selector="ToggleButton#CollapseButton:checked:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#1C1D24"/>
             <Setter Property="BorderBrush" Value="#2A2A32"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
 
         <!-- Text input. -->
@@ -163,7 +208,7 @@
             <Setter Property="FontSize" Value="11"/>
         </Style>
         <Style Selector="TextBox:focus">
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
 
         <!-- Dropdown. -->
@@ -183,43 +228,54 @@
             <Setter Property="FontSize" Value="11"/>
         </Style>
 
-        <!-- On/off switch. -->
+        <!-- On/off switch. The Avalonia 12 Fluent ToggleSwitch fills its ON track
+             from the ToggleSwitchFillOn / ToggleSwitchStrokeOn resources (applied
+             to the SwitchKnobBounds part). Re-point them at the Beyond accent so
+             the on-state is cyan instead of inheriting the OS accent. -->
         <Style Selector="ToggleSwitch">
             <Setter Property="OnContent" Value="ON"/>
             <Setter Property="OffContent" Value="OFF"/>
             <Setter Property="Foreground" Value="#C5C7D0"/>
             <Setter Property="FontSize" Value="12"/>
+            <Style.Resources>
+                <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{DynamicResource BeyondAccentColor}"/>
+            </Style.Resources>
         </Style>
 
         <!-- Slider. -->
         <Style Selector="Slider">
-            <Setter Property="Foreground" Value="#00E5FF"/>
+            <Setter Property="Foreground" Value="{DynamicResource BeyondAccentBrush}"/>
             <Style.Resources>
-                <SolidColorBrush x:Key="SliderTrackValueFill">#00E5FF</SolidColorBrush>
-                <SolidColorBrush x:Key="SliderTrackValueFillPointerOver">#00E5FF</SolidColorBrush>
-                <SolidColorBrush x:Key="SliderTrackValueFillPressed">#00E5FF</SolidColorBrush>
-                <SolidColorBrush x:Key="SliderThumbBackground">#00E5FF</SolidColorBrush>
-                <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver">#00E5FF</SolidColorBrush>
-                <SolidColorBrush x:Key="SliderThumbBackgroundPressed">#00E5FF</SolidColorBrush>
+                <SolidColorBrush x:Key="SliderTrackValueFill" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="SliderThumbBackground" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="{DynamicResource BeyondAccentColor}"/>
+                <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="{DynamicResource BeyondAccentColor}"/>
             </Style.Resources>
         </Style>
         <Style Selector="Slider /template/ RepeatButton#PART_DecreaseButton">
-            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="Slider /template/ RepeatButton#PART_DecreaseButton:pointerover">
-            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="Slider /template/ RepeatButton#PART_DecreaseButton:pressed">
-            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="Slider /template/ Thumb">
-            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="Slider /template/ Thumb:pointerover">
-            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
         <Style Selector="Slider /template/ Thumb:pressed">
-            <Setter Property="Background" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource BeyondAccentBrush}"/>
         </Style>
     </Application.Styles>
 </Application>

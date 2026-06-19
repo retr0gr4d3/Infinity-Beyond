@@ -38,6 +38,47 @@ namespace Launcher.ViewModels
         [ObservableProperty]
         private string _newPassword = "";
 
+        // Live app accent, bound to the Configurator ColorPicker. Seeded from the
+        // persisted value (ThemeManager.Initialize ran at startup); each change is
+        // applied + saved by ThemeManager. App-local only — never the OS accent.
+        [ObservableProperty]
+        private Avalonia.Media.Color _accentColor = Launcher.ThemeManager.AccentColor;
+
+        partial void OnAccentColorChanged(Avalonia.Media.Color value)
+        {
+            Launcher.ThemeManager.SetAccent(value);
+        }
+
+        [RelayCommand]
+        private void ResetAccent()
+        {
+            Launcher.ThemeManager.ResetAccent();
+            AccentColor = Launcher.ThemeManager.AccentColor;
+        }
+
+        // Danger colour (Remove / Configurator / tab-close buttons), same pattern.
+        [ObservableProperty]
+        private Avalonia.Media.Color _dangerColor = Launcher.ThemeManager.DangerColor;
+
+        partial void OnDangerColorChanged(Avalonia.Media.Color value)
+        {
+            Launcher.ThemeManager.SetDanger(value);
+        }
+
+        [RelayCommand]
+        private void ResetDanger()
+        {
+            Launcher.ThemeManager.ResetDanger();
+            DangerColor = Launcher.ThemeManager.DangerColor;
+        }
+
+        [RelayCommand]
+        private void Reset()
+        {
+            ResetAccent();
+            ResetDanger();
+        }
+
         public event Action<string?, string?, string?>? OnLaunchRequested;
         public Func<System.Threading.Tasks.Task<string?>>? OnRequestFolderBrowse;
         // Shows a modal warning to the user (wired up by the view).
