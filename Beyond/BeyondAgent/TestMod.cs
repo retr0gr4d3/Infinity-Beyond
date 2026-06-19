@@ -42,6 +42,7 @@ namespace Infinity_TestMod
         // Local name spoof is always active: a non-empty spoofedName means the
         // nameplate/HUD/chat patches substitute it; blank means no spoof.
         public static string spoofedName = "";
+        private static int defaultTargetFrameRate = -2;
 
         // "Fun" window — home for visual/local spoofers (name, gear, future).
         // Sized to fit Name Spoof + Armor Spoof rows + armor catalog picker.
@@ -370,6 +371,12 @@ namespace Infinity_TestMod
 
         public override void OnInitialize()
         {
+            if (defaultTargetFrameRate == -2)
+            {
+                defaultTargetFrameRate = UnityEngine.Application.targetFrameRate;
+                if (defaultTargetFrameRate <= 0) defaultTargetFrameRate = 60;
+            }
+
             LauncherServer.Start();
             LoggerInstance.Msg("Alpha Testing Mod Menu Initialized successfully!");
             PacketLog.Init();
@@ -4519,6 +4526,8 @@ namespace Infinity_TestMod
                 { "isMember", (Entity.mainPlayer != null) ? (Entity.mainPlayer.UpgradeDays > 0) : false },
                 { "cameraZoom", CameraZoom.Multiplier },
                 { "autoSkipCutscenes", autoSkipCutscenes },
+                { "vsyncEnabled", UnityEngine.QualitySettings.vSyncCount > 0 },
+                { "uncapFrames", UnityEngine.Application.targetFrameRate == -1 },
                 { "forceMergeShop", forceMergeShop },
                 { "autoskillsActive", autoskillsActive },
                 { "spoofedName", spoofedName },
@@ -4708,6 +4717,23 @@ namespace Infinity_TestMod
                         switch (name)
                         {
                             case "autoSkipCutscenes": autoSkipCutscenes = (bool)val; break;
+                            case "vsyncEnabled":
+                                UnityEngine.QualitySettings.vSyncCount = (bool)val ? 1 : 0;
+                                LoggerInstance.Msg($"Framerate: Vsync {(UnityEngine.QualitySettings.vSyncCount > 0 ? "ON" : "OFF")}");
+                                break;
+                            case "uncapFrames":
+                                bool uncap = (bool)val;
+                                if (uncap)
+                                {
+                                    UnityEngine.QualitySettings.vSyncCount = 0;
+                                    UnityEngine.Application.targetFrameRate = -1;
+                                }
+                                else
+                                {
+                                    UnityEngine.Application.targetFrameRate = defaultTargetFrameRate;
+                                }
+                                LoggerInstance.Msg($"Framerate: Uncap {(uncap ? "ON" : "OFF")} (TargetFrameRate={UnityEngine.Application.targetFrameRate}, Vsync={UnityEngine.QualitySettings.vSyncCount})");
+                                break;
                             case "forceMergeShop": forceMergeShop = (bool)val; break;
                             case "autoskillsActive": autoskillsActive = (bool)val; break;
                             case "cameraZoom":
@@ -4841,6 +4867,7 @@ namespace Infinity_TestMod
                             LoggerInstance.Error($"Cutscene skip failed: {ex}");
                         }
                     }
+
                     else if (type == "LoadShop")
                     {
                         int shopId = (int)cmd["ShopId"];

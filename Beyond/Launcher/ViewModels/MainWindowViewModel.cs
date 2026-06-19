@@ -39,6 +39,34 @@ namespace Launcher.ViewModels
             set => UpdateSetting(ref _autoSkipCutscenes, value, "autoSkipCutscenes");
         }
 
+        private bool _isVsyncEnabled = true;
+        public bool IsVsyncEnabled
+        {
+            get => _isVsyncEnabled;
+            set
+            {
+                if (value)
+                {
+                    UncapFrames = false;
+                }
+                UpdateSetting(ref _isVsyncEnabled, value, "vsyncEnabled");
+            }
+        }
+
+        private bool _uncapFrames;
+        public bool UncapFrames
+        {
+            get => _uncapFrames;
+            set
+            {
+                if (value)
+                {
+                    IsVsyncEnabled = false;
+                }
+                UpdateSetting(ref _uncapFrames, value, "uncapFrames");
+            }
+        }
+
         private bool _verticalSkillBar;
         public bool VerticalSkillBar
         {
@@ -95,6 +123,8 @@ namespace Launcher.ViewModels
         {
             _connection.SendCommand("SkipCutscene", null);
         }
+
+
 
         // --- Session metadata (managed by the shell) ---
         // Per-session pipe name. Bound to UnityWindowHost.PipeName (so the spawned
@@ -206,6 +236,8 @@ namespace Launcher.ViewModels
             try
             {
                 if (settings.TryGetValue("autoSkipCutscenes", out var val)) AutoSkipCutscenes = (bool)val;
+                if (settings.TryGetValue("vsyncEnabled", out val)) IsVsyncEnabled = (bool)val;
+                if (settings.TryGetValue("uncapFrames", out val)) UncapFrames = (bool)val;
                 if (settings.TryGetValue("cameraZoom", out var valZoom)) CameraZoom = (double)valZoom;
                 if (settings.TryGetValue("forceMergeShop", out val)) ForceMergeShop = (bool)val;
                 if (settings.TryGetValue("autoskillsActive", out val)) AutoskillsActive = (bool)val;
