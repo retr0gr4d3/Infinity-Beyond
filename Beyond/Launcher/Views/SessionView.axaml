@@ -42,9 +42,9 @@
         </Style>
     </UserControl.Styles>
 
-    <Grid ColumnDefinitions="Auto,*">
+    <Grid ColumnDefinitions="Auto,Auto,*">
         <!-- Collapsible Sidebar Panel -->
-        <Border Grid.Column="0" Name="Sidebar" Width="380" Background="#141418" BorderBrush="#202026" BorderThickness="0,0,1,0" IsVisible="True">
+        <Border Grid.Column="0" Name="Sidebar" Width="380" Background="#141418" BorderBrush="#202026" BorderThickness="0,0,1,0" IsVisible="{Binding #CollapseToggleHandle.IsChecked}">
             <Grid RowDefinitions="Auto,*,Auto">
                 <!-- Header/Status Area -->
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="15,15,15,10">
@@ -207,17 +207,27 @@
             </Grid>
         </Border>
 
-        <!-- Embedded Unity Game Viewer & Floating Splitter Overlay -->
-        <Grid Grid.Column="1" Background="#000000">
+        <!-- Always-visible collapse handle. Lives inside the main window (its own
+             Avalonia column, beside the native game host) so it is NOT a separate
+             OS-level window — Discord/OBS won't see it as a capturable surface. -->
+        <Border Grid.Column="1" Name="HandleRail" Width="20" Background="#141418" BorderBrush="#202026" BorderThickness="0,0,1,0">
+            <ToggleButton Name="CollapseToggleHandle" Classes="CollapseToggle" IsChecked="True"
+                          Width="20" Height="40"
+                          VerticalAlignment="Center" HorizontalAlignment="Center"
+                          Padding="0" Focusable="False"
+                          HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                          ToolTip.Tip="Toggle Control Panel">
+                <TextBlock Text="⇋" FontSize="14" FontWeight="Bold" Foreground="#00E5FF"/>
+            </ToggleButton>
+        </Border>
+
+        <!-- Embedded Unity Game Viewer -->
+        <Grid Grid.Column="2" Background="#000000">
             <local:UnityWindowHost PipeName="{Binding SessionPipeName}"
                                    PresetUsername="{Binding PresetUsername}"
                                    PresetPassword="{Binding PresetPassword}"
                                    PresetNickname="{Binding PresetNickname}"
                                    GameDirectory="{Binding GameDirectory}" />
-
-            <!-- Invisible anchor at the left edge of the game area, vertically centered -->
-            <Control Name="PopupAnchor" Width="0" Height="0" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="True"/>
-
         </Grid>
     </Grid>
 </UserControl>
