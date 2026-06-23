@@ -155,6 +155,7 @@ namespace BeyondAgent
                     forgedata: [],
                     autohRange: 0f,
                     autovRange: 0f,
+                    autoHoldAtRange: false,
                     mana: 0);
                 CharacterClass.AllSkills = new Dictionary<int, Skill>
                 {
