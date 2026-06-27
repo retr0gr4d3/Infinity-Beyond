@@ -28,10 +28,6 @@ namespace BeyondAgent
         private static string shopIdInput = "";
         private static string questIdInput = "";
 
-        public static bool autoskillsActive = false;
-        public static bool showConfigWindow = false;
-        public static Rect configWindowRect = new(330, 100, 320, 360);
-
         public static bool showFakeDevWindow = false;
         public static Rect fakeDevWindowRect = new(330, 410, 320, 280);
         private static bool defaultsCaptured = false;
@@ -54,8 +50,8 @@ namespace BeyondAgent
         public static bool showExtraFunWindow = false;
         public static Rect extraFunWindowRect = new(700, 410, 360, 360);
 
-        public static bool showRetroTestsWindow = false;
-        public static Rect retroTestsWindowRect = new(330, 350, 320, 300);
+        public static bool showAutoskillTestsWindow = false;
+        public static Rect autoskillTestsWindowRect = new(330, 350, 320, 300);
         public static bool showSkillsetTestWindow = false;
         public static Rect skillsetTestWindowRect = new(330, 350, 320, 640);
 
@@ -285,27 +281,18 @@ namespace BeyondAgent
         private static GUIStyle rowButtonStyle;
         private static GUIStyle previewTextStyle;
 
-        private static readonly List<int> skillOrder = [0, 1, 2, 3, 4];
+        public static bool interceptActive = false;
+        public static bool interceptorLoggingActive = false;
+        public static string lastPacketInfo = "None";
+
+        public static bool autoskillsActive = false;
         private static readonly Dictionary<int, float> skillDelays = new()
         {
             { 0, 1f }, { 1, 1f }, { 2, 1f }, { 3, 1f }, { 4, 1f }
         };
         private static readonly string[] delayInputs = ["1000", "1000", "1000", "1000", "1000"];
-        private static readonly bool[] skillEnabled = [true, true, true, true, true];
-        public static bool interceptActive = false;
-        public static bool interceptorLoggingActive = false;
-        public static string lastPacketInfo = "None";
         private static int currentSkillIndex = 0;
         private static float nextSkillTime = 0f;
-
-        public static bool retroAutoskillsActive = false;
-        private static readonly Dictionary<int, float> retroSkillDelays = new()
-        {
-            { 0, 1f }, { 1, 1f }, { 2, 1f }, { 3, 1f }, { 4, 1f }
-        };
-        private static readonly string[] retroDelayInputs = ["1000", "1000", "1000", "1000", "1000"];
-        private static int retroCurrentSkillIndex = 0;
-        private static float retroNextSkillTime = 0f;
 
         public class SkillsetEntry
         {
@@ -321,13 +308,13 @@ namespace BeyondAgent
         private static int selectedSkillsetIndex = -1;
         private static string skillsetEditName = "Generic";
         private static string skillsetEditCombo = "1,2,3,4,5";
-        private static readonly bool[] retroSkillWaits = [false, false, false, false, false];
-        private static readonly bool[] retroSkillFrees = [false, false, false, false, false];
+        private static readonly bool[] skillWaits = [false, false, false, false, false];
+        private static readonly bool[] skillFrees = [false, false, false, false, false];
         private static bool lastCastWasFree = false;
         private static string skillsetImportExportText = "";
         private static string skillsetFileInput = "export_skillset.txt";
         private static string _skillsetFilePath;
-        private static Vector2 retroSkillsetsScroll = Vector2.zero;
+        private static Vector2 skillsetsScroll = Vector2.zero;
         private static List<int> activeComboList = [];
 
         private static Texture2D buttonTexture;
@@ -391,6 +378,7 @@ namespace BeyondAgent
             QualitySettings.vSyncCount = 1;
 
             LauncherServer.Start();
+            Application.logMessageReceivedThreaded += HandleUnityLog;
             LoggerInstance.Msg("Alpha Testing Mod Menu Initialized successfully!");
             PacketLog.Init();
             Directory.Init();
@@ -437,6 +425,7 @@ namespace BeyondAgent
 
         public override void OnApplicationQuit()
         {
+            Application.logMessageReceivedThreaded -= HandleUnityLog;
             LauncherServer.Stop();
             Directory.Save();
             ItemCatalog.Save();
@@ -469,6 +458,11 @@ namespace BeyondAgent
 
         public override void OnUpdate()
         {
+            if (UnityEngine.Screen.fullScreen)
+            {
+                UnityEngine.Screen.fullScreen = false;
+            }
+
             if (!triedAutoLogin)
             {
                 try
@@ -585,91 +579,13 @@ namespace BeyondAgent
 
                     if (playerExists)
                     {
-                        if (skillOrder.Count > 0)
-                        {
-                            int checkedCount = 0;
-                            bool found = false;
-                            int targetSkillSlot = -1;
-
-                            while (checkedCount < skillOrder.Count)
-                            {
-                                int tempSlot = skillOrder[currentSkillIndex];
-                                if (tempSlot >= 0 && tempSlot < skillEnabled.Length && skillEnabled[tempSlot])
-                                {
-                                    targetSkillSlot = tempSlot;
-                                    found = true;
-                                    break;
-                                }
-                                currentSkillIndex = (currentSkillIndex + 1) % skillOrder.Count;
-                                checkedCount++;
-                            }
-
-                            if (found && targetSkillSlot != -1)
-                            {
-                                try
-                                {
-                                    if (UISkillSlots.Instance != null)
-                                    {
-                                        SkillSlotButton slotBtn = UISkillSlots.Instance.GetSlot(targetSkillSlot);
-                                        if (slotBtn != null && !IsSkillSlotButtonDisabled(slotBtn))
-                                        {
-                                            slotBtn.UseSkill(true);
-                                            slotBtn.UseSkill(false);
-                                            LoggerInstance.Msg($"Autoskill casted slot: {targetSkillSlot}");
-                                        }
-                                    }
-                                }
-                                catch (System.Exception ex)
-                                {
-                                    LoggerInstance.Error($"Error casting autoskill: {ex}");
-                                }
-
-                                float delay = 1f;
-                                if (skillDelays.ContainsKey(targetSkillSlot))
-                                {
-                                    delay = skillDelays[targetSkillSlot];
-                                }
-
-                                nextSkillTime = Time.time + delay;
-                                currentSkillIndex = (currentSkillIndex + 1) % skillOrder.Count;
-                            }
-                            else
-                            {
-                                nextSkillTime = Time.time + 1f;
-                            }
-                        }
-                        else
-                        {
-                            nextSkillTime = Time.time + 1f;
-                        }
-                    }
-                    else
-                    {
-                        nextSkillTime = Time.time + 1f;
-                    }
-                }
-            }
-
-            if (retroAutoskillsActive)
-            {
-                if (Time.time >= retroNextSkillTime)
-                {
-                    bool playerExists = false;
-                    try
-                    {
-                        playerExists = Entity.mainPlayer != null;
-                    }
-                    catch { }
-
-                    if (playerExists)
-                    {
                         // Check if any "use when free" skill is off cooldown and ready
                         int freeCastSlot = -1;
                         if (!lastCastWasFree)
                         {
                             for (int i = 0; i < 5; i++)
                             {
-                                if (retroSkillFrees[i])
+                                if (skillFrees[i])
                                 {
                                     if (UISkillSlots.Instance != null)
                                     {
@@ -693,21 +609,21 @@ namespace BeyondAgent
                                 {
                                     slotBtn.UseSkill(true);
                                     slotBtn.UseSkill(false);
-                                    LoggerInstance.Msg($"Retro Autoskill casted free slot: {freeCastSlot}");
+                                    LoggerInstance.Msg($"Autoskill casted free slot: {freeCastSlot}");
                                     lastCastWasFree = true;
 
                                     float delay = 1f;
-                                    if (retroSkillDelays.ContainsKey(freeCastSlot))
+                                    if (skillDelays.ContainsKey(freeCastSlot))
                                     {
-                                        delay = retroSkillDelays[freeCastSlot];
+                                        delay = skillDelays[freeCastSlot];
                                     }
-                                    retroNextSkillTime = Time.time + delay;
+                                    nextSkillTime = Time.time + delay;
                                     return; // Wait for delay, do not execute normal combo
                                 }
                             }
                             catch (System.Exception ex)
                             {
-                                LoggerInstance.Error($"Error casting free retro autoskill: {ex}");
+                                LoggerInstance.Error($"Error casting free autoskill: {ex}");
                             }
                         }
 
@@ -720,14 +636,14 @@ namespace BeyondAgent
 
                             while (checkCount < combo.Count)
                             {
-                                int tempSlot = combo[retroCurrentSkillIndex % combo.Count];
+                                int tempSlot = combo[currentSkillIndex % combo.Count];
                                 if (tempSlot is >= 0 and < 5)
                                 {
                                     targetSkillSlot = tempSlot;
                                     found = true;
                                     break;
                                 }
-                                retroCurrentSkillIndex = (retroCurrentSkillIndex + 1) % combo.Count;
+                                currentSkillIndex = (currentSkillIndex + 1) % combo.Count;
                                 checkCount++;
                             }
 
@@ -743,40 +659,40 @@ namespace BeyondAgent
                                         {
                                             slotBtn.UseSkill(true);
                                             slotBtn.UseSkill(false);
-                                            LoggerInstance.Msg($"Retro Autoskill casted slot: {targetSkillSlot}");
+                                            LoggerInstance.Msg($"Autoskill casted slot: {targetSkillSlot}");
                                             casted = true;
                                         }
                                     }
                                 }
                                 catch (System.Exception ex)
                                 {
-                                    LoggerInstance.Error($"Error casting retro autoskill: {ex}");
+                                    LoggerInstance.Error($"Error casting autoskill: {ex}");
                                 }
 
                                 if (casted)
                                 {
                                     float delay = 1f;
-                                    if (retroSkillDelays.ContainsKey(targetSkillSlot))
+                                    if (skillDelays.ContainsKey(targetSkillSlot))
                                     {
-                                        delay = retroSkillDelays[targetSkillSlot];
+                                        delay = skillDelays[targetSkillSlot];
                                     }
-                                    retroNextSkillTime = Time.time + delay;
-                                    retroCurrentSkillIndex = (retroCurrentSkillIndex + 1) % combo.Count;
+                                    nextSkillTime = Time.time + delay;
+                                    currentSkillIndex = (currentSkillIndex + 1) % combo.Count;
                                     lastCastWasFree = false;
                                 }
                                 else
                                 {
                                     // Skill was on cooldown/disabled. Check again in 100ms.
-                                    retroNextSkillTime = Time.time + 0.1f;
+                                    nextSkillTime = Time.time + 0.1f;
                                     bool waitThisSkill = false;
                                     if (targetSkillSlot is >= 0 and < 5)
                                     {
-                                        waitThisSkill = retroSkillWaits[targetSkillSlot];
+                                        waitThisSkill = skillWaits[targetSkillSlot];
                                     }
                                     if (!waitThisSkill)
                                     {
                                         // Advance index to not get stuck on this step
-                                        retroCurrentSkillIndex = (retroCurrentSkillIndex + 1) % combo.Count;
+                                        currentSkillIndex = (currentSkillIndex + 1) % combo.Count;
                                     }
                                     lastCastWasFree = false;
                                 }
@@ -784,17 +700,17 @@ namespace BeyondAgent
                             else
                             {
                                 // All skills disabled or invalid
-                                retroNextSkillTime = Time.time + 1f;
+                                nextSkillTime = Time.time + 1f;
                             }
                         }
                         else
                         {
-                            retroNextSkillTime = Time.time + 1f;
+                            nextSkillTime = Time.time + 1f;
                         }
                     }
                     else
                     {
-                        retroNextSkillTime = Time.time + 1f;
+                        nextSkillTime = Time.time + 1f;
                     }
                 }
             }
@@ -971,12 +887,6 @@ namespace BeyondAgent
                 windowRect = ResizableWindow.HandleResize(9999, windowRect);
             }
 
-            if (showWindow && showConfigWindow)
-            {
-                configWindowRect = ResizableWindow.DrawScaledWindow(9998, configWindowRect, 320f, DrawConfigWindow, "Autoskills Config", windowStyle);
-                configWindowRect = ResizableWindow.HandleResize(9998, configWindowRect);
-            }
-
             if (showWindow && showInterceptorWindow)
             {
                 interceptorWindowRect = ResizableWindow.DrawScaledWindow(9997, interceptorWindowRect, 500f, DrawInterceptorWindow, "Packet Interceptor", windowStyle);
@@ -1043,10 +953,10 @@ namespace BeyondAgent
                 extraFunWindowRect = ResizableWindow.HandleResize(9987, extraFunWindowRect);
             }
 
-            if (showWindow && showRetroTestsWindow)
+            if (showWindow && showAutoskillTestsWindow)
             {
-                retroTestsWindowRect = ResizableWindow.DrawScaledWindow(9988, retroTestsWindowRect, 320f, DrawRetroTestsWindow, "Retro Tests", windowStyle);
-                retroTestsWindowRect = ResizableWindow.HandleResize(9988, retroTestsWindowRect);
+                autoskillTestsWindowRect = ResizableWindow.DrawScaledWindow(9988, autoskillTestsWindowRect, 320f, DrawAutoskillTestsWindow, "Autoskill Tests", windowStyle);
+                autoskillTestsWindowRect = ResizableWindow.HandleResize(9988, autoskillTestsWindowRect);
             }
 
             if (showWindow && showSkillsetTestWindow)
@@ -1172,11 +1082,6 @@ namespace BeyondAgent
                 GUI.enabled = true;
                 autoskillsActive = false;
             }
-
-            if (GUI.Button(new Rect(155, curY, 125, 35), "Config", closeButtonStyle))
-            {
-                showConfigWindow = !showConfigWindow;
-            }
             curY += 35f;
 
             curY = DrawSeparator(curY);
@@ -1245,15 +1150,15 @@ namespace BeyondAgent
 
             curY = DrawSeparator(curY);
 
-            // Section 7: Retro Tests
-            GUI.Label(new Rect(20, curY, 260, 20), "<b>Retro Tests</b>", labelStyle);
+            // Section 7: Autoskill Tests
+            GUI.Label(new Rect(20, curY, 260, 20), "<b>Autoskill Tests</b>", labelStyle);
             curY += 22f;
 
-            string retroTestsBtnText = showRetroTestsWindow ? "Hide" : "Open";
-            if (GUI.Button(new Rect(20, curY, 260, 35), retroTestsBtnText, closeButtonStyle))
+            string autoskillTestsBtnText = showAutoskillTestsWindow ? "Hide" : "Open";
+            if (GUI.Button(new Rect(20, curY, 260, 35), autoskillTestsBtnText, closeButtonStyle))
             {
-                showRetroTestsWindow = !showRetroTestsWindow;
-                // BeyondLog.Msg($"[RetroTests] Button clicked! showRetroTestsWindow is now: {showRetroTestsWindow}");
+                showAutoskillTestsWindow = !showAutoskillTestsWindow;
+                // BeyondLog.Msg($"[AutoskillTests] Button clicked! showAutoskillTestsWindow is now: {showAutoskillTestsWindow}");
             }
             curY += 35f;
 
@@ -1342,65 +1247,6 @@ namespace BeyondAgent
             return slot == 0 ? "Key 1 (Auto)" : $"Key {slot + 1}";
         }
 
-        private void DrawConfigWindow(int windowID)
-        {
-            ResizableWindow.BeginScaling(windowID, configWindowRect, 320f);
-            GUI.Label(new Rect(20, 35, 280, 20), "Configure Skill Delays & Order", labelStyle);
-            GUI.Label(new Rect(20, 60, 90, 20), "Skill", labelStyle);
-            GUI.Label(new Rect(115, 60, 65, 20), "Delay (ms)", labelStyle);
-            GUI.Label(new Rect(190, 60, 70, 20), "Order", labelStyle);
-            GUI.Label(new Rect(268, 60, 32, 20), "Auto", labelStyle);
-
-            const int startY = 85;
-            for (int i = 0; i < skillOrder.Count; i++)
-            {
-                int slot = skillOrder[i];
-                int currentY = startY + (i * 42);
-
-                GUI.Label(new Rect(20, currentY, 90, 35), GetSkillKeyName(slot), labelStyle);
-
-                string delayStr = delayInputs[slot];
-                string newDelayStr = GUI.TextField(new Rect(115, currentY, 65, 35), delayStr, textFieldStyle);
-                if (newDelayStr != delayStr)
-                {
-                    delayInputs[slot] = newDelayStr;
-                    if (float.TryParse(newDelayStr, out float ms))
-                    {
-                        skillDelays[slot] = ms / 1000f;
-                    }
-                }
-
-                if (i > 0)
-                {
-                    if (GUI.Button(new Rect(190, currentY, 32, 35), "▲", closeButtonStyle))
-                    {
-                        (skillOrder[i - 1], skillOrder[i]) = (skillOrder[i], skillOrder[i - 1]);
-                    }
-                }
-
-                if (i < skillOrder.Count - 1)
-                {
-                    if (GUI.Button(new Rect(228, currentY, 32, 35), "▼", closeButtonStyle))
-                    {
-                        (skillOrder[i + 1], skillOrder[i]) = (skillOrder[i], skillOrder[i + 1]);
-                    }
-                }
-
-                if (slot >= 0 && slot < skillEnabled.Length)
-                {
-                    skillEnabled[slot] = GUI.Toggle(new Rect(272, currentY + 8, 20, 20), skillEnabled[slot], "");
-                }
-            }
-
-            if (GUI.Button(new Rect(20, 305, 280, 35), "Close Config", closeButtonStyle))
-            {
-                showConfigWindow = false;
-            }
-
-            GUI.DragWindow(ResizableWindow.TitleBarDragRect(320f));
-            ResizableWindow.EndScaling();
-        }
-
         private void DrawSkillsetTestWindow(int windowID)
         {
             ResizableWindow.BeginScaling(windowID, skillsetTestWindowRect, 320f);
@@ -1413,33 +1259,33 @@ namespace BeyondAgent
 
             float curY = 35f;
 
-            // 1. Toggle Button for Retro Autoskills
-            string autoSkillsText = retroAutoskillsActive ? "Retro Autoskills: ON" : "Retro Autoskills: OFF";
+            // 1. Toggle Button for Autoskills
+            string autoSkillsText = autoskillsActive ? "Autoskills: ON" : "Autoskills: OFF";
             if (playerExists)
             {
                 if (GUI.Button(new Rect(pad, curY, innerW, 35), autoSkillsText, closeButtonStyle))
                 {
-                    retroAutoskillsActive = !retroAutoskillsActive;
-                    if (retroAutoskillsActive)
+                    autoskillsActive = !autoskillsActive;
+                    if (autoskillsActive)
                     {
                         activeComboList = ParseCombo(skillsetEditCombo);
-                        retroCurrentSkillIndex = 0;
-                        retroNextSkillTime = Time.time;
+                        currentSkillIndex = 0;
+                        nextSkillTime = Time.time;
                         lastCastWasFree = false;
-                        BeyondLog.Msg("Retro Autoskills activated!");
+                        BeyondLog.Msg("Autoskills activated!");
                     }
                     else
                     {
-                        BeyondLog.Msg("Retro Autoskills deactivated!");
+                        BeyondLog.Msg("Autoskills deactivated!");
                     }
                 }
             }
             else
             {
                 GUI.enabled = false;
-                GUI.Button(new Rect(pad, 35, innerW, 35), "Retro Autoskills: OFF", closeButtonStyle);
+                GUI.Button(new Rect(pad, 35, innerW, 35), "Autoskills: OFF", closeButtonStyle);
                 GUI.enabled = true;
-                retroAutoskillsActive = false;
+                autoskillsActive = false;
             }
             curY += 45f;
 
@@ -1450,7 +1296,7 @@ namespace BeyondAgent
             if (newCombo != skillsetEditCombo)
             {
                 skillsetEditCombo = newCombo;
-                if (retroAutoskillsActive)
+                if (autoskillsActive)
                 {
                     activeComboList = ParseCombo(skillsetEditCombo);
                 }
@@ -1465,9 +1311,9 @@ namespace BeyondAgent
             GUI.Box(new Rect(pad, curY, innerW, scrollHeight), "", containerBoxStyle ?? GUI.skin.box);
 
             float listHeight = Mathf.Max(scrollHeight - 10f, savedSkillsets.Count * 25f);
-            retroSkillsetsScroll = GUI.BeginScrollView(
+            skillsetsScroll = GUI.BeginScrollView(
                 new Rect(pad, curY, innerW, scrollHeight),
-                retroSkillsetsScroll,
+                skillsetsScroll,
                 new Rect(0, 0, innerW - 20, listHeight)
             );
 
@@ -1495,11 +1341,11 @@ namespace BeyondAgent
                         {
                             if (j < waitParts.Length)
                             {
-                                bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                bool.TryParse(waitParts[j], out skillWaits[j]);
                             }
                             else
                             {
-                                retroSkillWaits[j] = false;
+                                skillWaits[j] = false;
                             }
                         }
                     }
@@ -1509,7 +1355,7 @@ namespace BeyondAgent
                         bool globalWait = savedSkillsets[i].WaitForSkill;
                         for (int j = 0; j < 5; j++)
                         {
-                            retroSkillWaits[j] = globalWait;
+                            skillWaits[j] = globalWait;
                         }
                     }
 
@@ -1521,11 +1367,11 @@ namespace BeyondAgent
                         {
                             if (j < freeParts.Length)
                             {
-                                bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                bool.TryParse(freeParts[j], out skillFrees[j]);
                             }
                             else
                             {
-                                retroSkillFrees[j] = false;
+                                skillFrees[j] = false;
                             }
                         }
                     }
@@ -1533,7 +1379,7 @@ namespace BeyondAgent
                     {
                         for (int j = 0; j < 5; j++)
                         {
-                            retroSkillFrees[j] = false;
+                            skillFrees[j] = false;
                         }
                     }
 
@@ -1543,15 +1389,15 @@ namespace BeyondAgent
                     {
                         if (j < delParts.Length)
                         {
-                            retroDelayInputs[j] = delParts[j];
+                            delayInputs[j] = delParts[j];
                             if (float.TryParse(delParts[j], out float ms))
                             {
-                                retroSkillDelays[j] = ms / 1000f;
+                                skillDelays[j] = ms / 1000f;
                             }
                         }
                     }
 
-                    if (retroAutoskillsActive)
+                    if (autoskillsActive)
                     {
                         activeComboList = ParseCombo(skillsetEditCombo);
                     }
@@ -1569,9 +1415,9 @@ namespace BeyondAgent
             {
                 if (!string.IsNullOrEmpty(skillsetEditName))
                 {
-                    string delStr = string.Join(",", retroDelayInputs);
-                    string waitStr = string.Join(",", retroSkillWaits);
-                    string freeStr = string.Join(",", retroSkillFrees);
+                    string delStr = string.Join(",", delayInputs);
+                    string waitStr = string.Join(",", skillWaits);
+                    string freeStr = string.Join(",", skillFrees);
                     int existingIdx = savedSkillsets.FindIndex(s => s.Name.Equals(skillsetEditName, System.StringComparison.OrdinalIgnoreCase));
                     if (existingIdx >= 0)
                     {
@@ -1634,10 +1480,10 @@ namespace BeyondAgent
                             {
                                 if (j < delParts.Length)
                                 {
-                                    retroDelayInputs[j] = delParts[j];
+                                    delayInputs[j] = delParts[j];
                                     if (float.TryParse(delParts[j], out float ms))
                                     {
-                                        retroSkillDelays[j] = ms / 1000f;
+                                        skillDelays[j] = ms / 1000f;
                                     }
                                 }
                             }
@@ -1655,11 +1501,11 @@ namespace BeyondAgent
                                 {
                                     if (j < waitParts.Length)
                                     {
-                                        bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                        bool.TryParse(waitParts[j], out skillWaits[j]);
                                     }
                                     else
                                     {
-                                        retroSkillWaits[j] = false;
+                                        skillWaits[j] = false;
                                     }
                                 }
                             }
@@ -1669,16 +1515,16 @@ namespace BeyondAgent
                                 bool.TryParse(rawWait, out bool globalWait);
                                 for (int j = 0; j < 5; j++)
                                 {
-                                    retroSkillWaits[j] = globalWait;
+                                    skillWaits[j] = globalWait;
                                 }
-                                waitStr = string.Join(",", retroSkillWaits);
+                                waitStr = string.Join(",", skillWaits);
                             }
                         }
                         else
                         {
                             for (int j = 0; j < 5; j++)
                             {
-                                retroSkillWaits[j] = false;
+                                skillWaits[j] = false;
                             }
                         }
 
@@ -1691,11 +1537,11 @@ namespace BeyondAgent
                             {
                                 if (j < freeParts.Length)
                                 {
-                                    bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                    bool.TryParse(freeParts[j], out skillFrees[j]);
                                 }
                                 else
                                 {
-                                    retroSkillFrees[j] = false;
+                                    skillFrees[j] = false;
                                 }
                             }
                         }
@@ -1703,11 +1549,11 @@ namespace BeyondAgent
                         {
                             for (int j = 0; j < 5; j++)
                             {
-                                retroSkillFrees[j] = false;
+                                skillFrees[j] = false;
                             }
                         }
 
-                        if (retroAutoskillsActive)
+                        if (autoskillsActive)
                         {
                             activeComboList = ParseCombo(skillsetEditCombo);
                         }
@@ -1723,9 +1569,9 @@ namespace BeyondAgent
 
             if (GUI.Button(new Rect(pad + innerW - 60, curY, 60, 30), "Export", closeButtonStyle))
             {
-                string delStr = string.Join(",", retroDelayInputs);
-                string waitStr = string.Join(",", retroSkillWaits);
-                string freeStr = string.Join(",", retroSkillFrees);
+                string delStr = string.Join(",", delayInputs);
+                string waitStr = string.Join(",", skillWaits);
+                string freeStr = string.Join(",", skillFrees);
                 skillsetImportExportText = $"{skillsetEditName}|{skillsetEditCombo}|{delStr}|{waitStr}|{freeStr}";
                 UnityEngine.GUIUtility.systemCopyBuffer = skillsetImportExportText;
                 BeyondLog.Msg("Exported skillset copied to clipboard!");
@@ -1772,10 +1618,10 @@ namespace BeyondAgent
                                         {
                                             if (j < delParts.Length)
                                             {
-                                                retroDelayInputs[j] = delParts[j];
+                                                delayInputs[j] = delParts[j];
                                                 if (float.TryParse(delParts[j], out float ms))
                                                 {
-                                                    retroSkillDelays[j] = ms / 1000f;
+                                                    skillDelays[j] = ms / 1000f;
                                                 }
                                             }
                                         }
@@ -1792,11 +1638,11 @@ namespace BeyondAgent
                                             {
                                                 if (j < waitParts.Length)
                                                 {
-                                                    bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                                    bool.TryParse(waitParts[j], out skillWaits[j]);
                                                 }
                                                 else
                                                 {
-                                                    retroSkillWaits[j] = false;
+                                                    skillWaits[j] = false;
                                                 }
                                             }
                                         }
@@ -1806,16 +1652,16 @@ namespace BeyondAgent
                                             bool.TryParse(rawWait, out bool globalWait);
                                             for (int j = 0; j < 5; j++)
                                             {
-                                                retroSkillWaits[j] = globalWait;
+                                                skillWaits[j] = globalWait;
                                             }
-                                            waitStr = string.Join(",", retroSkillWaits);
+                                            waitStr = string.Join(",", skillWaits);
                                         }
                                     }
                                     else
                                     {
                                         for (int j = 0; j < 5; j++)
                                         {
-                                            retroSkillWaits[j] = false;
+                                            skillWaits[j] = false;
                                         }
                                     }
 
@@ -1828,11 +1674,11 @@ namespace BeyondAgent
                                         {
                                             if (j < freeParts.Length)
                                             {
-                                                bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                                bool.TryParse(freeParts[j], out skillFrees[j]);
                                             }
                                             else
                                             {
-                                                retroSkillFrees[j] = false;
+                                                skillFrees[j] = false;
                                             }
                                         }
                                     }
@@ -1840,11 +1686,11 @@ namespace BeyondAgent
                                     {
                                         for (int j = 0; j < 5; j++)
                                         {
-                                            retroSkillFrees[j] = false;
+                                            skillFrees[j] = false;
                                         }
                                     }
 
-                                    if (retroAutoskillsActive)
+                                    if (autoskillsActive)
                                     {
                                         activeComboList = ParseCombo(skillsetEditCombo);
                                     }
@@ -1881,9 +1727,9 @@ namespace BeyondAgent
                     if (!string.IsNullOrEmpty(fullPath))
                     {
                         skillsetFileInput = System.IO.Path.GetFileName(fullPath);
-                        string delStr = string.Join(",", retroDelayInputs);
-                        string waitStr = string.Join(",", retroSkillWaits);
-                        string freeStr = string.Join(",", retroSkillFrees);
+                        string delStr = string.Join(",", delayInputs);
+                        string waitStr = string.Join(",", skillWaits);
+                        string freeStr = string.Join(",", skillFrees);
                         string payload = $"{skillsetEditName}|{skillsetEditCombo}|{delStr}|{waitStr}|{freeStr}";
                         System.IO.File.WriteAllText(fullPath, payload);
                         skillsetImportExportText = payload;
@@ -1905,37 +1751,37 @@ namespace BeyondAgent
             {
                 GUI.Label(new Rect(pad, curY, 80, 30), GetSkillKeyName(i), labelStyle);
 
-                string delayStr = retroDelayInputs[i];
+                string delayStr = delayInputs[i];
                 string newDelayStr = GUI.TextField(new Rect(pad + 85, curY, 50, 30), delayStr, textFieldStyle);
                 if (newDelayStr != delayStr)
                 {
-                    retroDelayInputs[i] = newDelayStr;
+                    delayInputs[i] = newDelayStr;
                     if (float.TryParse(newDelayStr, out float ms))
                     {
-                        retroSkillDelays[i] = ms / 1000f;
+                        skillDelays[i] = ms / 1000f;
                     }
                 }
 
-                bool oldWait = retroSkillWaits[i];
+                bool oldWait = skillWaits[i];
                 bool newWait = GUI.Toggle(new Rect(pad + 140, curY + 5, 20, 20), oldWait, "");
                 if (newWait != oldWait)
                 {
-                    retroSkillWaits[i] = newWait;
+                    skillWaits[i] = newWait;
                     if (newWait)
                     {
-                        retroSkillFrees[i] = false;
+                        skillFrees[i] = false;
                     }
                 }
                 GUI.Label(new Rect(pad + 162, curY, 32, 30), "Wait", labelStyle);
 
-                bool oldFree = retroSkillFrees[i];
+                bool oldFree = skillFrees[i];
                 bool newFree = GUI.Toggle(new Rect(pad + 198, curY + 5, 20, 20), oldFree, "");
                 if (newFree != oldFree)
                 {
-                    retroSkillFrees[i] = newFree;
+                    skillFrees[i] = newFree;
                     if (newFree)
                     {
-                        retroSkillWaits[i] = false;
+                        skillWaits[i] = false;
                     }
                 }
                 GUI.Label(new Rect(pad + 220, curY, 32, 30), "Free", labelStyle);
@@ -1959,9 +1805,9 @@ namespace BeyondAgent
             ResizableWindow.EndScaling();
         }
 
-        private void DrawRetroTestsWindow(int windowID)
+        private void DrawAutoskillTestsWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, retroTestsWindowRect, 320f);
+            ResizableWindow.BeginScaling(windowID, autoskillTestsWindowRect, 320f);
             const float winWidth = 320f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -1982,13 +1828,13 @@ namespace BeyondAgent
 
             if (GUI.Button(new Rect(pad, curY, innerW, 35), "Close", closeButtonStyle))
             {
-                showRetroTestsWindow = false;
+                showAutoskillTestsWindow = false;
             }
             curY += 45f;
 
             if (!ResizableWindow.WasManuallyResized(9988))
             {
-                retroTestsWindowRect.height = curY;
+                autoskillTestsWindowRect.height = curY;
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
@@ -2016,6 +1862,92 @@ namespace BeyondAgent
                 }
             }
             return list;
+        }
+
+        // Load a saved skillset into the live autoskill state (combo/delays/waits/
+        // frees). forceCombo=true sets activeComboList immediately even when autoskills
+        // is off — used when starting a chain so the chosen combo is live once the
+        // runner enables autoskills mid-hunt. Returns false if index is out of range.
+        private static bool ApplySkillset(int index, bool forceCombo)
+        {
+            if (index < 0 || index >= savedSkillsets.Count)
+            {
+                return false;
+            }
+
+            selectedSkillsetIndex = index;
+            skillsetEditName = savedSkillsets[index].Name;
+            skillsetEditCombo = savedSkillsets[index].Combo;
+
+            // Parse waits
+            if (!string.IsNullOrEmpty(savedSkillsets[index].Waits))
+            {
+                string[] waitParts = savedSkillsets[index].Waits.Split(',');
+                for (int j = 0; j < 5; j++)
+                {
+                    if (j < waitParts.Length)
+                    {
+                        bool.TryParse(waitParts[j], out skillWaits[j]);
+                    }
+                    else
+                    {
+                        skillWaits[j] = false;
+                    }
+                }
+            }
+            else
+            {
+                bool globalWait = savedSkillsets[index].WaitForSkill;
+                for (int j = 0; j < 5; j++)
+                {
+                    skillWaits[j] = globalWait;
+                }
+            }
+
+            // Parse frees
+            if (!string.IsNullOrEmpty(savedSkillsets[index].Frees))
+            {
+                string[] freeParts = savedSkillsets[index].Frees.Split(',');
+                for (int j = 0; j < 5; j++)
+                {
+                    if (j < freeParts.Length)
+                    {
+                        bool.TryParse(freeParts[j], out skillFrees[j]);
+                    }
+                    else
+                    {
+                        skillFrees[j] = false;
+                    }
+                }
+            }
+            else
+            {
+                for (int j = 0; j < 5; j++)
+                {
+                    skillFrees[j] = false;
+                }
+            }
+
+            // Parse delays
+            string[] delParts = (savedSkillsets[index].Delays ?? "1000,1000,1000,1000,1000").Split(',');
+            for (int j = 0; j < 5; j++)
+            {
+                if (j < delParts.Length)
+                {
+                    delayInputs[j] = delParts[j];
+                    if (float.TryParse(delParts[j], out float ms))
+                    {
+                        skillDelays[j] = ms / 1000f;
+                    }
+                }
+            }
+
+            if (forceCombo || autoskillsActive)
+            {
+                activeComboList = ParseCombo(skillsetEditCombo);
+            }
+
+            return true;
         }
 
         private static void AddOrUpdateSkillset(string name, string combo, string delays, string waits, string frees)
@@ -2074,10 +2006,105 @@ namespace BeyondAgent
                 {
                     savedSkillsets = [];
                 }
+
+                LoadLibrarySkillsets();
             }
             catch (System.Exception ex)
             {
                 BeyondLog.Error($"Failed to load skillsets: {ex.Message}");
+            }
+        }
+
+        private static void LoadLibrarySkillsets()
+        {
+            try
+            {
+                string libraryDir = System.IO.Path.Combine(BeyondEnv.UserDataDirectory, "Beyond", "Infinity-Files");
+                string autoskillsFile = System.IO.Path.Combine(libraryDir, "Autoskills", "autoskills.txt");
+                if (System.IO.File.Exists(autoskillsFile))
+                {
+                    bool modified = false;
+                    foreach (string raw in System.IO.File.ReadAllLines(autoskillsFile))
+                    {
+                        string line = raw.Trim();
+                        if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("//"))
+                        {
+                            continue;
+                        }
+
+                        string[] parts = line.Split('|');
+                        if (parts.Length >= 2)
+                        {
+                            string name = parts[0].Trim();
+                            if (name.Length == 0) continue;
+
+                            string combo = parts[1].Trim();
+                            string delStr = "1000,1000,1000,1000,1000";
+                            if (parts.Length >= 3)
+                            {
+                                delStr = parts[2].Trim();
+                            }
+
+                            string waitStr = "false,false,false,false,false";
+                            if (parts.Length >= 4)
+                            {
+                                string rawWait = parts[3].Trim();
+                                if (rawWait.Contains(","))
+                                {
+                                    waitStr = rawWait;
+                                }
+                                else
+                                {
+                                    bool.TryParse(rawWait, out bool globalWait);
+                                    waitStr = string.Join(",", Enumerable.Repeat(globalWait.ToString().ToLower(), 5));
+                                }
+                            }
+
+                            string freeStr = "false,false,false,false,false";
+                            if (parts.Length >= 5)
+                            {
+                                freeStr = parts[4].Trim();
+                            }
+
+                            int existingIdx = savedSkillsets.FindIndex(s => s.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase));
+                            if (existingIdx >= 0)
+                            {
+                                if (savedSkillsets[existingIdx].Combo != combo ||
+                                    savedSkillsets[existingIdx].Delays != delStr ||
+                                    savedSkillsets[existingIdx].Waits != waitStr ||
+                                    savedSkillsets[existingIdx].Frees != freeStr)
+                                {
+                                    savedSkillsets[existingIdx].Combo = combo;
+                                    savedSkillsets[existingIdx].Delays = delStr;
+                                    savedSkillsets[existingIdx].Waits = waitStr;
+                                    savedSkillsets[existingIdx].Frees = freeStr;
+                                    modified = true;
+                                }
+                            }
+                            else
+                            {
+                                savedSkillsets.Add(new SkillsetEntry
+                                {
+                                    Name = name,
+                                    Combo = combo,
+                                    Delays = delStr,
+                                    Waits = waitStr,
+                                    Frees = freeStr
+                                });
+                                modified = true;
+                            }
+                        }
+                    }
+
+                    if (modified)
+                    {
+                        SaveSkillsets();
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                BeyondLog.Error($"Failed to load library skillsets: {ex.Message}");
             }
         }
 
@@ -3614,6 +3641,7 @@ namespace BeyondAgent
                             {
                                 questRunnerLog.RemoveAt(0);
                             }
+                            questRunnerLogScroll.y = float.MaxValue;
                         }
                     };
                     questRunner.Start(qid, iters,
@@ -3764,6 +3792,7 @@ namespace BeyondAgent
                         {
                             questRunnerLog.RemoveAt(0);
                         }
+                        questRunnerLogScroll.y = float.MaxValue;
                     }
                 };
                 questRunner.StartChain(currentChainName, QuestChains.Get(currentChainName));
@@ -4270,7 +4299,7 @@ namespace BeyondAgent
             float mouseY = Screen.height - Input.mousePosition.y;
             Vector2 imguiMousePos = new(mouseX, mouseY);
 
-            return ToggleButtonRect.Contains(imguiMousePos) || (showWindow && windowRect.Contains(imguiMousePos)) || (showWindow && showFakeDevWindow && fakeDevWindowRect.Contains(imguiMousePos)) || (showWindow && showShopLoaderWindow && shopLoaderWindowRect.Contains(imguiMousePos)) || (showWindow && showQuestLoaderWindow && questLoaderWindowRect.Contains(imguiMousePos)) || (showWindow && showConfigWindow && configWindowRect.Contains(imguiMousePos)) || (showWindow && showInterceptorWindow && interceptorWindowRect.Contains(imguiMousePos)) || (showWindow && showSnifferWindow && snifferWindowRect.Contains(imguiMousePos)) || (showWindow && showSenderWindow && senderWindowRect.Contains(imguiMousePos)) || (showWindow && showReceiverWindow && receiverWindowRect.Contains(imguiMousePos)) || (showWindow && showQuestRunnerWindow && questRunnerWindowRect.Contains(imguiMousePos)) || (showWindow && showFunWindow && funWindowRect.Contains(imguiMousePos)) || (showWindow && showRetroTestsWindow && retroTestsWindowRect.Contains(imguiMousePos)) || (showWindow && showSkillsetTestWindow && skillsetTestWindowRect.Contains(imguiMousePos));
+            return ToggleButtonRect.Contains(imguiMousePos) || (showWindow && windowRect.Contains(imguiMousePos)) || (showWindow && showFakeDevWindow && fakeDevWindowRect.Contains(imguiMousePos)) || (showWindow && showShopLoaderWindow && shopLoaderWindowRect.Contains(imguiMousePos)) || (showWindow && showQuestLoaderWindow && questLoaderWindowRect.Contains(imguiMousePos)) || (showWindow && showInterceptorWindow && interceptorWindowRect.Contains(imguiMousePos)) || (showWindow && showSnifferWindow && snifferWindowRect.Contains(imguiMousePos)) || (showWindow && showSenderWindow && senderWindowRect.Contains(imguiMousePos)) || (showWindow && showReceiverWindow && receiverWindowRect.Contains(imguiMousePos)) || (showWindow && showQuestRunnerWindow && questRunnerWindowRect.Contains(imguiMousePos)) || (showWindow && showFunWindow && funWindowRect.Contains(imguiMousePos)) || (showWindow && showAutoskillTestsWindow && autoskillTestsWindowRect.Contains(imguiMousePos)) || (showWindow && showSkillsetTestWindow && skillsetTestWindowRect.Contains(imguiMousePos));
         }
 
         private static Texture2D CreateThemedButtonTexture(Color borderColor)
@@ -4688,7 +4717,6 @@ namespace BeyondAgent
                 { "vsyncEnabled", QualitySettings.vSyncCount > 0 },
                 { "uncapFrames", Application.targetFrameRate == -1 },
                 { "forceMergeShop", forceMergeShop },
-                { "autoskillsActive", autoskillsActive },
                 { "spoofedName", spoofedName },
                 { "helmSpoofActive", helmSpoofActive },
                 { "helmSpoofBundle", helmSpoofBundle },
@@ -4708,7 +4736,7 @@ namespace BeyondAgent
                 { "snifferClientActive", snifferClientActive },
                 { "interceptActive", interceptActive },
                 { "interceptorLoggingActive", interceptorLoggingActive },
-                { "retroAutoskillsActive", retroAutoskillsActive },
+                { "autoskillsActive", autoskillsActive },
                 { "verticalSkillBar", HudToggles.VerticalSkillBar },
                 { "hideUI", HudToggles.HideUI },
                 { "hideOtherPlayers", HudToggles.HideOtherPlayers },
@@ -4718,9 +4746,9 @@ namespace BeyondAgent
                 { "skillsetEditName", skillsetEditName },
                 { "skillsetFileInput", skillsetFileInput },
                 { "skillsetImportExportText", skillsetImportExportText },
-                { "retroDelayInputs", string.Join(",", retroDelayInputs) },
-                { "retroSkillWaits", string.Join(",", retroSkillWaits) },
-                { "retroSkillFrees", string.Join(",", retroSkillFrees) },
+                { "delayInputs", string.Join(",", delayInputs) },
+                { "skillWaits", string.Join(",", skillWaits) },
+                { "skillFrees", string.Join(",", skillFrees) },
                 { "selectedSkillsetIndex", selectedSkillsetIndex },
                 { "savedSkillsets", savedSkillsets }
             };
@@ -4799,10 +4827,16 @@ namespace BeyondAgent
                         chainsDict[kv.Key] = entries;
                     }
                 }
+                Dictionary<string, string> chainClasses;
+                lock (QuestChains.All)
+                {
+                    chainClasses = new Dictionary<string, string>(QuestChains.Classes);
+                }
                 LauncherServer.Send(new
                 {
                     Type = "QuestChains",
-                    Chains = chainsDict
+                    Chains = chainsDict,
+                    ChainClasses = chainClasses
                 });
 
                 // Send Item Catalog
@@ -4911,7 +4945,6 @@ namespace BeyondAgent
                                 LoggerInstance.Msg($"Framerate: Uncap {(uncap ? "ON" : "OFF")} (TargetFrameRate={UnityEngine.Application.targetFrameRate}, VSync={UnityEngine.QualitySettings.vSyncCount})");
                                 break;
                             case "forceMergeShop": forceMergeShop = (bool)val; break;
-                            case "autoskillsActive": autoskillsActive = (bool)val; break;
                             case "cameraZoom":
                                 CameraZoom.Multiplier = (float)val;
                                 CameraZoom.Apply();
@@ -4967,19 +5000,19 @@ namespace BeyondAgent
                             case "snifferClientActive": snifferClientActive = (bool)val; break;
                             case "interceptActive": interceptActive = (bool)val; break;
                             case "interceptorLoggingActive": interceptorLoggingActive = (bool)val; break;
-                            case "retroAutoskillsActive":
-                                retroAutoskillsActive = (bool)val;
-                                if (retroAutoskillsActive)
+                            case "autoskillsActive":
+                                autoskillsActive = (bool)val;
+                                if (autoskillsActive)
                                 {
                                     activeComboList = ParseCombo(skillsetEditCombo);
-                                    retroCurrentSkillIndex = 0;
-                                    retroNextSkillTime = UnityEngine.Time.time;
+                                    currentSkillIndex = 0;
+                                    nextSkillTime = UnityEngine.Time.time;
                                     lastCastWasFree = false;
                                 }
                                 break;
                             case "skillsetEditCombo":
                                 skillsetEditCombo = (string)val;
-                                if (retroAutoskillsActive)
+                                if (autoskillsActive)
                                 {
                                     activeComboList = ParseCombo(skillsetEditCombo);
                                 }
@@ -4988,7 +5021,7 @@ namespace BeyondAgent
                             case "skillsetEditName": skillsetEditName = (string)val; break;
                             case "skillsetFileInput": skillsetFileInput = (string)val; break;
                             case "skillsetImportExportText": skillsetImportExportText = (string)val; break;
-                            case "retroDelayInputs":
+                            case "delayInputs":
                                 string delStr = (string)val;
                                 if (!string.IsNullOrEmpty(delStr))
                                 {
@@ -4997,16 +5030,16 @@ namespace BeyondAgent
                                     {
                                         if (j < delParts.Length)
                                         {
-                                            retroDelayInputs[j] = delParts[j];
+                                            delayInputs[j] = delParts[j];
                                             if (float.TryParse(delParts[j], out float ms))
                                             {
-                                                retroSkillDelays[j] = ms / 1000f;
+                                                skillDelays[j] = ms / 1000f;
                                             }
                                         }
                                     }
                                 }
                                 break;
-                            case "retroSkillWaits":
+                            case "skillWaits":
                                 string waitStr = (string)val;
                                 if (!string.IsNullOrEmpty(waitStr))
                                 {
@@ -5015,12 +5048,12 @@ namespace BeyondAgent
                                     {
                                         if (j < waitParts.Length)
                                         {
-                                            bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                            bool.TryParse(waitParts[j], out skillWaits[j]);
                                         }
                                     }
                                 }
                                 break;
-                            case "retroSkillFrees":
+                            case "skillFrees":
                                 string freeStr = (string)val;
                                 if (!string.IsNullOrEmpty(freeStr))
                                 {
@@ -5029,7 +5062,7 @@ namespace BeyondAgent
                                     {
                                         if (j < freeParts.Length)
                                         {
-                                            bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                            bool.TryParse(freeParts[j], out skillFrees[j]);
                                         }
                                     }
                                 }
@@ -5173,6 +5206,7 @@ namespace BeyondAgent
                                 {
                                     questRunnerLog.RemoveAt(0);
                                 }
+                                questRunnerLogScroll.y = float.MaxValue;
                             }
                             LauncherServer.Send(new { Type = "QuestRunnerLog", Message = formatted });
                         };
@@ -5291,9 +5325,9 @@ namespace BeyondAgent
                     {
                         if (!string.IsNullOrEmpty(skillsetEditName))
                         {
-                            string delStr = string.Join(",", retroDelayInputs);
-                            string waitStr = string.Join(",", retroSkillWaits);
-                            string freeStr = string.Join(",", retroSkillFrees);
+                            string delStr = string.Join(",", delayInputs);
+                            string waitStr = string.Join(",", skillWaits);
+                            string freeStr = string.Join(",", skillFrees);
                             AddOrUpdateSkillset(skillsetEditName, skillsetEditCombo, delStr, waitStr, freeStr);
                             SendStatusUpdate();
                         }
@@ -5311,80 +5345,8 @@ namespace BeyondAgent
                     else if (type == "SelectSkillset")
                     {
                         int index = (int)cmd["Index"];
-                        if (index >= 0 && index < savedSkillsets.Count)
+                        if (ApplySkillset(index, forceCombo: false))
                         {
-                            selectedSkillsetIndex = index;
-                            skillsetEditName = savedSkillsets[index].Name;
-                            skillsetEditCombo = savedSkillsets[index].Combo;
-
-                            // Parse waits
-                            if (!string.IsNullOrEmpty(savedSkillsets[index].Waits))
-                            {
-                                string[] waitParts = savedSkillsets[index].Waits.Split(',');
-                                for (int j = 0; j < 5; j++)
-                                {
-                                    if (j < waitParts.Length)
-                                    {
-                                        bool.TryParse(waitParts[j], out retroSkillWaits[j]);
-                                    }
-                                    else
-                                    {
-                                        retroSkillWaits[j] = false;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                bool globalWait = savedSkillsets[index].WaitForSkill;
-                                for (int j = 0; j < 5; j++)
-                                {
-                                    retroSkillWaits[j] = globalWait;
-                                }
-                            }
-
-                            // Parse frees
-                            if (!string.IsNullOrEmpty(savedSkillsets[index].Frees))
-                            {
-                                string[] freeParts = savedSkillsets[index].Frees.Split(',');
-                                for (int j = 0; j < 5; j++)
-                                {
-                                    if (j < freeParts.Length)
-                                    {
-                                        bool.TryParse(freeParts[j], out retroSkillFrees[j]);
-                                    }
-                                    else
-                                    {
-                                        retroSkillFrees[j] = false;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                for (int j = 0; j < 5; j++)
-                                {
-                                    retroSkillFrees[j] = false;
-                                }
-                            }
-
-                            // Parse delays
-                            string[] delParts = (savedSkillsets[index].Delays ?? "1000,1000,1000,1000,1000").Split(',');
-                            for (int j = 0; j < 5; j++)
-                            {
-                                if (j < delParts.Length)
-                                {
-                                    retroDelayInputs[j] = delParts[j];
-                                    if (float.TryParse(delParts[j], out float ms))
-                                    {
-                                        retroSkillDelays[j] = ms / 1000f;
-                                    }
-                                }
-                            }
-
-                            if (retroAutoskillsActive)
-                            {
-                                activeComboList = ParseCombo(skillsetEditCombo);
-                            }
-
                             SendStatusUpdate();
                         }
                     }
@@ -5407,10 +5369,10 @@ namespace BeyondAgent
                                     {
                                         if (j < delParts.Length)
                                         {
-                                            retroDelayInputs[j] = delParts[j];
+                                            delayInputs[j] = delParts[j];
                                             if (float.TryParse(delParts[j], out float ms))
                                             {
-                                                retroSkillDelays[j] = ms / 1000f;
+                                                skillDelays[j] = ms / 1000f;
                                             }
                                         }
                                     }
@@ -5428,11 +5390,11 @@ namespace BeyondAgent
                                         {
                                             if (j < waitParts.Length)
                                             {
-                                                bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                                bool.TryParse(waitParts[j], out skillWaits[j]);
                                             }
                                             else
                                             {
-                                                retroSkillWaits[j] = false;
+                                                skillWaits[j] = false;
                                             }
                                         }
                                     }
@@ -5441,17 +5403,17 @@ namespace BeyondAgent
                                         bool.TryParse(rawWait, out bool globalWait);
                                         for (int j = 0; j < 5; j++)
                                         {
-                                            retroSkillWaits[j] = globalWait;
+                                            skillWaits[j] = globalWait;
                                         }
 
-                                        waitStr = string.Join(",", retroSkillWaits);
+                                        waitStr = string.Join(",", skillWaits);
                                     }
                                 }
                                 else
                                 {
                                     for (int j = 0; j < 5; j++)
                                     {
-                                        retroSkillWaits[j] = false;
+                                        skillWaits[j] = false;
                                     }
                                 }
 
@@ -5464,11 +5426,11 @@ namespace BeyondAgent
                                     {
                                         if (j < freeParts.Length)
                                         {
-                                            bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                            bool.TryParse(freeParts[j], out skillFrees[j]);
                                         }
                                         else
                                         {
-                                            retroSkillFrees[j] = false;
+                                            skillFrees[j] = false;
                                         }
                                     }
                                 }
@@ -5476,11 +5438,11 @@ namespace BeyondAgent
                                 {
                                     for (int j = 0; j < 5; j++)
                                     {
-                                        retroSkillFrees[j] = false;
+                                        skillFrees[j] = false;
                                     }
                                 }
 
-                                if (retroAutoskillsActive)
+                                if (autoskillsActive)
                                 {
                                     activeComboList = ParseCombo(skillsetEditCombo);
                                 }
@@ -5490,11 +5452,16 @@ namespace BeyondAgent
                             }
                         }
                     }
+                    else if (type == "AutoLoadLibrarySkillsets")
+                    {
+                        LoadLibrarySkillsets();
+                        SendStatusUpdate();
+                    }
                     else if (type == "ExportSkillset")
                     {
-                        string delStr = string.Join(",", retroDelayInputs);
-                        string waitStr = string.Join(",", retroSkillWaits);
-                        string freeStr = string.Join(",", retroSkillFrees);
+                        string delStr = string.Join(",", delayInputs);
+                        string waitStr = string.Join(",", skillWaits);
+                        string freeStr = string.Join(",", skillFrees);
                         skillsetImportExportText = $"{skillsetEditName}|{skillsetEditCombo}|{delStr}|{waitStr}|{freeStr}";
                         SendStatusUpdate();
                     }
@@ -5528,10 +5495,10 @@ namespace BeyondAgent
                                                 {
                                                     if (j < delParts.Length)
                                                     {
-                                                        retroDelayInputs[j] = delParts[j];
+                                                        delayInputs[j] = delParts[j];
                                                         if (float.TryParse(delParts[j], out float ms))
                                                         {
-                                                            retroSkillDelays[j] = ms / 1000f;
+                                                            skillDelays[j] = ms / 1000f;
                                                         }
                                                     }
                                                 }
@@ -5548,11 +5515,11 @@ namespace BeyondAgent
                                                     {
                                                         if (j < waitParts.Length)
                                                         {
-                                                            bool.TryParse(waitParts[j], out retroSkillWaits[j]);
+                                                            bool.TryParse(waitParts[j], out skillWaits[j]);
                                                         }
                                                         else
                                                         {
-                                                            retroSkillWaits[j] = false;
+                                                            skillWaits[j] = false;
                                                         }
                                                     }
                                                 }
@@ -5561,17 +5528,17 @@ namespace BeyondAgent
                                                     bool.TryParse(rawWait, out bool globalWait);
                                                     for (int j = 0; j < 5; j++)
                                                     {
-                                                        retroSkillWaits[j] = globalWait;
+                                                        skillWaits[j] = globalWait;
                                                     }
 
-                                                    waitStr = string.Join(",", retroSkillWaits);
+                                                    waitStr = string.Join(",", skillWaits);
                                                 }
                                             }
                                             else
                                             {
                                                 for (int j = 0; j < 5; j++)
                                                 {
-                                                    retroSkillWaits[j] = false;
+                                                    skillWaits[j] = false;
                                                 }
                                             }
 
@@ -5584,11 +5551,11 @@ namespace BeyondAgent
                                                 {
                                                     if (j < freeParts.Length)
                                                     {
-                                                        bool.TryParse(freeParts[j], out retroSkillFrees[j]);
+                                                        bool.TryParse(freeParts[j], out skillFrees[j]);
                                                     }
                                                     else
                                                     {
-                                                        retroSkillFrees[j] = false;
+                                                        skillFrees[j] = false;
                                                     }
                                                 }
                                             }
@@ -5596,11 +5563,11 @@ namespace BeyondAgent
                                             {
                                                 for (int j = 0; j < 5; j++)
                                                 {
-                                                    retroSkillFrees[j] = false;
+                                                    skillFrees[j] = false;
                                                 }
                                             }
 
-                                            if (retroAutoskillsActive)
+                                            if (autoskillsActive)
                                             {
                                                 activeComboList = ParseCombo(skillsetEditCombo);
                                             }
@@ -5628,9 +5595,9 @@ namespace BeyondAgent
                             if (!string.IsNullOrEmpty(fullPath))
                             {
                                 skillsetFileInput = System.IO.Path.GetFileName(fullPath);
-                                string delStr = string.Join(",", retroDelayInputs);
-                                string waitStr = string.Join(",", retroSkillWaits);
-                                string freeStr = string.Join(",", retroSkillFrees);
+                                string delStr = string.Join(",", delayInputs);
+                                string waitStr = string.Join(",", skillWaits);
+                                string freeStr = string.Join(",", skillFrees);
                                 string payload = $"{skillsetEditName}|{skillsetEditCombo}|{delStr}|{waitStr}|{freeStr}";
                                 System.IO.File.WriteAllText(fullPath, payload);
                                 skillsetImportExportText = payload;
@@ -5656,7 +5623,27 @@ namespace BeyondAgent
                                 JObject root = System.IO.File.Exists(chainFile)
                                     ? JObject.Parse(System.IO.File.ReadAllText(chainFile))
                                     : [];
-                                root[name] = entries;
+                                string cls = (string)cmd["Class"];
+                                if (string.IsNullOrEmpty(cls)
+                                    && root[name] is JObject existingChain
+                                    && existingChain["class"] != null)
+                                {
+                                    // Preserve a class already on disk when this save
+                                    // doesn't specify one (e.g. chain editor re-save).
+                                    cls = (string)existingChain["class"];
+                                }
+                                if (!string.IsNullOrEmpty(cls))
+                                {
+                                    root[name] = new JObject
+                                    {
+                                        ["class"] = cls,
+                                        ["entries"] = entries
+                                    };
+                                }
+                                else
+                                {
+                                    root[name] = entries;
+                                }
                                 System.IO.File.WriteAllText(chainFile, root.ToString(Newtonsoft.Json.Formatting.Indented));
                                 QuestChains.Init();
                                 SendCatalogs();
@@ -5709,9 +5696,21 @@ namespace BeyondAgent
                                     {
                                         questRunnerLog.RemoveAt(0);
                                     }
+                                    questRunnerLogScroll.y = float.MaxValue;
                                 }
                                 LauncherServer.Send(new { Type = "QuestRunnerLog", Message = formatted });
                             };
+                            // Optional class/skillset chosen on the chain tab — apply it
+                            // (forcing the combo live) before the run begins.
+                            string skillsetName = (string)cmd["Skillset"];
+                            if (!string.IsNullOrEmpty(skillsetName))
+                            {
+                                int si = savedSkillsets.FindIndex(s => s.Name.Equals(skillsetName, System.StringComparison.OrdinalIgnoreCase));
+                                if (si >= 0 && ApplySkillset(si, forceCombo: true))
+                                {
+                                    SendStatusUpdate();
+                                }
+                            }
                             questRunner?.StartChain(name, QuestChains.Get(name));
                         }
                     }
@@ -5725,6 +5724,28 @@ namespace BeyondAgent
                     LoggerInstance.Error($"[Launcher] Error processing command: {ex.Message}");
                 }
             }
+        }
+
+        private static void HandleUnityLog(string logString, string stackTrace, LogType type)
+        {
+            string prefix = type switch
+            {
+                LogType.Error => "[Error]",
+                LogType.Assert => "[Assert]",
+                LogType.Warning => "[Warning]",
+                LogType.Exception => "[Exception]",
+                _ => "[Log]"
+            };
+            
+            string source = logString.Contains("[Beyond]") ? "[Beyond]" : "[Infinity]";
+            string cleanedMsg = logString.Replace("[Beyond] ", "").Replace("[Beyond]", "");
+            string msg = $"{source}{prefix} {cleanedMsg}";
+            
+            if (type == LogType.Exception && !string.IsNullOrEmpty(stackTrace))
+            {
+                msg += "\n" + stackTrace;
+            }
+            LauncherServer.Send(new { Type = "Log", Message = msg });
         }
     }
 }

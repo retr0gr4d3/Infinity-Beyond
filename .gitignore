@@ -56,3 +56,6 @@ UserData/
 !/Beyond/Beyond.sln
 
 BeyondLauncher*
+
+# Scripts
+/Infinity Scripts

@@ -137,13 +137,14 @@
                                     </Grid>
                                 </ToggleButton>
 
-                                <Grid Margin="0,10,0,0" IsVisible="{Binding #ToggleLauncherModules.IsChecked}" ColumnDefinitions="*,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                                <Grid Margin="0,10,0,0" IsVisible="{Binding #ToggleLauncherModules.IsChecked}" ColumnDefinitions="*,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                                     <Button Grid.Row="0" Grid.Column="0" Content="Fake Dev Options" Command="{Binding OpenFakeDevWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="0" Grid.Column="1" Content="Spoofers &amp; Jukebox" Command="{Binding OpenSpoofersWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="1" Grid.Column="0" Content="Shop Loader" Command="{Binding OpenShopLoaderWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="1" Grid.Column="1" Content="Quest Loader" Command="{Binding OpenQuestLoaderWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
-                                    <Button Grid.Row="2" Grid.Column="0" Content="Autoskills (Retro)" Command="{Binding OpenAutoskillsCommand}" HorizontalAlignment="Stretch" Height="30"/>
+                                    <Button Grid.Row="2" Grid.Column="0" Content="Autoskills" Command="{Binding OpenAutoskillsCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="2" Grid.Column="1" Content="Quest Runner" Command="{Binding OpenQuestRunnerWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
+                                    <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Content="Library" Command="{Binding OpenLibraryWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -188,6 +189,10 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
+
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" HorizontalAlignment="Right" IsVisible="{Binding #ToggleEventLogs.IsChecked}">
+                                    <Button Content="View Full Log" Command="{Binding OpenLogViewerCommand}" Height="24" FontSize="10" Padding="8,0" VerticalContentAlignment="Center" Classes="Accent"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -203,7 +208,7 @@
 
                 <!-- Footer Area -->
                 <Separator Grid.Row="2" Margin="0" Height="1" Background="#202026" VerticalAlignment="Top"/>
-                <TextBlock Grid.Row="2" Text="v0.1.2 (Beyond Standalone Edition)" FontSize="9" Foreground="#44454E" HorizontalAlignment="Center" Margin="10,12"/>
+                <TextBlock Grid.Row="2" Text="v0.1.3 (Beyond Standalone Edition)" FontSize="9" Foreground="#44454E" HorizontalAlignment="Center" Margin="10,12"/>
             </Grid>
         </Border>
 

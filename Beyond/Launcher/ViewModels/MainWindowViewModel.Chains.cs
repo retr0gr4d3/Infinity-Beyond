@@ -13,7 +13,56 @@ namespace Launcher.ViewModels
         public ObservableCollection<string> ChainNames { get; } = [];
         public System.Collections.Generic.Dictionary<string, JArray> ChainDetails { get; } = [];
 
+        // Chain name -> recommended class/skillset (from a script's object form).
+        public System.Collections.Generic.Dictionary<string, string> ChainClasses { get; } = [];
+
+        // Picker shown on the chain tab: "(none)" + the user's saved skillset names.
+        public const string NoChainClass = "(none)";
+        public ObservableCollection<string> ChainSkillsetOptions { get; } = [NoChainClass];
+
         [ObservableProperty] private string? _selectedChainName;
+
+        [ObservableProperty] private string? _selectedChainClass = NoChainClass;
+
+        private bool _isRefreshingChains;
+
+        // When a chain is picked, default the class to its recommended skillset (if any).
+        partial void OnSelectedChainNameChanged(string? value)
+        {
+            if (_isRefreshingChains)
+            {
+                return;
+            }
+
+            if (value != null && ChainClasses.TryGetValue(value, out string? cls) && !string.IsNullOrEmpty(cls))
+            {
+                if (!ChainSkillsetOptions.Contains(cls))
+                {
+                    ChainSkillsetOptions.Add(cls);
+                }
+                SelectedChainClass = cls;
+            }
+            else
+            {
+                SelectedChainClass = NoChainClass;
+            }
+        }
+
+        // Rebuild the skillset picker from SavedSkillsets (called when status updates).
+        public void RefreshChainSkillsetOptions()
+        {
+            string? prev = SelectedChainClass;
+            ChainSkillsetOptions.Clear();
+            ChainSkillsetOptions.Add(NoChainClass);
+            foreach (SkillsetEntry s in SavedSkillsets)
+            {
+                if (!string.IsNullOrEmpty(s.Name) && !ChainSkillsetOptions.Contains(s.Name))
+                {
+                    ChainSkillsetOptions.Add(s.Name);
+                }
+            }
+            SelectedChainClass = (prev != null && ChainSkillsetOptions.Contains(prev)) ? prev : NoChainClass;
+        }
 
         [ObservableProperty] private string _chainEditorName = "NewChain";
         public ObservableCollection<ChainEntryViewModel> ChainEditorEntries { get; } = [];
@@ -25,8 +74,20 @@ namespace Launcher.ViewModels
         {
             if (!string.IsNullOrEmpty(SelectedChainName))
             {
-                _connection.SendCommand("RunChain", new JObject { ["Name"] = SelectedChainName });
+                JObject p = new() { ["Name"] = SelectedChainName };
+                if (!string.IsNullOrEmpty(SelectedChainClass) && SelectedChainClass != NoChainClass)
+                {
+                    p["Skillset"] = SelectedChainClass;
+                }
+                _connection.SendCommand("RunChain", p);
             }
+        }
+
+        [RelayCommand]
+        private void StopChain()
+        {
+            // Chains run on the shared quest runner — stopping it cancels the chain.
+            _connection.SendCommand("StopQuestRunner", null);
         }
 
         [RelayCommand]
@@ -172,11 +233,15 @@ namespace Launcher.ViewModels
             catch (Exception) { }
         }
 
-        private void OnQuestChainsReceived(JObject chains)
+        private void OnQuestChainsReceived(JObject msg)
         {
+            string? prevSelection = SelectedChainName;
+            string? prevClass = SelectedChainClass;
+
             ChainNames.Clear();
             ChainDetails.Clear();
-            if (chains != null)
+            ChainClasses.Clear();
+            if (msg["Chains"] is JObject chains)
             {
                 foreach (JProperty prop in chains.Properties())
                 {
@@ -186,6 +251,28 @@ namespace Launcher.ViewModels
                         ChainDetails[prop.Name] = arr;
                     }
                 }
+            }
+            if (msg["ChainClasses"] is JObject classes)
+            {
+                foreach (JProperty prop in classes.Properties())
+                {
+                    string? cls = (string?)prop.Value;
+                    if (!string.IsNullOrEmpty(cls))
+                    {
+                        ChainClasses[prop.Name] = cls;
+                    }
+                }
+            }
+
+            if (prevSelection != null && ChainNames.Contains(prevSelection))
+            {
+                _isRefreshingChains = true;
+                SelectedChainName = prevSelection;
+                if (prevClass != null && ChainSkillsetOptions.Contains(prevClass))
+                {
+                    SelectedChainClass = prevClass;
+                }
+                _isRefreshingChains = false;
             }
         }
     }

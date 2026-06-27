@@ -271,9 +271,9 @@ namespace Launcher
                         break;
 
                     case "QuestChains":
-                        if (msg["Chains"] is JObject chains)
+                        if (msg["Chains"] is JObject)
                         {
-                            Dispatcher.UIThread.Post(() => QuestChainsReceived?.Invoke(chains));
+                            Dispatcher.UIThread.Post(() => QuestChainsReceived?.Invoke(msg));
                         }
                         break;
                 }

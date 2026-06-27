@@ -55,10 +55,20 @@
             <Border Grid.Row="1" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
                 <StackPanel Spacing="8">
                     <TextBlock Text="Chain Automation" Classes="Header" Margin="0"/>
-                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                        <ComboBox ItemsSource="{Binding ChainNames}" SelectedItem="{Binding SelectedChainName}" HorizontalAlignment="Stretch"/>
-                        <Button Grid.Column="1" Content="Run Quest Chain" Command="{Binding RunChainCommand}" Classes="Accent" Width="135"/>
-                        <Button Grid.Column="2" Content="Open Chain Editor" Command="{Binding OpenChainEditorWindowCommand}" Width="135"/>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <StackPanel Grid.Column="0" Spacing="3">
+                            <TextBlock Text="Chain" FontSize="10" Foreground="#8F909A"/>
+                            <ComboBox ItemsSource="{Binding ChainNames}" SelectedItem="{Binding SelectedChainName}" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="3">
+                            <TextBlock Text="Class / Skillset" FontSize="10" Foreground="#8F909A"/>
+                            <ComboBox ItemsSource="{Binding ChainSkillsetOptions}" SelectedItem="{Binding SelectedChainClass}" HorizontalAlignment="Stretch"/>
+                        </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                        <Button Grid.Column="1" Content="Start" Command="{Binding RunChainCommand}" Classes="Accent" Width="95"/>
+                        <Button Grid.Column="2" Content="Stop" Command="{Binding StopChainCommand}" Width="95"/>
+                        <Button Grid.Column="3" Content="Open Chain Editor" Command="{Binding OpenChainEditorWindowCommand}" Width="135"/>
                     </Grid>
                 </StackPanel>
             </Border>

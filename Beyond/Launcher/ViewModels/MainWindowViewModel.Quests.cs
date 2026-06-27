@@ -73,10 +73,10 @@ namespace Launcher.ViewModels
 
         private void OnQuestRunnerLogReceived(string message)
         {
-            QuestRunnerLogs.Insert(0, message);
+            QuestRunnerLogs.Add(message);
             if (QuestRunnerLogs.Count > 200)
             {
-                QuestRunnerLogs.RemoveAt(QuestRunnerLogs.Count - 1);
+                QuestRunnerLogs.RemoveAt(0);
             }
         }
 

@@ -75,7 +75,7 @@
 
             <!-- Metadata -->
             <StackPanel Spacing="2" HorizontalAlignment="Center">
-                <TextBlock Name="VersionText" Text="Version 0.1.2" Foreground="#8F909A" FontSize="11"
+                <TextBlock Name="VersionText" Text="Version 0.1.3" Foreground="#8F909A" FontSize="11"
                            HorizontalAlignment="Center"/>
                 <TextBlock Name="BuildDateText" Text="" Foreground="#656770" FontSize="11"
                            HorizontalAlignment="Center"/>

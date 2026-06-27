@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.LogViewerWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Event Terminal Log Viewer"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="800" Height="600">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Event Terminal Log Viewer"/>
+
+        <Grid RowDefinitions="*,Auto" Margin="15">
+            <ListBox Grid.Row="0" Name="LogListBox" ItemsSource="{Binding GeneralLogs}" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="x:String">
+                        <TextBlock Text="{Binding}" Foreground="#E2E4E9" FontSize="11" TextWrapping="Wrap" Margin="4,2" FontFamily="Consolas, monospace"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,15,0,0">
+                <Button Content="Save to File" Name="SaveBtn" Width="120" Height="30" Classes="Accent"/>
+                <Button Content="Clear" Name="ClearBtn" Width="100" Height="30"/>
+                <Button Content="Close" Name="CloseBtn" Width="100" Height="30"/>
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</Window>

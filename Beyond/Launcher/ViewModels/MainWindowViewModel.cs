@@ -346,11 +346,6 @@ namespace Launcher.ViewModels
                     InterceptorLoggingActive = (bool)val;
                 }
 
-                if (settings.TryGetValue("retroAutoskillsActive", out val))
-                {
-                    RetroAutoskillsActive = (bool)val;
-                }
-
                 if (settings.TryGetValue("verticalSkillBar", out val))
                 {
                     VerticalSkillBar = (bool)val;
@@ -427,8 +422,9 @@ namespace Launcher.ViewModels
                             SavedSkillsets.Add(entry);
                         }
                     }
+                    RefreshChainSkillsetOptions();
                 }
-                if (settings.TryGetValue("retroDelayInputs", out val))
+                if (settings.TryGetValue("delayInputs", out val))
                 {
                     string? delStr = (string?)val;
                     if (!string.IsNullOrEmpty(delStr))
@@ -466,7 +462,7 @@ namespace Launcher.ViewModels
                         OnPropertyChanged(nameof(Skill5Delay));
                     }
                 }
-                if (settings.TryGetValue("retroSkillWaits", out val))
+                if (settings.TryGetValue("skillWaits", out val))
                 {
                     string? waitStr = (string?)val;
                     if (!string.IsNullOrEmpty(waitStr))
@@ -504,7 +500,7 @@ namespace Launcher.ViewModels
                         OnPropertyChanged(nameof(Skill5Wait));
                     }
                 }
-                if (settings.TryGetValue("retroSkillFrees", out val))
+                if (settings.TryGetValue("skillFrees", out val))
                 {
                     string? freeStr = (string?)val;
                     if (!string.IsNullOrEmpty(freeStr))
@@ -623,6 +619,12 @@ namespace Launcher.ViewModels
         }
 
         [RelayCommand]
+        private void OpenLogViewer()
+        {
+            ShowToolWindow<LogViewerWindow>();
+        }
+
+        [RelayCommand]
         private void OpenQuestLoaderWindow()
         {
             ShowToolWindow<QuestLoaderWindow>();
@@ -668,6 +670,12 @@ namespace Launcher.ViewModels
         private void OpenChainEditorWindow()
         {
             ShowToolWindow<ChainEditorWindow>();
+        }
+
+        [RelayCommand]
+        private void OpenLibraryWindow()
+        {
+            ShowToolWindow<LibraryWindow>();
         }
     }
 }

@@ -22,8 +22,8 @@
                 <!-- 1. Enable Toggle -->
                 <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="Autoskills Active (Retro/Combo)" VerticalAlignment="Center" FontSize="13" Foreground="#E2E4E9" FontWeight="SemiBold"/>
-                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding RetroAutoskillsActive}"/>
+                        <TextBlock Text="Autoskills Active" VerticalAlignment="Center" FontSize="13" Foreground="#E2E4E9" FontWeight="SemiBold"/>
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoskillsActive}"/>
                     </Grid>
                 </Border>
 

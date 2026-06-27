@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 
 namespace Launcher.ViewModels
 {
-    // AutoskillsWindow: the retro/combo autoskill engine — enable toggles, the
+    // AutoskillsWindow: the autoskill engine — enable toggles, the
     // saved-skillset manager, and per-key delay / wait / free configuration.
     public partial class MainWindowViewModel
     {
@@ -13,11 +13,6 @@ namespace Launcher.ViewModels
         {
             get;
             set => UpdateSetting(ref field, value, "autoskillsActive");
-        }
-        public bool RetroAutoskillsActive
-        {
-            get;
-            set => UpdateSetting(ref field, value, "retroAutoskillsActive");
         }
 
         // --- Skillset manager ---
@@ -65,7 +60,7 @@ namespace Launcher.ViewModels
             {
                 if (SetProperty(ref _skill1Delay, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroDelaysUpdate();
+                    SendDelaysUpdate();
                 }
             }
         }
@@ -78,7 +73,7 @@ namespace Launcher.ViewModels
             {
                 if (SetProperty(ref _skill2Delay, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroDelaysUpdate();
+                    SendDelaysUpdate();
                 }
             }
         }
@@ -91,7 +86,7 @@ namespace Launcher.ViewModels
             {
                 if (SetProperty(ref _skill3Delay, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroDelaysUpdate();
+                    SendDelaysUpdate();
                 }
             }
         }
@@ -104,7 +99,7 @@ namespace Launcher.ViewModels
             {
                 if (SetProperty(ref _skill4Delay, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroDelaysUpdate();
+                    SendDelaysUpdate();
                 }
             }
         }
@@ -117,15 +112,15 @@ namespace Launcher.ViewModels
             {
                 if (SetProperty(ref _skill5Delay, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroDelaysUpdate();
+                    SendDelaysUpdate();
                 }
             }
         }
 
-        private void SendRetroDelaysUpdate()
+        private void SendDelaysUpdate()
         {
             string consolidated = $"{Skill1Delay},{Skill2Delay},{Skill3Delay},{Skill4Delay},{Skill5Delay}";
-            _connection.SetSetting("retroDelayInputs", consolidated);
+            _connection.SetSetting("delayInputs", consolidated);
         }
 
         // --- Per-key wait (mutually exclusive with free) ---
@@ -139,11 +134,11 @@ namespace Launcher.ViewModels
                 {
                     _skill1Free = false;
                     OnPropertyChanged(nameof(Skill1Free));
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
                 if (SetProperty(ref _skill1Wait, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
             }
         }
@@ -158,11 +153,11 @@ namespace Launcher.ViewModels
                 {
                     _skill2Free = false;
                     OnPropertyChanged(nameof(Skill2Free));
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
                 if (SetProperty(ref _skill2Wait, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
             }
         }
@@ -177,11 +172,11 @@ namespace Launcher.ViewModels
                 {
                     _skill3Free = false;
                     OnPropertyChanged(nameof(Skill3Free));
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
                 if (SetProperty(ref _skill3Wait, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
             }
         }
@@ -196,11 +191,11 @@ namespace Launcher.ViewModels
                 {
                     _skill4Free = false;
                     OnPropertyChanged(nameof(Skill4Free));
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
                 if (SetProperty(ref _skill4Wait, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
             }
         }
@@ -215,19 +210,19 @@ namespace Launcher.ViewModels
                 {
                     _skill5Free = false;
                     OnPropertyChanged(nameof(Skill5Free));
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
                 if (SetProperty(ref _skill5Wait, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
             }
         }
 
-        private void SendRetroWaitsUpdate()
+        private void SendWaitsUpdate()
         {
             string consolidated = $"{Skill1Wait},{Skill2Wait},{Skill3Wait},{Skill4Wait},{Skill5Wait}";
-            _connection.SetSetting("retroSkillWaits", consolidated);
+            _connection.SetSetting("skillWaits", consolidated);
         }
 
         // --- Per-key free (mutually exclusive with wait) ---
@@ -241,11 +236,11 @@ namespace Launcher.ViewModels
                 {
                     _skill1Wait = false;
                     OnPropertyChanged(nameof(Skill1Wait));
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
                 if (SetProperty(ref _skill1Free, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
             }
         }
@@ -260,11 +255,11 @@ namespace Launcher.ViewModels
                 {
                     _skill2Wait = false;
                     OnPropertyChanged(nameof(Skill2Wait));
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
                 if (SetProperty(ref _skill2Free, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
             }
         }
@@ -279,11 +274,11 @@ namespace Launcher.ViewModels
                 {
                     _skill3Wait = false;
                     OnPropertyChanged(nameof(Skill3Wait));
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
                 if (SetProperty(ref _skill3Free, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
             }
         }
@@ -298,11 +293,11 @@ namespace Launcher.ViewModels
                 {
                     _skill4Wait = false;
                     OnPropertyChanged(nameof(Skill4Wait));
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
                 if (SetProperty(ref _skill4Free, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
             }
         }
@@ -317,19 +312,19 @@ namespace Launcher.ViewModels
                 {
                     _skill5Wait = false;
                     OnPropertyChanged(nameof(Skill5Wait));
-                    SendRetroWaitsUpdate();
+                    SendWaitsUpdate();
                 }
                 if (SetProperty(ref _skill5Free, value) && !_isUpdatingFromMod)
                 {
-                    SendRetroFreesUpdate();
+                    SendFreesUpdate();
                 }
             }
         }
 
-        private void SendRetroFreesUpdate()
+        private void SendFreesUpdate()
         {
             string consolidated = $"{Skill1Free},{Skill2Free},{Skill3Free},{Skill4Free},{Skill5Free}";
-            _connection.SetSetting("retroSkillFrees", consolidated);
+            _connection.SetSetting("skillFrees", consolidated);
         }
 
         // --- Skillset file / import-export commands ---

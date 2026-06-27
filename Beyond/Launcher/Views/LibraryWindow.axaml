@@ -1,0 +1,70 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.LibraryWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Library"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="620" Height="560">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Library"/>
+
+        <Grid RowDefinitions="Auto,*,Auto" Margin="15">
+            <!-- Update / status bar -->
+            <Border Grid.Row="0" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Text="Community scripts &amp; autoskills from the Infinity-Files repo." FontSize="11" Foreground="#A6A8B2" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Update Library" Command="{Binding UpdateLibraryCommand}" IsEnabled="{Binding !LibraryBusy}" Classes="Accent" Width="135" Height="30"/>
+                    </Grid>
+                    <TextBlock Text="{Binding LibraryStatus}" FontSize="10" Foreground="#8F909A" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Two content columns -->
+            <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="10">
+                <!-- Scripts -->
+                <Border Grid.Column="0" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <DockPanel LastChildFill="True">
+                        <TextBlock DockPanel.Dock="Top" Text="Scripts (Quest Chains)" Classes="Header" Margin="0,0,0,8"/>
+                        <Button DockPanel.Dock="Bottom" Content="Load Script" Command="{Binding LoadScriptCommand}"
+                                IsEnabled="{Binding SelectedLibraryScript, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                HorizontalAlignment="Stretch" Height="30" Margin="0,8,0,0"/>
+                        <ListBox Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4"
+                                 ItemsSource="{Binding LibraryScripts}" SelectedItem="{Binding SelectedLibraryScript}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="x:String">
+                                    <TextBlock Text="{Binding}" Foreground="#E2E4E9" FontSize="12" Margin="4,2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+
+                <!-- Autoskills -->
+                <Border Grid.Column="1" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                    <DockPanel LastChildFill="True">
+                        <TextBlock DockPanel.Dock="Top" Text="Autoskills (Skillsets)" Classes="Header" Margin="0,0,0,8"/>
+                        <ListBox Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4"
+                                 ItemsSource="{Binding LibraryAutoskills}" SelectedItem="{Binding SelectedLibraryAutoskill}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="x:String">
+                                    <TextBlock Text="{Binding}" Foreground="#E2E4E9" FontSize="12" Margin="4,2"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <TextBlock Grid.Row="2" Text="Loading merges into your chains / skillsets and needs a running session." FontSize="10" Foreground="#656770" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+        </Grid>
+    </DockPanel>
+</Window>

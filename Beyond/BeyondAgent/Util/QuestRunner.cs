@@ -131,6 +131,7 @@ namespace BeyondAgent.Util
                 !string.IsNullOrEmpty(TargetArea) ? $", tfer to {TargetArea}/{TargetFrame}/{TargetPad}" :
                 !string.IsNullOrEmpty(TargetFrame) ? $", hop to {TargetFrame}/{TargetPad}" : "";
             Log($"[start] quest {questId} × {iterations}{travelNote}");
+
             // Travel first when a target is set — some quests are area-gated
             // server-side and reject acceptQuest from the wrong zone.
             EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
@@ -151,10 +152,12 @@ namespace BeyondAgent.Util
             ChainEntries = entries;
             ChainName = chainName ?? "";
             ChainIndex = 0;
-            QuestChains.Entry first = entries[0];
+
+            QuestChains.Entry first = ChainEntries[ChainIndex];
             BindEntry(first.qid, first.items, first.area, first.frame, first.pad);
             _autoskillsWasOn = BeyondAgentClass.autoskillsActive;
-            Log($"[start] chain '{chainName}' ({entries.Count} entries) — first: {first}");
+            Log($"[start] chain '{chainName}' starting at {ChainIndex + 1}/{ChainEntries.Count}: {first}");
+            ChatUtils.SendChatAndLog("Starting Chain", name: "System", channel: "Admin");
             EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
         }
 
@@ -185,8 +188,18 @@ namespace BeyondAgent.Util
 
         public void Tick()
         {
+            if (!IsRunning)
+            {
+                return;
+            }
+
             try
             {
+                if (IsMapLoading())
+                {
+                    return;
+                }
+
                 switch (State)
                 {
                     case RunState.Accepting: TickAccept(); break;
@@ -214,6 +227,13 @@ namespace BeyondAgent.Util
                 return;
             }
 
+            if (ChainEntries != null && Entity.mainPlayer.Quests != null && Entity.mainPlayer.Quests.isQuestComplete(QuestID))
+            {
+                Log($"  quest {QuestID} is already completed, advancing/finishing");
+                AdvanceChainOrFinish();
+                return;
+            }
+
             // Skip the send if we're already on this quest — server treats it
             // as a no-op anyway but avoids a wasted packet. Still go through
             // the travel check; previously we jumped straight to Hunting and
@@ -228,6 +248,7 @@ namespace BeyondAgent.Util
 
             try
             {
+                Log($"  [accepting] sending request to accept quest {QuestID}...");
                 AEC.Instance.sendRequest(new RequestQuestAccept(QuestID));
             }
             catch (Exception ex)
@@ -276,19 +297,26 @@ namespace BeyondAgent.Util
                 EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
                 return;
             }
+            AdvanceChainOrFinish();
+        }
+
+        private void AdvanceChainOrFinish()
+        {
             if (ChainEntries != null && ChainIndex + 1 < ChainEntries.Count)
             {
                 ChainIndex++;
                 QuestChains.Entry next = ChainEntries[ChainIndex];
                 BindEntry(next.qid, next.items, next.area, next.frame, next.pad);
-                Log($"[chain] {ChainIndex + 1}/{ChainEntries.Count}: {next}");
+                Log($"[chain] advancing to {ChainIndex + 1}/{ChainEntries.Count}: {next}");
                 EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
-                return;
             }
-            Log(ChainEntries != null
-                ? $"[done] chain '{ChainName}' complete"
-                : "[done] all iterations complete");
-            EnterState(RunState.Done);
+            else
+            {
+                Log(ChainEntries != null
+                    ? $"[done] chain '{ChainName}' complete"
+                    : "[done] all iterations complete");
+                EnterState(RunState.Done);
+            }
         }
 
         private void TickTravel()
@@ -492,6 +520,7 @@ namespace BeyondAgent.Util
             // RequestStartCharge.
             if (Entity.mainPlayer.target != tgt)
             {
+                Log($"  [hunting] engaging target: {tgt.Name} (Level {tgt.Level}, HP: {tgt.HP}/{tgt.MaxHP})");
                 try
                 {
                     GameObject go = tgt.getGameObject();
@@ -548,6 +577,7 @@ namespace BeyondAgent.Util
         {
             try
             {
+                Log($"  [turning-in] sending request to complete quest {QuestID}...");
                 AEC.Instance.sendRequest(new RequestTryQuestComplete(QuestID));
             }
             catch (Exception ex)
@@ -947,8 +977,10 @@ namespace BeyondAgent.Util
 
         private void EnterState(RunState s)
         {
+            bool wasRunning = IsRunning;
             State = s;
             _stateEnteredAt = Time.time;
+            Log($"[state] {s}");
             if (s == RunState.Hunting)
             {
                 _lastProgressAt = Time.time;
@@ -962,6 +994,11 @@ namespace BeyondAgent.Util
                 _areaFirstMatchedAt = -1f;
                 _frameFirstMatchedAt = -1f;
                 _pickedGotoPad = null;
+            }
+
+            if (wasRunning && !IsRunning && ChainEntries != null)
+            {
+                ChatUtils.SendChatAndLog("Chain Stopped", name: "System", channel: "Admin");
             }
         }
 
@@ -983,6 +1020,95 @@ namespace BeyondAgent.Util
         {
             try { OnLog?.Invoke(line); } catch { }
             BeyondLog.Msg($"[QuestRunner] {line}");
+        }
+
+        private static readonly System.Reflection.FieldInfo _mapLoaderField =
+            typeof(Area).GetField("mapLoader", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        private static readonly System.Reflection.FieldInfo _questsCompleteField =
+            typeof(PlayerQuestData).GetField("questsComplete", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        private float _lastLoadingLogAt = 0f;
+        private string _lastLoadingReason = "";
+
+        private bool IsQuestListLoaded(int id)
+        {
+            if (Entity.mainPlayer?.Quests == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                System.Collections.IList list = _questsCompleteField?.GetValue(Entity.mainPlayer.Quests) as System.Collections.IList;
+                if (list != null && list.Count > (id >> 3))
+                {
+                    return true;
+                }
+            }
+            catch { }
+
+            return false;
+        }
+
+        private string GetLoadingReason()
+        {
+            if (Entity.mainPlayer == null)
+            {
+                return "waiting for mainPlayer entity…";
+            }
+            if (Area.currentArea == null)
+            {
+                return "waiting for currentArea initialization…";
+            }
+
+            if (UILoader.Instance != null && UILoader.Instance.gameObject != null && UILoader.Instance.gameObject.activeInHierarchy)
+            {
+                return "waiting for loading screen to clear…";
+            }
+
+            try
+            {
+                if (_mapLoaderField != null)
+                {
+                    AssetBundleLoader loader = _mapLoaderField.GetValue(Area.currentArea) as AssetBundleLoader;
+                    if (loader != null && !loader.IsDone)
+                    {
+                        return $"loading map asset bundles ({Mathf.RoundToInt(loader.GetProgress() * 100)}%)…";
+                    }
+                }
+            }
+            catch { }
+
+            if (QuestID > 0 && !IsQuestListLoaded(QuestID))
+            {
+                return "waiting for completed quest list synchronization…";
+            }
+
+            return null;
+        }
+
+        private bool IsMapLoading()
+        {
+            string reason = GetLoadingReason();
+            if (reason != null)
+            {
+                StatusLine = reason;
+                if (Time.time - _lastLoadingLogAt > 4f || reason != _lastLoadingReason)
+                {
+                    Log($"  [waiting] {reason}");
+                    _lastLoadingLogAt = Time.time;
+                    _lastLoadingReason = reason;
+                }
+                return true;
+            }
+
+            if (_lastLoadingReason != "")
+            {
+                Log("  [waiting] map and data load complete, preparing next steps");
+                _lastLoadingReason = "";
+            }
+            return false;
         }
     }
 }

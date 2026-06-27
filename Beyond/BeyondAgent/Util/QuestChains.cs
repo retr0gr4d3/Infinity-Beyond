@@ -41,6 +41,9 @@ namespace BeyondAgent.Util
         // Insertion-order map so the dropdown lists them in a stable order.
         public static readonly Dictionary<string, List<Entry>> All = [];
 
+        // Chain name -> recommended class/skillset (optional; from the object form).
+        public static readonly Dictionary<string, string> Classes = [];
+
         public static IEnumerable<string> Names => All.Keys;
 
         public static List<Entry> Get(string name)
@@ -53,6 +56,7 @@ namespace BeyondAgent.Util
             try
             {
                 All.Clear();          // wipe stale state so deletes/renames take effect
+                Classes.Clear();
                 LoadEmbedded();
                 LoadUserOverride();
                 BeyondLog.Msg($"[QuestChains] loaded {All.Count} chain(s): {string.Join(", ", All.Keys)}");
@@ -100,7 +104,25 @@ namespace BeyondAgent.Util
                     continue; // skip _doc and similar
                 }
 
-                if (prop.Value is not JArray arr)
+                // A chain value is either a bare array of entries (legacy) or an
+                // object { "class": "...", "entries": [...] } that also names a
+                // recommended class/skillset.
+                JArray arr;
+                string cls = null;
+                if (prop.Value is JArray bareArr)
+                {
+                    arr = bareArr;
+                }
+                else if (prop.Value is JObject objVal)
+                {
+                    arr = objVal["entries"] as JArray;
+                    cls = (string)objVal["class"];
+                }
+                else
+                {
+                    continue;
+                }
+                if (arr == null)
                 {
                     continue;
                 }
@@ -131,6 +153,14 @@ namespace BeyondAgent.Util
                 if (entries.Count > 0)
                 {
                     All[prop.Name] = entries;
+                    if (!string.IsNullOrEmpty(cls))
+                    {
+                        Classes[prop.Name] = cls;
+                    }
+                    else
+                    {
+                        Classes.Remove(prop.Name);
+                    }
                     BeyondLog.Msg($"[QuestChains] {source}: {prop.Name} ({entries.Count} entries)");
                 }
             }
