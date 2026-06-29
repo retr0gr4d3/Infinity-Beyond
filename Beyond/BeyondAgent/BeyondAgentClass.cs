@@ -9,7 +9,7 @@ using UnityEngine.EventSystems;
 
 namespace BeyondAgent
 {
-    public class BeyondAgentClass : BeyondMod
+    public class BeyondAgentClass
     {
         public static bool useImgui = false;
         public static bool showWindow = false;
@@ -362,7 +362,7 @@ namespace BeyondAgent
             }
         }
 
-        public override void OnInitialize()
+        public void OnInitialize()
         {
             if (defaultTargetFrameRate == -2)
             {
@@ -379,7 +379,7 @@ namespace BeyondAgent
 
             LauncherServer.Start();
             Application.logMessageReceivedThreaded += HandleUnityLog;
-            LoggerInstance.Msg("Alpha Testing Mod Menu Initialized successfully!");
+            BeyondLog.Msg("Alpha Testing Mod Menu Initialized successfully!");
             PacketLog.Init();
             Directory.Init();
             ItemCatalog.Init();
@@ -393,7 +393,7 @@ namespace BeyondAgent
 
             HarmonyLib.Harmony harmony = new(nameof(BeyondAgentClass));
             harmony.PatchAll();
-            LoggerInstance.Msg("Harmony patches applied!");
+            BeyondLog.Msg("Harmony patches applied!");
             GenerateTextures();
 
             // Pre-seed the local name spoof when the launcher spawned this session
@@ -414,16 +414,16 @@ namespace BeyondAgent
 
                     spoofedName = nick;
                     nameSpoofInput = nick;
-                    LoggerInstance.Msg($"Pre-seeded local name spoof from launcher nickname: '{nick}'.");
+                    BeyondLog.Msg($"Pre-seeded local name spoof from launcher nickname: '{nick}'.");
                 }
             }
             catch (System.Exception ex)
             {
-                LoggerInstance.Error($"BEYOND_NICK pre-seed failed: {ex.Message}");
+                BeyondLog.Error($"BEYOND_NICK pre-seed failed: {ex.Message}");
             }
         }
 
-        public override void OnApplicationQuit()
+        public void OnApplicationQuit()
         {
             Application.logMessageReceivedThreaded -= HandleUnityLog;
             LauncherServer.Stop();
@@ -456,7 +456,7 @@ namespace BeyondAgent
             return false;
         }
 
-        public override void OnUpdate()
+        public void OnUpdate()
         {
             if (UnityEngine.Screen.fullScreen)
             {
@@ -484,7 +484,7 @@ namespace BeyondAgent
                                 login.InputPassword.text = pass;
                                 login.OnLoginPressed();
                                 triedAutoLogin = true;
-                                LoggerInstance.Msg("Auto-login submitted successfully.");
+                                BeyondLog.Msg("Auto-login submitted successfully.");
                             }
                         }
                         else
@@ -495,7 +495,7 @@ namespace BeyondAgent
                 }
                 catch (System.Exception ex)
                 {
-                    LoggerInstance.Error($"Auto-login check error: {ex}");
+                    BeyondLog.Error($"Auto-login check error: {ex}");
                 }
             }
             // After auto-login the game lands on the CharacterSelect "play" screen.
@@ -518,21 +518,21 @@ namespace BeyondAgent
                         {
                             charSelect.GoServerSelect();
                             triedAutoServerSelect = true;
-                            LoggerInstance.Msg("Auto-advanced play screen to server select.");
+                            BeyondLog.Msg("Auto-advanced play screen to server select.");
                         }
                     }
                 }
                 catch (System.Exception ex)
                 {
-                    LoggerInstance.Error($"Auto server-select check error: {ex}");
+                    BeyondLog.Error($"Auto server-select check error: {ex}");
                 }
             }
-            try { ProcessLauncherCommands(); } catch (System.Exception ex) { LoggerInstance.Error($"ProcessLauncherCommands error: {ex}"); }
+            try { ProcessLauncherCommands(); } catch (System.Exception ex) { BeyondLog.Error($"ProcessLauncherCommands error: {ex}"); }
             // Tick the quest runner every frame. It's a no-op when Idle/Done/Failed.
-            try { questRunner?.Tick(); } catch (System.Exception ex) { LoggerInstance.Error($"QuestRunner tick: {ex.Message}"); }
+            try { questRunner?.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"QuestRunner tick: {ex.Message}"); }
 
             // Pet combat-anim driver — no-op when toggle off or no pet.
-            try { PetCombatAnimDriver.Tick(); } catch (System.Exception ex) { LoggerInstance.Error($"PetCombatAnim tick: {ex.Message}"); }
+            try { PetCombatAnimDriver.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"PetCombatAnim tick: {ex.Message}"); }
 
             // Camera zoom — re-apply every frame so newly-spawned CameraFollow
             // instances (area changes) pick up the active multiplier. Cheap
@@ -545,7 +545,7 @@ namespace BeyondAgent
 
             // HUD toggle cluster — vertical skills + hide UI/players/monsters/NPCs.
             // Internally throttled so the scene scans don't run every frame.
-            try { HudToggles.Tick(); } catch (System.Exception ex) { LoggerInstance.Error($"HudToggles tick: {ex.Message}"); }
+            try { HudToggles.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"HudToggles tick: {ex.Message}"); }
 
             // Hotkeys for the same toggles. Single-letter binds chosen to
             // match the original button labels (V=Vertical, U=hide UI,
@@ -557,14 +557,14 @@ namespace BeyondAgent
             {
                 if (!IsTypingInChat())
                 {
-                    if (Input.GetKeyDown(KeyCode.V)) { HudToggles.VerticalSkillBar = !HudToggles.VerticalSkillBar; LoggerInstance.Msg($"[Hotkey] VerticalSkillBar={HudToggles.VerticalSkillBar}"); }
-                    if (Input.GetKeyDown(KeyCode.U)) { HudToggles.HideUI = !HudToggles.HideUI; LoggerInstance.Msg($"[Hotkey] HideUI={HudToggles.HideUI}"); }
-                    if (Input.GetKeyDown(KeyCode.P)) { HudToggles.HideOtherPlayers = !HudToggles.HideOtherPlayers; LoggerInstance.Msg($"[Hotkey] HideOtherPlayers={HudToggles.HideOtherPlayers}"); }
-                    if (Input.GetKeyDown(KeyCode.M)) { HudToggles.HideMonsters = !HudToggles.HideMonsters; LoggerInstance.Msg($"[Hotkey] HideMonsters={HudToggles.HideMonsters}"); }
-                    if (Input.GetKeyDown(KeyCode.N)) { HudToggles.HideNPCs = !HudToggles.HideNPCs; LoggerInstance.Msg($"[Hotkey] HideNPCs={HudToggles.HideNPCs}"); }
+                    if (Input.GetKeyDown(KeyCode.V)) { HudToggles.VerticalSkillBar = !HudToggles.VerticalSkillBar; BeyondLog.Msg($"[Hotkey] VerticalSkillBar={HudToggles.VerticalSkillBar}"); }
+                    if (Input.GetKeyDown(KeyCode.U)) { HudToggles.HideUI = !HudToggles.HideUI; BeyondLog.Msg($"[Hotkey] HideUI={HudToggles.HideUI}"); }
+                    if (Input.GetKeyDown(KeyCode.P)) { HudToggles.HideOtherPlayers = !HudToggles.HideOtherPlayers; BeyondLog.Msg($"[Hotkey] HideOtherPlayers={HudToggles.HideOtherPlayers}"); }
+                    if (Input.GetKeyDown(KeyCode.M)) { HudToggles.HideMonsters = !HudToggles.HideMonsters; BeyondLog.Msg($"[Hotkey] HideMonsters={HudToggles.HideMonsters}"); }
+                    if (Input.GetKeyDown(KeyCode.N)) { HudToggles.HideNPCs = !HudToggles.HideNPCs; BeyondLog.Msg($"[Hotkey] HideNPCs={HudToggles.HideNPCs}"); }
                 }
             }
-            catch (System.Exception ex) { LoggerInstance.Error($"HudToggles hotkey: {ex.Message}"); }
+            catch (System.Exception ex) { BeyondLog.Error($"HudToggles hotkey: {ex.Message}"); }
 
             if (autoskillsActive)
             {
@@ -609,7 +609,7 @@ namespace BeyondAgent
                                 {
                                     slotBtn.UseSkill(true);
                                     slotBtn.UseSkill(false);
-                                    LoggerInstance.Msg($"Autoskill casted free slot: {freeCastSlot}");
+                                    BeyondLog.Msg($"Autoskill casted free slot: {freeCastSlot}");
                                     lastCastWasFree = true;
 
                                     float delay = 1f;
@@ -623,7 +623,7 @@ namespace BeyondAgent
                             }
                             catch (System.Exception ex)
                             {
-                                LoggerInstance.Error($"Error casting free autoskill: {ex}");
+                                BeyondLog.Error($"Error casting free autoskill: {ex}");
                             }
                         }
 
@@ -659,14 +659,14 @@ namespace BeyondAgent
                                         {
                                             slotBtn.UseSkill(true);
                                             slotBtn.UseSkill(false);
-                                            LoggerInstance.Msg($"Autoskill casted slot: {targetSkillSlot}");
+                                            BeyondLog.Msg($"Autoskill casted slot: {targetSkillSlot}");
                                             casted = true;
                                         }
                                     }
                                 }
                                 catch (System.Exception ex)
                                 {
-                                    LoggerInstance.Error($"Error casting autoskill: {ex}");
+                                    BeyondLog.Error($"Error casting autoskill: {ex}");
                                 }
 
                                 if (casted)
@@ -737,15 +737,15 @@ namespace BeyondAgent
                 separatorTexture.SetPixel(0, 0, new Color(0.14f, 0.16f, 0.18f, 1f));
                 separatorTexture.Apply();
 
-                LoggerInstance.Msg("Generated UI textures.");
+                BeyondLog.Msg("Generated UI textures.");
             }
             catch (System.Exception ex)
             {
-                LoggerInstance.Error($"Failed to generate textures: {ex}");
+                BeyondLog.Error($"Failed to generate textures: {ex}");
             }
         }
 
-        public override void OnGUI()
+        public void OnGUI()
         {
             if (!useImgui)
             {
@@ -884,85 +884,71 @@ namespace BeyondAgent
             if (showWindow)
             {
                 windowRect = ResizableWindow.DrawScaledWindow(9999, windowRect, 300f, DrawWindow, "Beyond Infinity", windowStyle);
-                windowRect = ResizableWindow.HandleResize(9999, windowRect);
             }
 
             if (showWindow && showInterceptorWindow)
             {
                 interceptorWindowRect = ResizableWindow.DrawScaledWindow(9997, interceptorWindowRect, 500f, DrawInterceptorWindow, "Packet Interceptor", windowStyle);
-                interceptorWindowRect = ResizableWindow.HandleResize(9997, interceptorWindowRect);
             }
 
             if (showWindow && showSnifferWindow)
             {
                 snifferWindowRect = ResizableWindow.DrawScaledWindow(9996, snifferWindowRect, 500f, DrawSnifferWindow, "Packet Sniffer", windowStyle);
-                snifferWindowRect = ResizableWindow.HandleResize(9996, snifferWindowRect);
             }
 
             if (showWindow && showSenderWindow)
             {
                 senderWindowRect = ResizableWindow.DrawScaledWindow(9995, senderWindowRect, 500f, DrawSenderWindow, "Packet Sender", windowStyle);
-                senderWindowRect = ResizableWindow.HandleResize(9995, senderWindowRect);
             }
 
             if (showWindow && showReceiverWindow)
             {
                 receiverWindowRect = ResizableWindow.DrawScaledWindow(9994, receiverWindowRect, 500f, DrawReceiverWindow, "Packet Receiver", windowStyle);
-                receiverWindowRect = ResizableWindow.HandleResize(9994, receiverWindowRect);
             }
 
             if (showWindow && showFakeDevWindow)
             {
                 fakeDevWindowRect = ResizableWindow.DrawScaledWindow(9992, fakeDevWindowRect, 320f, DrawFakeDevWindow, "FakeDev Settings", windowStyle);
-                fakeDevWindowRect = ResizableWindow.HandleResize(9992, fakeDevWindowRect);
             }
 
             if (showWindow && showShopLoaderWindow)
             {
                 shopLoaderWindowRect = ResizableWindow.DrawScaledWindow(9991, shopLoaderWindowRect, 280f, DrawShopLoaderWindow, "Shop Loader", windowStyle);
-                shopLoaderWindowRect = ResizableWindow.HandleResize(9991, shopLoaderWindowRect);
             }
 
             if (showWindow && showQuestLoaderWindow)
             {
                 questLoaderWindowRect = ResizableWindow.DrawScaledWindow(9990, questLoaderWindowRect, 280f, DrawQuestLoaderWindow, "Quest Loader", windowStyle);
-                questLoaderWindowRect = ResizableWindow.HandleResize(9990, questLoaderWindowRect);
             }
 
             if (showWindow && showQuestRunnerWindow)
             {
                 questRunnerWindowRect = ResizableWindow.DrawScaledWindow(9993, questRunnerWindowRect, 640f, DrawQuestRunnerWindow, "Quest Runner", windowStyle);
-                questRunnerWindowRect = ResizableWindow.HandleResize(9993, questRunnerWindowRect);
             }
 
             if (showWindow && showQuestRunnerWindow && _showChainEditor)
             {
                 _chainEditorWindowRect = ResizableWindow.DrawScaledWindow(9985, _chainEditorWindowRect, 540f, DrawChainEditorWindow, "Chain Editor", windowStyle);
-                _chainEditorWindowRect = ResizableWindow.HandleResize(9985, _chainEditorWindowRect);
             }
 
             if (showWindow && showFunWindow)
             {
                 funWindowRect = ResizableWindow.DrawScaledWindow(9989, funWindowRect, 360f, DrawFunWindow, "Fun", windowStyle);
-                funWindowRect = ResizableWindow.HandleResize(9989, funWindowRect);
             }
 
             if (showWindow && showExtraFunWindow)
             {
                 extraFunWindowRect = ResizableWindow.DrawScaledWindow(9987, extraFunWindowRect, 360f, DrawExtraFunWindow, "Extra Fun", windowStyle);
-                extraFunWindowRect = ResizableWindow.HandleResize(9987, extraFunWindowRect);
             }
 
             if (showWindow && showAutoskillTestsWindow)
             {
                 autoskillTestsWindowRect = ResizableWindow.DrawScaledWindow(9988, autoskillTestsWindowRect, 320f, DrawAutoskillTestsWindow, "Autoskill Tests", windowStyle);
-                autoskillTestsWindowRect = ResizableWindow.HandleResize(9988, autoskillTestsWindowRect);
             }
 
             if (showWindow && showSkillsetTestWindow)
             {
                 skillsetTestWindowRect = ResizableWindow.DrawScaledWindow(9986, skillsetTestWindowRect, 320f, DrawSkillsetTestWindow, "Skillset Test", windowStyle);
-                skillsetTestWindowRect = ResizableWindow.HandleResize(9986, skillsetTestWindowRect);
             }
         }
 
@@ -983,7 +969,6 @@ namespace BeyondAgent
 
         private void DrawWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, windowRect, 300f);
             const float contentWidth = 300f - 40f;  // -20px padding each side
             GUI.Label(new Rect(20, 35, contentWidth, 25), "Tools & Automation", labelStyle);
             try
@@ -998,13 +983,13 @@ namespace BeyondAgent
                         defaultPlayerName = Entity.mainPlayer.Name ?? "";
                         nameSpoofInput = defaultPlayerName;
                         defaultsCaptured = true;
-                        LoggerInstance.Msg($"Captured player defaults: Name={defaultPlayerName}, UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
+                        BeyondLog.Msg($"Captured player defaults: Name={defaultPlayerName}, UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
                     }
                 }
             }
             catch (System.Exception ex)
             {
-                LoggerInstance.Error($"Error reading Entity.mainPlayer properties: {ex}");
+                BeyondLog.Error($"Error reading Entity.mainPlayer properties: {ex}");
             }
 
             bool playerExists = false;
@@ -1067,11 +1052,11 @@ namespace BeyondAgent
                     {
                         currentSkillIndex = 0;
                         nextSkillTime = Time.time;
-                        LoggerInstance.Msg("Autoskills activated!");
+                        BeyondLog.Msg("Autoskills activated!");
                     }
                     else
                     {
-                        LoggerInstance.Msg("Autoskills deactivated!");
+                        BeyondLog.Msg("Autoskills deactivated!");
                     }
                 }
             }
@@ -1192,7 +1177,7 @@ namespace BeyondAgent
             if (GUI.Button(new Rect(20, curY, 125, 35), autoSkipText, closeButtonStyle))
             {
                 autoSkipCutscenes = !autoSkipCutscenes;
-                LoggerInstance.Msg($"Cutscene auto-skip: {(autoSkipCutscenes ? "ON" : "OFF")}");
+                BeyondLog.Msg($"Cutscene auto-skip: {(autoSkipCutscenes ? "ON" : "OFF")}");
             }
             if (GUI.Button(new Rect(155, curY, 125, 35), "Skip Now", closeButtonStyle))
             {
@@ -1203,16 +1188,16 @@ namespace BeyondAgent
                     {
                         mgr.EndPressed();
                         CameraZoom.Reset();
-                        LoggerInstance.Msg("Cutscene: skipped (zoom reset)");
+                        BeyondLog.Msg("Cutscene: skipped (zoom reset)");
                     }
                     else
                     {
-                        LoggerInstance.Msg("Cutscene: no active Dialogger_Manager");
+                        BeyondLog.Msg("Cutscene: no active Dialogger_Manager");
                     }
                 }
                 catch (System.Exception ex)
                 {
-                    LoggerInstance.Error($"Cutscene skip failed: {ex}");
+                    BeyondLog.Error($"Cutscene skip failed: {ex}");
                 }
             }
             curY += 35f + 10f;
@@ -1239,7 +1224,6 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(300f));
-            ResizableWindow.EndScaling();
         }
 
         private static string GetSkillKeyName(int slot)
@@ -1249,7 +1233,6 @@ namespace BeyondAgent
 
         private void DrawSkillsetTestWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, skillsetTestWindowRect, 320f);
             const float winWidth = 320f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -1802,12 +1785,10 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
-            ResizableWindow.EndScaling();
         }
 
         private void DrawAutoskillTestsWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, autoskillTestsWindowRect, 320f);
             const float winWidth = 320f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -1838,7 +1819,6 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
-            ResizableWindow.EndScaling();
         }
 
         private static List<int> ParseCombo(string comboStr)
@@ -2127,7 +2107,6 @@ namespace BeyondAgent
 
         private void DrawInterceptorWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, interceptorWindowRect, 500f);
             const float winWidth = 500f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -2142,13 +2121,13 @@ namespace BeyondAgent
             if (GUI.Button(new Rect(pad, 65, btnW, 35), "Block Packets", closeButtonStyle))
             {
                 interceptActive = true;
-                LoggerInstance.Msg("Packet interception STARTED.");
+                BeyondLog.Msg("Packet interception STARTED.");
             }
 
             if (GUI.Button(new Rect(pad + btnW + 5, 65, btnW, 35), "Allow Packets", closeButtonStyle))
             {
                 interceptActive = false;
-                LoggerInstance.Msg("Packet interception STOPPED.");
+                BeyondLog.Msg("Packet interception STOPPED.");
             }
 
             if (GUI.Button(new Rect(pad + ((btnW + 5) * 2), 65, btnW, 35), "Clear Logs", closeButtonStyle))
@@ -2157,7 +2136,7 @@ namespace BeyondAgent
                 {
                     interceptedPacketsLog.Clear();
                 }
-                LoggerInstance.Msg("Packet log cleared.");
+                BeyondLog.Msg("Packet log cleared.");
             }
 
             GUI.Box(new Rect(pad, 115, innerW, 180), "", containerBoxStyle ?? GUI.skin.box);
@@ -2190,12 +2169,10 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(500f));
-            ResizableWindow.EndScaling();
         }
 
         private void DrawSnifferWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, snifferWindowRect, 500f);
             const float winWidth = 500f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -2206,14 +2183,14 @@ namespace BeyondAgent
             if (GUI.Button(new Rect(pad, 35, sniffBtnW, 35), serverBtnText, closeButtonStyle))
             {
                 snifferServerActive = !snifferServerActive;
-                LoggerInstance.Msg($"Sniffer Server: {(snifferServerActive ? "ON" : "OFF")}");
+                BeyondLog.Msg($"Sniffer Server: {(snifferServerActive ? "ON" : "OFF")}");
             }
 
             string clientBtnText = snifferClientActive ? "Client: ON" : "Client: OFF";
             if (GUI.Button(new Rect(pad + sniffBtnW + 5, 35, sniffBtnW, 35), clientBtnText, closeButtonStyle))
             {
                 snifferClientActive = !snifferClientActive;
-                LoggerInstance.Msg($"Sniffer Client: {(snifferClientActive ? "ON" : "OFF")}");
+                BeyondLog.Msg($"Sniffer Client: {(snifferClientActive ? "ON" : "OFF")}");
             }
 
             bool bothActive = snifferServerActive && snifferClientActive;
@@ -2230,7 +2207,7 @@ namespace BeyondAgent
                     snifferServerActive = true;
                     snifferClientActive = true;
                 }
-                LoggerInstance.Msg($"Sniffer All: Server={snifferServerActive}, Client={snifferClientActive}");
+                BeyondLog.Msg($"Sniffer All: Server={snifferServerActive}, Client={snifferClientActive}");
             }
 
             if (GUI.Button(new Rect(pad + ((sniffBtnW + 5) * 3), 35, sniffBtnW, 35), "Clear", closeButtonStyle))
@@ -2241,7 +2218,7 @@ namespace BeyondAgent
                     selectedSniffIndex = -1;
                     selectedPacketJson = "";
                 }
-                LoggerInstance.Msg("Sniffer log cleared.");
+                BeyondLog.Msg("Sniffer log cleared.");
             }
 
             GUI.Box(new Rect(pad, 80, innerW, 220), "", containerBoxStyle ?? GUI.skin.box);
@@ -2278,7 +2255,7 @@ namespace BeyondAgent
                     if (GUI.Button(new Rect(innerW - 80, yPos, 60, 22), "Copy", closeButtonStyle))
                     {
                         UnityEngine.GUIUtility.systemCopyBuffer = snifferLog[i].RawJson;
-                        LoggerInstance.Msg("[Packet Sniffer] Copied packet JSON to clipboard.");
+                        BeyondLog.Msg("[Packet Sniffer] Copied packet JSON to clipboard.");
                     }
                 }
             }
@@ -2312,7 +2289,7 @@ namespace BeyondAgent
                 if (!string.IsNullOrEmpty(selectedPacketJson))
                 {
                     UnityEngine.GUIUtility.systemCopyBuffer = selectedPacketJson;
-                    LoggerInstance.Msg("[Packet Sniffer] Copied selected packet JSON to clipboard.");
+                    BeyondLog.Msg("[Packet Sniffer] Copied selected packet JSON to clipboard.");
                 }
             }
 
@@ -2322,12 +2299,10 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
-            ResizableWindow.EndScaling();
         }
 
         private void DrawSenderWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, senderWindowRect, 500f);
             const float winWidth = 500f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -2393,16 +2368,16 @@ namespace BeyondAgent
                     if (AEC.Instance != null)
                     {
                         AEC.Instance.sendRequest(new Request(cmd, paramsList));
-                        LoggerInstance.Msg($"[Packet Sender] Sent manually injected packet: Cmd='{cmd}', Params=[{string.Join(", ", paramsList)}]");
+                        BeyondLog.Msg($"[Packet Sender] Sent manually injected packet: Cmd='{cmd}', Params=[{string.Join(", ", paramsList)}]");
                     }
                     else
                     {
-                        LoggerInstance.Error("AEC.Instance is null, cannot send packet.");
+                        BeyondLog.Error("AEC.Instance is null, cannot send packet.");
                     }
                 }
                 catch (System.Exception ex)
                 {
-                    LoggerInstance.Error($"Error sending manual packet: {ex.Message}");
+                    BeyondLog.Error($"Error sending manual packet: {ex.Message}");
                 }
             }
 
@@ -2412,12 +2387,10 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(500f));
-            ResizableWindow.EndScaling();
         }
 
         private void DrawReceiverWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, receiverWindowRect, 500f);
             const float winWidth = 500f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -2475,7 +2448,7 @@ namespace BeyondAgent
                 string json = receiverJsonInput.Trim();
                 if (string.IsNullOrEmpty(json))
                 {
-                    LoggerInstance.Error("[Packet Receiver] Cannot inject empty JSON.");
+                    BeyondLog.Error("[Packet Receiver] Cannot inject empty JSON.");
                 }
                 else
                 {
@@ -2496,7 +2469,6 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
-            ResizableWindow.EndScaling();
         }
 
         public static (bool ok, string info) FakeServerPacket(string json)
@@ -2543,7 +2515,6 @@ namespace BeyondAgent
 
         private void DrawFakeDevWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, fakeDevWindowRect, 320f);
             const float winWidth = 320f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -2568,11 +2539,11 @@ namespace BeyondAgent
                     {
                         Entity.mainPlayer.UpgradeDays = isMember ? 0 : 30;
                         Entity.mainPlayer.updateNameColor();
-                        LoggerInstance.Msg($"Set client UpgradeDays to {Entity.mainPlayer.UpgradeDays} (member={!isMember}).");
+                        BeyondLog.Msg($"Set client UpgradeDays to {Entity.mainPlayer.UpgradeDays} (member={!isMember}).");
                     }
                     catch (System.Exception ex)
                     {
-                        LoggerInstance.Error($"Error toggling membership: {ex}");
+                        BeyondLog.Error($"Error toggling membership: {ex}");
                     }
                 }
             }
@@ -2602,11 +2573,11 @@ namespace BeyondAgent
                     try
                     {
                         new DevWindow([]).Execute();
-                        LoggerInstance.Msg("Opened dev window.");
+                        BeyondLog.Msg("Opened dev window.");
                     }
                     catch (System.Exception ex)
                     {
-                        LoggerInstance.Error($"Error executing DevWindow: {ex}");
+                        BeyondLog.Error($"Error executing DevWindow: {ex}");
                     }
                 }
 
@@ -2620,16 +2591,16 @@ namespace BeyondAgent
                             Entity.mainPlayer.AccessLevel = defaultAccessLevel;
                             Entity.mainPlayer.updateNameColor();
                             ClearNameSpoof();
-                            LoggerInstance.Msg($"Reset player defaults: Name={defaultPlayerName}, UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
+                            BeyondLog.Msg($"Reset player defaults: Name={defaultPlayerName}, UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
                         }
                         else
                         {
-                            LoggerInstance.Error("Cannot reset: Default player privileges were not captured.");
+                            BeyondLog.Error("Cannot reset: Default player privileges were not captured.");
                         }
                     }
                     catch (System.Exception ex)
                     {
-                        LoggerInstance.Error($"Error resetting privileges: {ex}");
+                        BeyondLog.Error($"Error resetting privileges: {ex}");
                     }
                 }
             }
@@ -2647,12 +2618,10 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
-            ResizableWindow.EndScaling();
         }
 
         private void DrawFunWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, funWindowRect, 360f);
             const float winWidth = 360f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -2763,7 +2732,6 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
-            ResizableWindow.EndScaling();
         }
 
         // Extra Fun — sibling window for niche spoofs. Currently hosts the
@@ -2771,7 +2739,6 @@ namespace BeyondAgent
         // owns its own catalog slot (6 = Monsters bucket).
         private void DrawExtraFunWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, extraFunWindowRect, 360f);
             const float winWidth = 360f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -2964,7 +2931,6 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
-            ResizableWindow.EndScaling();
         }
 
         /// <summary>
@@ -3395,11 +3361,11 @@ namespace BeyondAgent
                 {
                     Entity.mainPlayer.AccessLevel = level;
                     Entity.mainPlayer.updateNameColor();
-                    LoggerInstance.Msg($"Set client AccessLevel to {level}.");
+                    BeyondLog.Msg($"Set client AccessLevel to {level}.");
                 }
                 catch (System.Exception ex)
                 {
-                    LoggerInstance.Error($"Error setting access level: {ex}");
+                    BeyondLog.Error($"Error setting access level: {ex}");
                 }
             }
         }
@@ -3449,7 +3415,6 @@ namespace BeyondAgent
 
         private void DrawShopLoaderWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, shopLoaderWindowRect, 280f);
             const float winWidth = 280f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -3470,16 +3435,16 @@ namespace BeyondAgent
                         try
                         {
                             AEC.Instance.sendRequest(new RequestLoadShop(shopId));
-                            LoggerInstance.Msg($"Requested load shop: {shopId}");
+                            BeyondLog.Msg($"Requested load shop: {shopId}");
                         }
                         catch (System.Exception ex)
                         {
-                            LoggerInstance.Error($"Error loading shop {shopId}: {ex}");
+                            BeyondLog.Error($"Error loading shop {shopId}: {ex}");
                         }
                     }
                     else
                     {
-                        LoggerInstance.Error($"Invalid shop ID input: '{shopIdInput}'");
+                        BeyondLog.Error($"Invalid shop ID input: '{shopIdInput}'");
                     }
                 }
 
@@ -3491,17 +3456,17 @@ namespace BeyondAgent
                         {
                             forceMergeShop = true;
                             AEC.Instance.sendRequest(new RequestLoadShop(shopId));
-                            LoggerInstance.Msg($"Requested load merge shop: {shopId}");
+                            BeyondLog.Msg($"Requested load merge shop: {shopId}");
                         }
                         catch (System.Exception ex)
                         {
                             forceMergeShop = false;
-                            LoggerInstance.Error($"Error loading merge shop {shopId}: {ex}");
+                            BeyondLog.Error($"Error loading merge shop {shopId}: {ex}");
                         }
                     }
                     else
                     {
-                        LoggerInstance.Error($"Invalid shop ID input: '{shopIdInput}'");
+                        BeyondLog.Error($"Invalid shop ID input: '{shopIdInput}'");
                     }
                 }
             }
@@ -3519,12 +3484,10 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(280f));
-            ResizableWindow.EndScaling();
         }
 
         private void DrawQuestLoaderWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, questLoaderWindowRect, 280f);
             const float winWidth = 280f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -3545,16 +3508,16 @@ namespace BeyondAgent
                         try
                         {
                             UIQuests.ShowQuestUI([questId], QuestMode.Quest, null);
-                            LoggerInstance.Msg($"Requested load quest: {questId}");
+                            BeyondLog.Msg($"Requested load quest: {questId}");
                         }
                         catch (System.Exception ex)
                         {
-                            LoggerInstance.Error($"Error loading quest {questId}: {ex}");
+                            BeyondLog.Error($"Error loading quest {questId}: {ex}");
                         }
                     }
                     else
                     {
-                        LoggerInstance.Error($"Invalid quest ID input: '{questIdInput}'");
+                        BeyondLog.Error($"Invalid quest ID input: '{questIdInput}'");
                     }
                 }
 
@@ -3565,16 +3528,16 @@ namespace BeyondAgent
                         try
                         {
                             AEC.Instance.sendRequest(new RequestAbandonQuest(questId.ToString()));
-                            LoggerInstance.Msg($"Requested abandon quest: {questId}");
+                            BeyondLog.Msg($"Requested abandon quest: {questId}");
                         }
                         catch (System.Exception ex)
                         {
-                            LoggerInstance.Error($"Error abandoning quest {questId}: {ex}");
+                            BeyondLog.Error($"Error abandoning quest {questId}: {ex}");
                         }
                     }
                     else
                     {
-                        LoggerInstance.Error($"Invalid quest ID input for abandon: '{questIdInput}'");
+                        BeyondLog.Error($"Invalid quest ID input for abandon: '{questIdInput}'");
                     }
                 }
             }
@@ -3592,12 +3555,10 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(280f));
-            ResizableWindow.EndScaling();
         }
 
         private void DrawQuestRunnerWindow(int windowID)
         {
-            ResizableWindow.BeginScaling(windowID, questRunnerWindowRect, 640f);
             const float winWidth = 640f;
             const float pad = 20f;
             const float innerW = winWidth - (pad * 2);
@@ -3651,7 +3612,7 @@ namespace BeyondAgent
                 }
                 else
                 {
-                    LoggerInstance.Error("[QuestRunner] qid and iters must be integers");
+                    BeyondLog.Error("[QuestRunner] qid and iters must be integers");
                 }
             }
             // Second input row: optional auto-travel. Leave Area empty to
@@ -3881,7 +3842,6 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(winWidth));
-            ResizableWindow.EndScaling();
         }
 
         // ------- Chain Editor logic + GUI (INJECTED) -------
@@ -3930,7 +3890,6 @@ namespace BeyondAgent
                 return;
             }
 
-            ResizableWindow.BeginScaling(windowID, _chainEditorWindowRect, 540f);
             const float p = 10f;
             const float W = 540f;
             float H = _chainEditorWindowRect.height;
@@ -4069,7 +4028,6 @@ namespace BeyondAgent
             }
 
             GUI.DragWindow(ResizableWindow.TitleBarDragRect(W, 26f));
-            ResizableWindow.EndScaling();
         }
 
         private static void SaveEditedChain(bool saveAs)
@@ -4901,7 +4859,7 @@ namespace BeyondAgent
             }
             catch (System.Exception ex)
             {
-                LoggerInstance.Error($"[Launcher] SendCatalogs error: {ex.Message}");
+                BeyondLog.Error($"[Launcher] SendCatalogs error: {ex.Message}");
             }
         }
 
@@ -4929,7 +4887,7 @@ namespace BeyondAgent
                             case "autoSkipCutscenes": autoSkipCutscenes = (bool)val; break;
                             case "vsyncEnabled":
                                 UnityEngine.QualitySettings.vSyncCount = (bool)val ? 1 : 0;
-                                LoggerInstance.Msg($"Framerate: VSync {(UnityEngine.QualitySettings.vSyncCount > 0 ? "ON" : "OFF")}");
+                                BeyondLog.Msg($"Framerate: VSync {(UnityEngine.QualitySettings.vSyncCount > 0 ? "ON" : "OFF")}");
                                 break;
                             case "uncapFrames":
                                 bool uncap = (bool)val;
@@ -4942,7 +4900,7 @@ namespace BeyondAgent
                                 {
                                     UnityEngine.Application.targetFrameRate = defaultTargetFrameRate;
                                 }
-                                LoggerInstance.Msg($"Framerate: Uncap {(uncap ? "ON" : "OFF")} (TargetFrameRate={UnityEngine.Application.targetFrameRate}, VSync={UnityEngine.QualitySettings.vSyncCount})");
+                                BeyondLog.Msg($"Framerate: Uncap {(uncap ? "ON" : "OFF")} (TargetFrameRate={UnityEngine.Application.targetFrameRate}, VSync={UnityEngine.QualitySettings.vSyncCount})");
                                 break;
                             case "forceMergeShop": forceMergeShop = (bool)val; break;
                             case "cameraZoom":
@@ -5085,16 +5043,16 @@ namespace BeyondAgent
                             {
                                 mgr.EndPressed();
                                 CameraZoom.Reset();
-                                LoggerInstance.Msg("Cutscene: skipped (zoom reset)");
+                                BeyondLog.Msg("Cutscene: skipped (zoom reset)");
                             }
                             else
                             {
-                                LoggerInstance.Msg("Cutscene: no active Dialogger_Manager");
+                                BeyondLog.Msg("Cutscene: no active Dialogger_Manager");
                             }
                         }
                         catch (System.Exception ex)
                         {
-                            LoggerInstance.Error($"Cutscene skip failed: {ex}");
+                            BeyondLog.Error($"Cutscene skip failed: {ex}");
                         }
                     }
 
@@ -5104,14 +5062,14 @@ namespace BeyondAgent
                         if (AEC.Instance != null)
                         {
                             AEC.Instance.sendRequest(new RequestLoadShop(shopId));
-                            LoggerInstance.Msg($"[Launcher] Loaded shop ID {shopId}");
+                            BeyondLog.Msg($"[Launcher] Loaded shop ID {shopId}");
                         }
                     }
                     else if (type == "LoadQuest")
                     {
                         int questId = (int)cmd["QuestId"];
                         UIQuests.ShowQuestUI([questId], QuestMode.Quest, null);
-                        LoggerInstance.Msg($"[Launcher] Loaded quest ID {questId}");
+                        BeyondLog.Msg($"[Launcher] Loaded quest ID {questId}");
                     }
                     else if (type == "AcceptQuest")
                     {
@@ -5119,7 +5077,7 @@ namespace BeyondAgent
                         if (AEC.Instance != null)
                         {
                             AEC.Instance.sendRequest(new RequestQuestAccept(questId));
-                            LoggerInstance.Msg($"[Launcher] Accepted quest ID {questId}");
+                            BeyondLog.Msg($"[Launcher] Accepted quest ID {questId}");
                         }
                     }
                     else if (type == "TurnInQuest")
@@ -5128,7 +5086,7 @@ namespace BeyondAgent
                         if (AEC.Instance != null)
                         {
                             AEC.Instance.sendRequest(new RequestTryQuestComplete(questId));
-                            LoggerInstance.Msg($"[Launcher] Turned in quest ID {questId}");
+                            BeyondLog.Msg($"[Launcher] Turned in quest ID {questId}");
                         }
                     }
                     else if (type == "SendPacket")
@@ -5139,7 +5097,7 @@ namespace BeyondAgent
                             if (AEC.Instance != null)
                             {
                                 AEC.Instance.sendRequest(new Request(packet));
-                                LoggerInstance.Msg($"[Launcher] Sent packet: {packet}");
+                                BeyondLog.Msg($"[Launcher] Sent packet: {packet}");
                             }
                         }
                         else
@@ -5166,7 +5124,7 @@ namespace BeyondAgent
                             if (AEC.Instance != null)
                             {
                                 AEC.Instance.sendRequest(new Request(packetCmd, paramsList));
-                                LoggerInstance.Msg($"[Launcher] Sent manually injected packet: Cmd='{packetCmd}', Params=[{string.Join(", ", paramsList)}]");
+                                BeyondLog.Msg($"[Launcher] Sent manually injected packet: Cmd='{packetCmd}', Params=[{string.Join(", ", paramsList)}]");
                             }
                         }
                     }
@@ -5183,7 +5141,7 @@ namespace BeyondAgent
                             {
                                 byte[] bytes = System.Text.Encoding.UTF8.GetBytes(packet);
                                 _wrapAndQueueResponseMethod.Invoke(AEC.Instance, [bytes]);
-                                LoggerInstance.Msg($"[Launcher] Injected packet: {packet}");
+                                BeyondLog.Msg($"[Launcher] Injected packet: {packet}");
                             }
                         }
                     }
@@ -5221,17 +5179,17 @@ namespace BeyondAgent
                     {
                         int trackId = (int)cmd["TrackId"];
                         Jukebox.Play(trackId);
-                        LoggerInstance.Msg($"[Launcher] Jukebox: Play track {trackId}");
+                        BeyondLog.Msg($"[Launcher] Jukebox: Play track {trackId}");
                     }
                     else if (type == "StopJukebox")
                     {
                         Jukebox.Stop();
-                        LoggerInstance.Msg("[Launcher] Jukebox: Stop");
+                        BeyondLog.Msg("[Launcher] Jukebox: Stop");
                     }
                     else if (type == "RestoreAreaBGM")
                     {
                         Jukebox.RestoreAreaBGM();
-                        LoggerInstance.Msg("[Launcher] Jukebox: Restore Area BGM");
+                        BeyondLog.Msg("[Launcher] Jukebox: Restore Area BGM");
                     }
                     else if (type == "SetAccessLevel")
                     {
@@ -5242,11 +5200,11 @@ namespace BeyondAgent
                             {
                                 Entity.mainPlayer.AccessLevel = level;
                                 Entity.mainPlayer.updateNameColor();
-                                LoggerInstance.Msg($"[Launcher] Set client AccessLevel to {level}.");
+                                BeyondLog.Msg($"[Launcher] Set client AccessLevel to {level}.");
                             }
                             catch (System.Exception ex)
                             {
-                                LoggerInstance.Error($"Error setting access level: {ex}");
+                                BeyondLog.Error($"Error setting access level: {ex}");
                             }
                             SendStatusUpdate();
                         }
@@ -5260,11 +5218,11 @@ namespace BeyondAgent
                             {
                                 Entity.mainPlayer.UpgradeDays = isMember ? 30 : 0;
                                 Entity.mainPlayer.updateNameColor();
-                                LoggerInstance.Msg($"[Launcher] Set client UpgradeDays to {Entity.mainPlayer.UpgradeDays} (member={isMember}).");
+                                BeyondLog.Msg($"[Launcher] Set client UpgradeDays to {Entity.mainPlayer.UpgradeDays} (member={isMember}).");
                             }
                             catch (System.Exception ex)
                             {
-                                LoggerInstance.Error($"Error toggling membership: {ex}");
+                                BeyondLog.Error($"Error toggling membership: {ex}");
                             }
                             SendStatusUpdate();
                         }
@@ -5274,11 +5232,11 @@ namespace BeyondAgent
                         try
                         {
                             new DevWindow([]).Execute();
-                            LoggerInstance.Msg("[Launcher] Opened dev window.");
+                            BeyondLog.Msg("[Launcher] Opened dev window.");
                         }
                         catch (System.Exception ex)
                         {
-                            LoggerInstance.Error($"Error executing DevWindow: {ex}");
+                            BeyondLog.Error($"Error executing DevWindow: {ex}");
                         }
                     }
                     else if (type == "OpenForgeReal")
@@ -5288,12 +5246,12 @@ namespace BeyondAgent
                             if (UIWindowManager.instance != null)
                             {
                                 UIWindowManager.instance.ShowForge();
-                                LoggerInstance.Msg("[SkillForge] opened (real sfInit fired)");
+                                BeyondLog.Msg("[SkillForge] opened (real sfInit fired)");
                             }
                         }
                         catch (System.Exception ex)
                         {
-                            LoggerInstance.Error($"[SkillForge] open failed: {ex}");
+                            BeyondLog.Error($"[SkillForge] open failed: {ex}");
                         }
                     }
                     else if (type == "OpenForgeStubbed")
@@ -5312,11 +5270,11 @@ namespace BeyondAgent
                                 spoofedName = "";
                                 nameSpoofInput = defaultPlayerName ?? "";
                                 Entity.mainPlayer.RefreshNameplate();
-                                LoggerInstance.Msg($"[Launcher] Reset player defaults: Name={defaultPlayerName}, UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
+                                BeyondLog.Msg($"[Launcher] Reset player defaults: Name={defaultPlayerName}, UpgradeDays={defaultUpgradeDays}, AccessLevel={defaultAccessLevel}");
                             }
                             catch (System.Exception ex)
                             {
-                                LoggerInstance.Error($"Error resetting fake dev: {ex}");
+                                BeyondLog.Error($"Error resetting fake dev: {ex}");
                             }
                             SendStatusUpdate();
                         }
@@ -5581,7 +5539,7 @@ namespace BeyondAgent
                         }
                         catch (System.Exception ex)
                         {
-                            LoggerInstance.Error("Failed to load file: " + ex.Message);
+                            BeyondLog.Error("Failed to load file: " + ex.Message);
                         }
                     }
                     else if (type == "SaveSkillsetFile")
@@ -5606,7 +5564,7 @@ namespace BeyondAgent
                         }
                         catch (System.Exception ex)
                         {
-                            LoggerInstance.Error("Failed to save file: " + ex.Message);
+                            BeyondLog.Error("Failed to save file: " + ex.Message);
                         }
                     }
                     else if (type == "SaveChain")
@@ -5650,7 +5608,7 @@ namespace BeyondAgent
                             }
                             catch (System.Exception ex)
                             {
-                                LoggerInstance.Error($"Error saving chain {name}: {ex.Message}");
+                                BeyondLog.Error($"Error saving chain {name}: {ex.Message}");
                             }
                         }
                     }
@@ -5676,7 +5634,7 @@ namespace BeyondAgent
                             }
                             catch (System.Exception ex)
                             {
-                                LoggerInstance.Error($"Error deleting chain {name}: {ex.Message}");
+                                BeyondLog.Error($"Error deleting chain {name}: {ex.Message}");
                             }
                         }
                     }
@@ -5721,7 +5679,7 @@ namespace BeyondAgent
                 }
                 catch (System.Exception ex)
                 {
-                    LoggerInstance.Error($"[Launcher] Error processing command: {ex.Message}");
+                    BeyondLog.Error($"[Launcher] Error processing command: {ex.Message}");
                 }
             }
         }

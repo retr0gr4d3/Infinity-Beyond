@@ -51,20 +51,6 @@ namespace BeyondAgent.Util
             return new Rect(inset, 0, Mathf.Max(0f, windowWidth - inset - 28f), titleHeight);
         }
 
-        // Deprecated: kept as no-ops to avoid compilation errors
-        public static float BeginScaling(int windowId, Rect currentRect, float defaultWidth)
-        {
-            return 1.0f;
-        }
-
-        public static void EndScaling() { }
-
-        public static Rect HandleResize(int windowId, Rect windowRect)
-        {
-            // Now a no-op since resizing is handled by the top-right drag button
-            return windowRect;
-        }
-
         public static Rect DrawScaledWindow(int id, Rect screenRect, float baseWidth, GUI.WindowFunction func, string title, GUIStyle style = null)
         {
             // Position clamping to keep the window on screen and rescue off-screen windows

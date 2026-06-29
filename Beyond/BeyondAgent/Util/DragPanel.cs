@@ -1,4 +1,3 @@
-using System.Text;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -51,11 +50,6 @@ namespace BeyondAgent.Util
         // 2. Walk to topmost RectTransform under Canvas → grabbed the shared
         //    container, so opening the Bank also dragged the open NPC bubble.
         // 3. (current) Walk up the single-child chain → correct in both.
-        // Flip to true if a window's drag target ever feels wrong — we'll
-        // log the full ancestor chain on first attach to see the actual
-        // hierarchy. Off by default to keep the the standalone launcher console quiet.
-        public static bool DumpHierarchyOnAttach = false;
-
         public static bool AttachToWindowRoot(Component source, string logTag)
         {
             if (source == null)
@@ -75,33 +69,9 @@ namespace BeyondAgent.Util
                 return false; // already attached, no log
             }
 
-            if (DumpHierarchyOnAttach)
-            {
-                LogAncestorChain(start, logTag);
-            }
-
             target.gameObject.AddComponent<DragPanel>();
             BeyondLog.Msg($"[{logTag}] drag handler attached to '{target.name}'");
             return true;
-        }
-
-        private static void LogAncestorChain(RectTransform start, string logTag)
-        {
-            StringBuilder sb = new();
-            sb.Append($"[{logTag}] ancestors: ");
-            int depth = 0;
-            for (Transform t = start; t != null; t = t.parent, depth++)
-            {
-                RectTransform rt = t as RectTransform;
-                int rtKids = rt != null ? CountRectTransformChildren(t) : -1;
-                bool isCanvas = t.GetComponent<Canvas>() != null;
-                sb.Append($"\n  [{depth}] '{t.name}' rt={rt != null} rtKids={rtKids}{(isCanvas ? " <-Canvas" : "")}");
-                if (isCanvas)
-                {
-                    break;
-                }
-            }
-            BeyondLog.Msg(sb.ToString());
         }
 
         private static RectTransform FindWindowRoot(RectTransform start)

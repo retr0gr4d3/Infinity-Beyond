@@ -11,39 +11,8 @@ namespace BeyondAgent.Util
     // live in the root BeyondAgent namespace so every BeyondAgent.*
     // file resolves them via enclosing-namespace lookup, no using needed.
 
-    // Base class for the agent. Lifecycle methods are driven by BeyondLifecycle
-    // (Unity MonoBehaviour) which forwards Unity's Update/OnGUI/quit callbacks.
-    public abstract class BeyondMod
-    {
-        public virtual void OnInitialize() { }
-        public virtual void OnUpdate() { }
-        public virtual void OnGUI() { }
-        public virtual void OnApplicationQuit() { }
-
-        public BeyondLogger LoggerInstance { get; } = new BeyondLogger();
-    }
-
-    // Instance + static logging facades. Everything funnels into the Unity
-    // player log (Player.log), which is where our standalone build's output
-    // goes.
-    public sealed class BeyondLogger
-    {
-        public void Msg(string msg)
-        {
-            Debug.Log("[Beyond] " + msg);
-        }
-
-        public void Warning(string msg)
-        {
-            Debug.LogWarning("[Beyond] " + msg);
-        }
-
-        public void Error(string msg)
-        {
-            Debug.LogError("[Beyond] " + msg);
-        }
-    }
-
+    // Static logging facade. Everything funnels into the Unity player log
+    // (Player.log), which is where our standalone build's output goes.
     public static class BeyondLog
     {
         public static void Msg(string msg)

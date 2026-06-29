@@ -23,7 +23,7 @@ namespace BeyondAgent.Util
     ///   - Requests:          RequestQuestAccept / RequestTryQuestComplete
     /// </para>
     /// <para>
-    /// Designed to be ticked from BeyondMod.OnUpdate so it lives on the main
+    /// Designed to be ticked from BeyondAgentClass.OnUpdate so it lives on the main
     /// Unity thread (no marshalling needed for any of the game-side calls).
     /// </para>
     /// </summary>
