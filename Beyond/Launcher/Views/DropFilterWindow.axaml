@@ -35,7 +35,7 @@
                 <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
                     <StackPanel Spacing="10">
                         <TextBlock Text="Rarities (optional)" Classes="Header" Margin="0"/>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
                             <TextBlock Text="Common" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
                             <CheckBox Grid.Column="1" IsChecked="{Binding FilterRarityCommon}" VerticalAlignment="Center"/>
 
@@ -47,6 +47,12 @@
 
                             <TextBlock Grid.Row="3" Text="Epic" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
                             <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding FilterRarityEpic}" VerticalAlignment="Center"/>
+
+                            <TextBlock Grid.Row="4" Text="Legendary" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
+                            <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding FilterRarityLegendary}" VerticalAlignment="Center"/>
+
+                            <TextBlock Grid.Row="5" Text="Mythic" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
+                            <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding FilterRarityMythic}" VerticalAlignment="Center"/>
                         </Grid>
                     </StackPanel>
                 </Border>

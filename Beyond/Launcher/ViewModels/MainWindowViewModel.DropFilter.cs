@@ -30,6 +30,12 @@ namespace Launcher.ViewModels
         [ObservableProperty]
         private bool _filterRarityEpic;
 
+        [ObservableProperty]
+        private bool _filterRarityLegendary;
+
+        [ObservableProperty]
+        private bool _filterRarityMythic;
+
         // Accept/Reject action: true = accept (whitelist), false = reject (blacklist)
         [ObservableProperty]
         private bool _filterActionAccept = true;
@@ -110,6 +116,8 @@ namespace Launcher.ViewModels
             if (FilterRarityUncommon) rarities.Add("uncommon");
             if (FilterRarityRare) rarities.Add("rare");
             if (FilterRarityEpic) rarities.Add("epic");
+            if (FilterRarityLegendary) rarities.Add("legendary");
+            if (FilterRarityMythic) rarities.Add("mythic");
 
             // Build single payload with both filters
             var payload = new JObject

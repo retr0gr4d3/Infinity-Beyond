@@ -84,11 +84,10 @@ namespace BeyondAgent.Util
                     continue;
                 }
 
-                // The gem drop packet carries no per-item rarity (only the
-                // ItemPattern's Quality, which is the target gear's). Until the
-                // Quality->tier mapping is known, rarity is left empty and the
-                // safety guard in ShouldAllowDrop never dusts on rarity alone.
-                if (!ShouldAllowDrop(name, id, ""))
+                // Rarity comes from Quality. Gear carries it top-level; gems
+                // carry it on their ItemPattern (the gear they produce).
+                int quality = (int?)item["Quality"] ?? (int?)item["ItemPattern"]?["Quality"] ?? 0;
+                if (!ShouldAllowDrop(name, id, QualityToRarity(quality)))
                 {
                     _pendingDiscards.Enqueue((id, lootId));
                 }
@@ -125,6 +124,21 @@ namespace BeyondAgent.Util
                 }
             }
         }
+
+        /// <summary>
+        /// Map an item's Quality value to a rarity tier. Returns "" for unknown
+        /// qualities (0, or 11+) so the rarity guard never dusts on them.
+        /// </summary>
+        private static string QualityToRarity(int q) => q switch
+        {
+            >= 1 and <= 5 => "common",
+            6 => "uncommon",
+            7 => "rare",
+            8 => "epic",
+            9 => "legendary",
+            10 => "mythic",
+            _ => "",
+        };
 
         /// <summary>
         /// Check if an item drop should be allowed based on current filter.
