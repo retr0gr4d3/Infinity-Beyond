@@ -137,7 +137,7 @@
                                     </Grid>
                                 </ToggleButton>
 
-                                <Grid Margin="0,10,0,0" IsVisible="{Binding #ToggleLauncherModules.IsChecked}" ColumnDefinitions="*,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                                <Grid Margin="0,10,0,0" IsVisible="{Binding #ToggleLauncherModules.IsChecked}" ColumnDefinitions="*,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
                                     <Button Grid.Row="0" Grid.Column="0" Content="Fake Dev Options" Command="{Binding OpenFakeDevWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="0" Grid.Column="1" Content="Spoofers &amp; Jukebox" Command="{Binding OpenSpoofersWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="1" Grid.Column="0" Content="Shop Loader" Command="{Binding OpenShopLoaderWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
@@ -145,6 +145,7 @@
                                     <Button Grid.Row="2" Grid.Column="0" Content="Autoskills" Command="{Binding OpenAutoskillsCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="2" Grid.Column="1" Content="Quest Runner" Command="{Binding OpenQuestRunnerWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Content="Library" Command="{Binding OpenLibraryWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
+                                    <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Content="Drop Filter" Command="{Binding OpenDropFilterWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                 </Grid>
                             </StackPanel>
                         </Border>

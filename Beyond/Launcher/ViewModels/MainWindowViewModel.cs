@@ -619,6 +619,12 @@ namespace Launcher.ViewModels
         }
 
         [RelayCommand]
+        private void OpenDropFilterWindow()
+        {
+            ShowToolWindow<DropFilterWindow>();
+        }
+
+        [RelayCommand]
         private void OpenLogViewer()
         {
             ShowToolWindow<LogViewerWindow>();

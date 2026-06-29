@@ -20,14 +20,23 @@
         <Grid RowDefinitions="Auto,*" Margin="15">
             <!-- Controls -->
             <Border Grid.Row="0" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <ToggleButton Content="Sniff Client (C2S)" IsChecked="{Binding SnifferClientActive}"/>
-                        <ToggleButton Content="Sniff Server (S2C)" IsChecked="{Binding SnifferServerActive}"/>
-                    </StackPanel>
-                    <TextBlock Grid.Column="1" Text="Click a packet header to view its raw JSON payload" VerticalAlignment="Center" FontSize="11" Foreground="#656770" HorizontalAlignment="Center"/>
-                    <Button Grid.Column="2" Content="Clear Sniffer Logs" Command="{Binding ClearSnifferLogsCommand}"/>
-                </Grid>
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="15">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ToggleButton Content="Sniff Client (C2S)" IsChecked="{Binding SnifferClientActive}"/>
+                            <ToggleButton Content="Sniff Server (S2C)" IsChecked="{Binding SnifferServerActive}"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="Click a packet header to view its raw JSON payload" VerticalAlignment="Center" FontSize="11" Foreground="#656770" HorizontalAlignment="Center"/>
+                        <Button Grid.Column="2" Content="Clear Sniffer Logs" Command="{Binding ClearSnifferLogsCommand}"/>
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,*,Auto,*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="Ignore C2S:" VerticalAlignment="Center" FontSize="11" Foreground="#8F909A"/>
+                        <TextBox Grid.Column="1" Text="{Binding IgnoredClientPacketsInput}" Watermark="RequestAttackInput,..." FontSize="11"/>
+                        <TextBlock Grid.Column="2" Text="Ignore S2C:" VerticalAlignment="Center" FontSize="11" Foreground="#8F909A"/>
+                        <TextBox Grid.Column="3" Text="{Binding IgnoredServerPacketsInput}" Watermark="ResponseAttack,..." FontSize="11"/>
+                        <Button Grid.Column="4" Content="Apply" Command="{Binding ApplySnifferFilterCommand}"/>
+                    </Grid>
+                </StackPanel>
             </Border>
 
             <!-- Grid Layout -->

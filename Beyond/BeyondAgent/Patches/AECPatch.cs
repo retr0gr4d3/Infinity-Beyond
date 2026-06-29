@@ -77,6 +77,14 @@ namespace BeyondAgent.Patches
             }
             catch { return; }
 
+            // Drop filter: queue any rejected reward drops for dusting.
+            // Cheap prefilter so we only parse reward packets.
+            if (rawJson.Contains("\"rewardPlayer\""))
+            {
+                try { DropFilterEngine.HandleRewardPacket(rawJson); }
+                catch (System.Exception ex) { BeyondLog.Error($"[DropFilter] reward parse: {ex.Message}"); }
+            }
+
             if (BeyondAgentClass.snifferServerActive)
             {
                 try

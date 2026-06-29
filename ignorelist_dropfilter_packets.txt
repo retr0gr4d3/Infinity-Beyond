@@ -1,0 +1,5 @@
+c2s:
+RequestAttackInput,RequestGar,RequestMovement,RequestStartCharge,RequestMoveOK,RequestMoveToCell
+
+s2c:
+ResponseAttack,ResponseAttackInput,ResponseChangeState,ResponseDot,ResponseHPMP,ResponseCellJoin,ResponseMtls,ResponseAuraChange,StatusEffect,ResponseRespawnMon,MonDeath,MonKill
