@@ -21,8 +21,8 @@
                 <Border Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="10">
                     <StackPanel Spacing="4">
                         <TextBlock Text="Keep drops are looted into your inventory; Reject drops are dusted. Anything in neither list is left in the drop window." Foreground="#8F909A" FontSize="9" TextWrapping="Wrap"/>
-                        <TextBlock Text="Comma-separated. Use Name, an item ID, or Name:rarity for gems (common, uncommon, rare, epic, legendary, mythic). A bare name matches any rarity. Use *gem:rarity to match ANY gem of a tier (or *gem for any gem)." Foreground="#656770" FontSize="9" TextWrapping="Wrap"/>
-                        <TextBlock Text="e.g. Lucky Cape Gem:rare, *gem:legendary, Blinding Light of Destiny" Foreground="#656770" FontSize="9" FontStyle="Italic" TextWrapping="Wrap"/>
+                        <TextBlock Text="Comma-separated. Use Name, an item ID, or Name:rarity for gems (common, uncommon, rare, epic, legendary, mythic). A bare name matches any rarity. Wildcards: *gem:rarity (any gem of a tier, or *gem for any gem), *ac (any AC item), *nonac (any non-AC item, gems excluded)." Foreground="#656770" FontSize="9" TextWrapping="Wrap"/>
+                        <TextBlock Text="e.g. Lucky Cape Gem:rare, *gem:legendary, *nonac, Blinding Light of Destiny" Foreground="#656770" FontSize="9" FontStyle="Italic" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 

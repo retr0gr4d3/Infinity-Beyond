@@ -18,17 +18,21 @@ namespace BeyondAgent.Util
     /// Each list entry is "Name", a numeric "ID", or "Name:rarity". A bare name/ID
     /// matches at any rarity (rarity is ignored for regular items). The ":rarity"
     /// qualifier only applies to GEMS (a drop with an ItemPattern); a gem's tier
-    /// comes from ItemPattern.Quality.
+    /// comes from ItemPattern.Quality. Wildcards match by category rather than name:
+    /// "*gem" (any gem, optionally ":rarity"), "*ac" (any AC/member-coin item), and
+    /// "*nonac" (any non-AC equipment item; gems excluded).
     /// </summary>
     public static class DropFilterEngine
     {
         /// <summary>One parsed filter entry: a name or numeric ID with an optional gem-rarity qualifier.</summary>
         private sealed class Entry
         {
-            public string Name;   // null when the entry parsed as a numeric ID or wildcard
-            public int? Id;       // set when the entry parsed as an integer
-            public string Rarity; // null = any rarity (bare name); else a gem tier
-            public bool AnyGem;   // "*gem" wildcard: matches any gem (of Rarity, if set), ignoring name
+            public string Name;     // null when the entry parsed as a numeric ID or wildcard
+            public int? Id;         // set when the entry parsed as an integer
+            public string Rarity;   // null = any rarity (bare name); else a gem tier
+            public bool AnyGem;     // "*gem" wildcard: matches any gem (of Rarity, if set), ignoring name
+            public bool AnyAc;      // "*ac" wildcard: matches any AC (member-coin) item, ignoring name
+            public bool AnyNonAc;   // "*nonac" wildcard: matches any non-AC, non-gem item, ignoring name
         }
 
         private static List<Entry> _keep = new();
@@ -190,11 +194,12 @@ namespace BeyondAgent.Util
                 // ItemPattern.Quality; regular items have no gem-rarity.
                 bool isGem = item.ItemPattern != null;
                 string rarity = isGem ? QualityToRarity(item.ItemPattern.Quality) : null;
+                bool isAc = item.isAC();
 
                 bool keep, reject;
                 lock (_gate)
                 {
-                    keep = MatchesAny(_keep, name, id, isGem, rarity);
+                    keep = MatchesAny(_keep, name, id, isGem, rarity, isAc);
                     if (keep)
                     {
                         reject = false;
@@ -206,7 +211,7 @@ namespace BeyondAgent.Util
                     }
                     else
                     {
-                        reject = MatchesAny(_reject, name, id, isGem, rarity);
+                        reject = MatchesAny(_reject, name, id, isGem, rarity, isAc);
                     }
                 }
 
@@ -230,7 +235,7 @@ namespace BeyondAgent.Util
 
                     lock (_gate) { _sentLootIds.Add(lootId); }
                     _nextActionTime = now + ActionDelaySeconds;
-                    Diag($"{(keep ? "KEEP getDrop" : "REJECT discardDrop")} Name=[{name}] ID={id} LootID={lootId} gem={isGem} rarity=[{rarity}]");
+                    Diag($"{(keep ? "KEEP getDrop" : "REJECT discardDrop")} Name=[{name}] ID={id} LootID={lootId} gem={isGem} rarity=[{rarity}] ac={isAc}");
                 }
                 catch (System.Exception ex)
                 {
@@ -289,6 +294,16 @@ namespace BeyondAgent.Util
                     // "*gem:rare" -> any rare gem; "*gem" alone -> any gem, any tier.
                     entry.AnyGem = true;
                 }
+                else if (string.Equals(token, "*ac", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    // "*ac" -> any AC (member-coin) item, ignoring name and rarity.
+                    entry.AnyAc = true;
+                }
+                else if (string.Equals(token, "*nonac", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    // "*nonac" -> any non-AC equipment item (gems excluded), ignoring name and rarity.
+                    entry.AnyNonAc = true;
+                }
                 else if (int.TryParse(token, out int id))
                 {
                     entry.Id = id;
@@ -305,7 +320,7 @@ namespace BeyondAgent.Util
         }
 
         /// <summary>Caller must hold _gate.</summary>
-        private static bool MatchesAny(List<Entry> entries, string name, int id, bool isGem, string rarity)
+        private static bool MatchesAny(List<Entry> entries, string name, int id, bool isGem, string rarity, bool isAc)
         {
             foreach (Entry e in entries)
             {
@@ -316,6 +331,19 @@ namespace BeyondAgent.Util
                     {
                         return true;
                     }
+                    continue;
+                }
+
+                // "*ac" / "*nonac" wildcards: match by member-coin status, ignoring name.
+                if (e.AnyAc)
+                {
+                    if (isAc) return true;
+                    continue;
+                }
+                if (e.AnyNonAc)
+                {
+                    // Equipment only — gems are excluded so "*nonac" doesn't sweep them.
+                    if (!isAc && !isGem) return true;
                     continue;
                 }
 
