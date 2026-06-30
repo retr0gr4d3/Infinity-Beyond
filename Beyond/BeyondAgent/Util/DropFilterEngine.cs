@@ -1,133 +1,352 @@
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace BeyondAgent.Util
 {
     /// <summary>
-    /// Drop filter that can whitelist (accept only) or blacklist (reject) items.
-    /// Filters by name, ID, and/or rarity. Drops arrive in "rewardPlayer" s2c
-    /// packets; anything the filter rejects is dusted via a "discardDrop" c2s
-    /// request.
+    /// Drop filter driven by a main-thread scan of the game's loot inventory
+    /// (<see cref="Game.lootItems"/>). Two independent lists:
+    ///   - Keep   -> matching drops are looted into the inventory (MoveToInv / getDrop).
+    ///   - Reject -> matching drops are dusted (DiscardItem / discardDrop).
+    /// Drops matching neither are left in the loot window. "Delete others" turns
+    /// Keep into a strict whitelist: everything not kept is dusted (Reject ignored).
     ///
-    /// Threading: HandleRewardPacket runs on the network thread, ApplyDropFilter
-    /// on the main thread — filter state is guarded by _gate. Actual sends are
-    /// queued and flushed by DrainDiscards() on the main thread (OnUpdate).
+    /// Because it scans the live loot list every tick, the filter is retroactive:
+    /// items already sitting in the loot window when the filter starts are actioned
+    /// on the next scan, the same as freshly dropped ones (the game adds every
+    /// reward drop to Game.lootItems via ResponseRewardPlayer).
+    ///
+    /// Each list entry is "Name", a numeric "ID", or "Name:rarity". A bare name/ID
+    /// matches at any rarity (rarity is ignored for regular items). The ":rarity"
+    /// qualifier only applies to GEMS (a drop with an ItemPattern); a gem's tier
+    /// comes from ItemPattern.Quality.
     /// </summary>
     public static class DropFilterEngine
     {
-        private static List<string> _filterItemNames = new();
-        private static List<int> _filterItemIds = new();
-        private static List<string> _filterRarities = new();
-        private static bool _acceptOnly = true; // true = accept (whitelist), false = reject (blacklist)
+        /// <summary>One parsed filter entry: a name or numeric ID with an optional gem-rarity qualifier.</summary>
+        private sealed class Entry
+        {
+            public string Name;   // null when the entry parsed as a numeric ID or wildcard
+            public int? Id;       // set when the entry parsed as an integer
+            public string Rarity; // null = any rarity (bare name); else a gem tier
+            public bool AnyGem;   // "*gem" wildcard: matches any gem (of Rarity, if set), ignoring name
+        }
+
+        private static List<Entry> _keep = new();
+        private static List<Entry> _reject = new();
+        private static bool _deleteOthers;
         private static readonly object _gate = new();
 
-        // Drops to dust, produced on the network thread, flushed on the main thread.
-        private static readonly ConcurrentQueue<(long itemId, long lootId)> _pendingDiscards = new();
+        // The server rate-limits loot actions and replies "Spam Detected" if they
+        // come too fast (observed: bursts <0.2s apart get blocked; actions seconds
+        // apart succeed). So we act on ONE drop at a time, spaced by a wall-clock
+        // delay, and back off hard whenever the server flags spam.
+        //
+        // _sentLootIds = drops we've already sent a request for (skipped until the
+        // server removes them from the loot list, i.e. confirms). _nextActionTime
+        // is the earliest realtime we may send the next action.
+        private static readonly HashSet<int> _sentLootIds = new();
+        private static float _nextActionTime;
+
+        // Set from the network thread when the server replies "Spam Detected";
+        // consumed on the main thread in Tick (Unity's Time API is main-thread only).
+        private static volatile bool _spamDetected;
+
+        private const float ActionDelaySeconds = 2.0f;
+        private const float SpamBackoffSeconds = 8.0f;
+
+        private static readonly HashSet<string> _knownRarities = new(System.StringComparer.OrdinalIgnoreCase)
+        {
+            "common", "uncommon", "rare", "epic", "legendary", "mythic",
+        };
 
         /// <summary>
-        /// Apply a new filter configuration. Clears previous filter.
-        /// If no items/rarities specified, disables filtering entirely.
+        /// Apply new Keep/Reject lists and the delete-others mode. Clears the
+        /// "already sent" set so the new filter re-acts on everything currently
+        /// in the loot window (retroactive). If both lists are empty and
+        /// deleteOthers is off, filtering is disabled.
         /// </summary>
-        public static void ApplyDropFilter(List<string> itemNames, List<int> itemIds, List<string> rarities, string action)
+        public static void ApplyDropFilter(string keepRaw, string rejectRaw, bool deleteOthers)
+        {
+            List<Entry> keep = ParseEntries(keepRaw);
+            List<Entry> reject = ParseEntries(rejectRaw);
+            lock (_gate)
+            {
+                _keep = keep;
+                _reject = reject;
+                _deleteOthers = deleteOthers;
+                _sentLootIds.Clear();
+            }
+            _nextActionTime = 0f;
+            Diag($"ApplyDropFilter keep={keep.Count} reject={reject.Count} deleteOthers={deleteOthers} keepRaw=[{keepRaw}] rejectRaw=[{rejectRaw}]");
+        }
+
+        /// <summary>Clear the filter.</summary>
+        public static void ClearFilter()
         {
             lock (_gate)
             {
-                if (itemNames?.Count > 0 || itemIds?.Count > 0 || rarities?.Count > 0)
-                {
-                    _filterItemNames = itemNames ?? new();
-                    _filterItemIds = itemIds ?? new();
-                    _filterRarities = rarities?.Select(r => r.ToLower()).ToList() ?? new();
-                    _acceptOnly = action?.ToLower() == "accept";
-                }
-                else
-                {
-                    DisableFilter();
-                }
+                _keep = new();
+                _reject = new();
+                _deleteOthers = false;
+                _sentLootIds.Clear();
             }
+            _nextActionTime = 0f;
         }
 
         /// <summary>
-        /// Inspect a "rewardPlayer" packet and queue any rejected drops for dusting.
-        /// Cheap no-op when no filter is active. Safe to call on the network thread.
+        /// The server replied "Spam Detected" — back off and let pending drops be
+        /// retried after the cooldown. Called from the s2c packet hook.
         /// </summary>
-        public static void HandleRewardPacket(string rawJson)
+        public static void NotifySpamDetected()
         {
-            if (!HasActiveFilter() || string.IsNullOrEmpty(rawJson))
+            // Runs on the network thread — no Unity API here. Tick applies the
+            // backoff on the main thread.
+            lock (_gate) { _sentLootIds.Clear(); }
+            _spamDetected = true;
+        }
+
+        /// <summary>
+        /// Scan the live loot inventory and act on matches. Main thread only —
+        /// call from OnUpdate. Throttled internally.
+        /// </summary>
+        public static void Tick()
+        {
+            bool active;
+            lock (_gate) { active = _keep.Count > 0 || _reject.Count > 0 || _deleteOthers; }
+            if (!active)
             {
                 return;
             }
 
-            JObject obj;
-            try { obj = JObject.Parse(rawJson); }
+            Loot loot = Game.lootItems;
+            if (loot == null)
+            {
+                return;
+            }
+
+            List<InventoryItem> list;
+            try { list = loot.getLootList(); }
             catch { return; }
-
-            if ((string)obj["Cmd"] != "rewardPlayer" || obj["items"] is not JArray items)
+            if (list == null)
             {
                 return;
             }
 
-            foreach (JToken tok in items)
+            var present = new HashSet<int>();
+            foreach (InventoryItem it in list)
             {
-                if (tok is not JObject item)
-                {
-                    continue;
-                }
-
-                string name = (string)item["Name"] ?? "";
-                int id = (int?)item["ID"] ?? 0;
-                long lootId = (long?)item["LootID"] ?? 0;
-                if (lootId == 0)
-                {
-                    continue;
-                }
-
-                // Rarity comes from Quality. Gear carries it top-level; gems
-                // carry it on their ItemPattern (the gear they produce).
-                int quality = (int?)item["Quality"] ?? (int?)item["ItemPattern"]?["Quality"] ?? 0;
-                if (!ShouldAllowDrop(name, id, QualityToRarity(quality)))
-                {
-                    _pendingDiscards.Enqueue((id, lootId));
-                }
+                if (it != null && it.LootID > 0) present.Add(it.LootID);
             }
-        }
 
-        /// <summary>
-        /// Flush queued dusts as discardDrop requests. Main thread only.
-        /// </summary>
-        public static void DrainDiscards()
-        {
-            if (_pendingDiscards.IsEmpty || AEC.Instance == null)
+            // Forget drops the server has removed (our request succeeded), so they
+            // can't pile up and a fresh drop reusing the LootID can be re-actioned.
+            lock (_gate) { _sentLootIds.RemoveWhere(id => !present.Contains(id)); }
+
+            float now = UnityEngine.Time.realtimeSinceStartup;
+
+            // The server flagged spam (set on the network thread): back off hard.
+            if (_spamDetected)
+            {
+                _spamDetected = false;
+                _nextActionTime = now + SpamBackoffSeconds;
+                Diag($"spam detected -> backing off {SpamBackoffSeconds}s");
+            }
+
+            // Wall-clock rate limit: at most one loot action per ActionDelaySeconds.
+            if (now < _nextActionTime)
             {
                 return;
             }
 
-            while (_pendingDiscards.TryDequeue(out (long itemId, long lootId) drop))
+            // Act on exactly one drop per pass, then wait out the delay.
+            foreach (InventoryItem item in list)
             {
+                if (item == null)
+                {
+                    continue;
+                }
+
+                int lootId = item.LootID;
+                if (lootId <= 0)
+                {
+                    continue;
+                }
+
+                // Already requested and not yet removed -> leave it (avoid re-spamming
+                // the same drop; it's retried after a spam backoff or re-apply).
+                lock (_gate)
+                {
+                    if (_sentLootIds.Contains(lootId))
+                    {
+                        continue;
+                    }
+                }
+
+                string name = item.Name ?? "";
+                int id = item.ID;
+
+                // The game treats a drop as a gem iff it has an ItemPattern
+                // (CombatLootDrop.SetItem). Gems take their rarity from
+                // ItemPattern.Quality; regular items have no gem-rarity.
+                bool isGem = item.ItemPattern != null;
+                string rarity = isGem ? QualityToRarity(item.ItemPattern.Quality) : null;
+
+                bool keep, reject;
+                lock (_gate)
+                {
+                    keep = MatchesAny(_keep, name, id, isGem, rarity);
+                    if (keep)
+                    {
+                        reject = false;
+                    }
+                    else if (_deleteOthers)
+                    {
+                        // Strict whitelist: everything not kept is dusted.
+                        reject = true;
+                    }
+                    else
+                    {
+                        reject = MatchesAny(_reject, name, id, isGem, rarity);
+                    }
+                }
+
+                if (!keep && !reject)
+                {
+                    continue;
+                }
+
                 try
                 {
-                    JObject payload = new()
+                    // The game's own methods build the exact RequestGetDrop /
+                    // RequestDiscardDrop a real client sends.
+                    if (keep)
                     {
-                        ["ItemID"] = drop.itemId,
-                        ["LootID"] = drop.lootId,
-                        ["Cmd"] = "discardDrop",
-                        ["Params"] = new JArray(drop.itemId.ToString(), drop.lootId.ToString()),
-                    };
-                    AEC.Instance.sendRequest(new Request(payload.ToString(Formatting.None)));
-                    BeyondLog.Msg($"[DropFilter] Dusted drop ItemID={drop.itemId} LootID={drop.lootId}");
+                        loot.MoveToInv(item);
+                    }
+                    else
+                    {
+                        loot.DiscardItem(item);
+                    }
+
+                    lock (_gate) { _sentLootIds.Add(lootId); }
+                    _nextActionTime = now + ActionDelaySeconds;
+                    Diag($"{(keep ? "KEEP getDrop" : "REJECT discardDrop")} Name=[{name}] ID={id} LootID={lootId} gem={isGem} rarity=[{rarity}]");
                 }
                 catch (System.Exception ex)
                 {
-                    BeyondLog.Error($"[DropFilter] discard failed: {ex.Message}");
+                    lock (_gate) { _sentLootIds.Add(lootId); }
+                    _nextActionTime = now + ActionDelaySeconds;
+                    Diag($"send failed ID={id} LootID={lootId}: {ex.Message}");
+                    BeyondLog.Error($"[DropFilter] send failed: {ex.Message}");
                 }
+
+                return; // one action per pass; wait out the delay
             }
         }
 
         /// <summary>
-        /// Map an item's Quality value to a rarity tier. Returns "" for unknown
-        /// qualities (0, or 11+) so the rarity guard never dusts on them.
+        /// Parse "Lucky Cape Gem:rare, Blinding Light of Destiny, 5357" into entries.
+        /// Comma-separated; multi-word names are preserved. A trailing ":rarity" is
+        /// only split off when the suffix is a known tier, so names containing a
+        /// colon survive intact.
+        /// </summary>
+        private static List<Entry> ParseEntries(string raw)
+        {
+            var result = new List<Entry>();
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return result;
+            }
+
+            foreach (string part in raw.Split(','))
+            {
+                string token = part.Trim();
+                if (token.Length == 0)
+                {
+                    continue;
+                }
+
+                string rarity = null;
+                int colon = token.LastIndexOf(':');
+                if (colon >= 0)
+                {
+                    string suffix = token.Substring(colon + 1).Trim();
+                    if (_knownRarities.Contains(suffix))
+                    {
+                        rarity = suffix.ToLower();
+                        token = token.Substring(0, colon).Trim();
+                    }
+                }
+
+                if (token.Length == 0)
+                {
+                    continue;
+                }
+
+                var entry = new Entry { Rarity = rarity };
+                if (string.Equals(token, "*gem", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    // "*gem:rare" -> any rare gem; "*gem" alone -> any gem, any tier.
+                    entry.AnyGem = true;
+                }
+                else if (int.TryParse(token, out int id))
+                {
+                    entry.Id = id;
+                }
+                else
+                {
+                    entry.Name = token;
+                }
+
+                result.Add(entry);
+            }
+
+            return result;
+        }
+
+        /// <summary>Caller must hold _gate.</summary>
+        private static bool MatchesAny(List<Entry> entries, string name, int id, bool isGem, string rarity)
+        {
+            foreach (Entry e in entries)
+            {
+                // "*gem" wildcard: match any gem, optionally constrained to a tier.
+                if (e.AnyGem)
+                {
+                    if (isGem && (e.Rarity == null || string.Equals(e.Rarity, rarity, System.StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return true;
+                    }
+                    continue;
+                }
+
+                bool nameMatch = e.Id.HasValue
+                    ? e.Id.Value == id
+                    : string.Equals(e.Name, name, System.StringComparison.OrdinalIgnoreCase);
+                if (!nameMatch)
+                {
+                    continue;
+                }
+
+                // Bare name/ID -> matches at any rarity (universal, the rule for items).
+                if (e.Rarity == null)
+                {
+                    return true;
+                }
+
+                // A rarity qualifier only ever matches a gem of that exact tier.
+                if (isGem && string.Equals(e.Rarity, rarity, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Map a gem's ItemPattern.Quality to a rarity tier. Positionally mirrors
+        /// the game's CombatLootDrop.QualityToLootRarity (5+ ladder, &lt;5 = common),
+        /// using Beyond's label vocabulary. Returns "" for unknown qualities.
         /// </summary>
         private static string QualityToRarity(int q) => q switch
         {
@@ -141,60 +360,18 @@ namespace BeyondAgent.Util
         };
 
         /// <summary>
-        /// Check if an item drop should be allowed based on current filter.
-        /// Returns true if DROP IS ALLOWED, false if it should be dusted.
+        /// Diagnostic breadcrumb. BeyondLog -> Debug.Log isn't captured in this
+        /// build's Player.log, so we also drop a synthetic entry into the
+        /// always-on packets.jsonl, where it's reliably greppable as "__dropfilter".
         /// </summary>
-        public static bool ShouldAllowDrop(string itemName, int itemId, string itemRarity)
+        private static void Diag(string msg)
         {
-            lock (_gate)
+            BeyondLog.Msg($"[DropFilter] {msg}");
+            try
             {
-                if (!HasActiveFilterLocked()) return true; // No filter = allow all
-
-                // Never dust an item whose rarity we can't determine when a
-                // rarity filter is active — fail safe toward keeping the item.
-                if (_filterRarities.Count > 0 && string.IsNullOrEmpty(itemRarity))
-                {
-                    return true;
-                }
-
-                bool matchesName = _filterItemNames.Count == 0 || _filterItemNames.Contains(itemName, System.StringComparer.OrdinalIgnoreCase);
-                bool matchesId = _filterItemIds.Count == 0 || _filterItemIds.Contains(itemId);
-                bool matchesRarity = _filterRarities.Count == 0 || _filterRarities.Contains(itemRarity?.ToLower());
-
-                bool isMatch = matchesName && matchesId && matchesRarity;
-
-                return _acceptOnly ? isMatch : !isMatch;
+                PacketLog.Write("s2c", $"{{\"Cmd\":\"__dropfilter\",\"msg\":{Newtonsoft.Json.JsonConvert.SerializeObject(msg)}}}", synthetic: true);
             }
+            catch { }
         }
-
-        /// <summary>
-        /// Clear any active filter.
-        /// </summary>
-        public static void ClearFilter()
-        {
-            lock (_gate)
-            {
-                DisableFilter();
-            }
-        }
-
-        private static void DisableFilter()
-        {
-            _filterItemNames.Clear();
-            _filterItemIds.Clear();
-            _filterRarities.Clear();
-            _acceptOnly = true;
-        }
-
-        private static bool HasActiveFilter()
-        {
-            lock (_gate)
-            {
-                return HasActiveFilterLocked();
-            }
-        }
-
-        private static bool HasActiveFilterLocked() =>
-            _filterItemNames.Count > 0 || _filterItemIds.Count > 0 || _filterRarities.Count > 0;
     }
 }

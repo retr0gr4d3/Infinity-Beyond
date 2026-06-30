@@ -19,52 +19,27 @@
             <StackPanel Spacing="12">
                 <!-- Instructions -->
                 <Border Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="10">
-                    <TextBlock Text="Filter by items AND/OR rarities. Both optional." Foreground="#8F909A" FontSize="9" TextWrapping="Wrap"/>
-                </Border>
-
-                <!-- Items Filter -->
-                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
-                    <StackPanel Spacing="8">
-                        <TextBlock Text="Items (optional)" Classes="Header" Margin="0"/>
-                        <TextBlock Text="Comma-separated. Multi-word names like this: Thief Armor Gem,Lucky Cape Gem,1,2" FontSize="9" Foreground="#656770" TextWrapping="Wrap"/>
-                        <TextBox Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" Padding="8" CornerRadius="4" Foreground="#E2E4E9" Text="{Binding ItemsFilterInput}" MinHeight="50" TextWrapping="Wrap" AcceptsReturn="True"/>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Keep drops are looted into your inventory; Reject drops are dusted. Anything in neither list is left in the drop window." Foreground="#8F909A" FontSize="9" TextWrapping="Wrap"/>
+                        <TextBlock Text="Comma-separated. Use Name, an item ID, or Name:rarity for gems (common, uncommon, rare, epic, legendary, mythic). A bare name matches any rarity. Use *gem:rarity to match ANY gem of a tier (or *gem for any gem)." Foreground="#656770" FontSize="9" TextWrapping="Wrap"/>
+                        <TextBlock Text="e.g. Lucky Cape Gem:rare, *gem:legendary, Blinding Light of Destiny" Foreground="#656770" FontSize="9" FontStyle="Italic" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Rarities Filter -->
+                <!-- Keep List -->
                 <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="Rarities (optional)" Classes="Header" Margin="0"/>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
-                            <TextBlock Text="Common" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
-                            <CheckBox Grid.Column="1" IsChecked="{Binding FilterRarityCommon}" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="1" Text="Uncommon" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
-                            <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding FilterRarityUncommon}" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="2" Text="Rare" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
-                            <CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding FilterRarityRare}" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="3" Text="Epic" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
-                            <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding FilterRarityEpic}" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="4" Text="Legendary" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
-                            <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding FilterRarityLegendary}" VerticalAlignment="Center"/>
-
-                            <TextBlock Grid.Row="5" Text="Mythic" Foreground="#E2E4E9" FontSize="11" VerticalAlignment="Center"/>
-                            <CheckBox Grid.Row="5" Grid.Column="1" IsChecked="{Binding FilterRarityMythic}" VerticalAlignment="Center"/>
-                        </Grid>
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Keep (loot to inventory)" Classes="Header" Margin="0"/>
+                        <TextBox Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" Padding="8" CornerRadius="4" Foreground="#E2E4E9" Text="{Binding KeepListInput}" MinHeight="60" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <CheckBox IsChecked="{Binding DeleteOthers}" Foreground="#E2E4E9" FontSize="11" Content="Delete all other drops (keep only the items listed above)"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Action -->
-                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                <!-- Reject List -->
+                <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" IsEnabled="{Binding RejectEnabled}">
                     <StackPanel Spacing="8">
-                        <TextBlock Text="Action" Classes="Header" Margin="0"/>
-                        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto">
-                            <RadioButton Grid.Column="0" GroupName="DropFilterAction" Content="Accept (Keep matching)" IsChecked="{Binding FilterActionAccept}" Foreground="#E2E4E9" FontSize="11"/>
-                            <RadioButton Grid.Column="1" GroupName="DropFilterAction" Content="Reject (Block matching)" IsChecked="{Binding FilterActionReject}" Foreground="#E2E4E9" FontSize="11"/>
-                        </Grid>
+                        <TextBlock Text="Reject (dust)" Classes="Header" Margin="0"/>
+                        <TextBox Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" Padding="8" CornerRadius="4" Foreground="#E2E4E9" Text="{Binding RejectListInput}" MinHeight="60" TextWrapping="Wrap" AcceptsReturn="True"/>
                     </StackPanel>
                 </Border>
 
