@@ -385,6 +385,7 @@ namespace BeyondAgent
             ItemCatalog.Init();
             MusicCatalog.Init();
             QuestChains.Init();
+            QuestDB.Init();
 
             string userDir = System.IO.Path.Combine(BeyondEnv.UserDataDirectory, "Beyond");
             System.IO.Directory.CreateDirectory(userDir);
@@ -3875,7 +3876,8 @@ namespace BeyondAgent
                               area = e.area,
                               frame = e.frame,
                               pad = e.pad,
-                              items = e.items
+                              items = e.items,
+                              mons = [.. e.mons]
                           }) :
                           [];
                 errorMsg = null;
@@ -3944,7 +3946,7 @@ namespace BeyondAgent
             y += 22f;
 
             // ---- Entries header ----
-            GUI.Label(new Rect(p, y, W - (p * 2), 18), "Entries:   qid | area | frame | pad | iters | -", labelStyle);
+            GUI.Label(new Rect(p, y, W - (p * 2), 18), "Entries:   qid | area | frame | pad | iters | mon (names/ids, comma) | -", labelStyle);
             y += 20f;
 
             // ---- Entries scroll list ----
@@ -3962,7 +3964,8 @@ namespace BeyondAgent
                 string sframe = GUI.TextField(new Rect(140, ey, 68, 26), ent.frame ?? "", textFieldStyle); ent.frame = sframe;
                 string spad = GUI.TextField(new Rect(214, ey, 58, 26), ent.pad ?? "Spawn", textFieldStyle); ent.pad = spad;
                 string sitems = GUI.TextField(new Rect(278, ey, 38, 26), ent.items.ToString(), textFieldStyle); int.TryParse(sitems, out int itemsval); ent.items = itemsval < 1 ? 1 : itemsval;
-                if (GUI.Button(new Rect(322, ey, 28, 26), "-", closeButtonStyle)) { _chainEditState.entries.RemoveAt(i); break; }
+                string smon = GUI.TextField(new Rect(322, ey, 140, 26), ent.MonText, textFieldStyle); ent.MonText = smon;
+                if (GUI.Button(new Rect(468, ey, 28, 26), "-", closeButtonStyle)) { _chainEditState.entries.RemoveAt(i); break; }
                 _chainEditState.entries[i] = ent;
             }
             if (GUI.Button(new Rect(0, _chainEditState.entries.Count * 32f, 28, 26), "+", closeButtonStyle))
@@ -4205,6 +4208,10 @@ namespace BeyondAgent
                     ["pad"] = string.IsNullOrEmpty(ent.pad) ? "Spawn" : ent.pad,
                     ["items"] = ent.items < 1 ? 1 : ent.items
                 };
+                if (ent.mons.Count > 0)
+                {
+                    o["mon"] = new JArray(ent.mons);
+                }
                 arr.Add(o);
             }
             return arr;
@@ -4782,7 +4789,8 @@ namespace BeyondAgent
                                 area = e.area ?? "",
                                 frame = e.frame ?? "",
                                 pad = e.pad ?? "Spawn",
-                                e.items
+                                e.items,
+                                mon = e.mons
                             });
                         }
                         chainsDict[kv.Key] = entries;

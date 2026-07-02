@@ -99,16 +99,46 @@ namespace Launcher.ViewModels
                 ChainEditorEntries.Clear();
                 foreach (JToken t in arr)
                 {
-                    ChainEditorEntries.Add(new ChainEntryViewModel
-                    {
-                        Qid = (int?)t["qid"] ?? 0,
-                        Area = (string?)t["area"] ?? "",
-                        Frame = (string?)t["frame"] ?? "",
-                        Pad = (string?)t["pad"] ?? "Spawn",
-                        Items = (int?)t["items"] ?? (int?)t["iters"] ?? 1
-                    });
+                    ChainEditorEntries.Add(EntryFromJson(t));
                 }
             }
+        }
+
+        // "mon" round-trip: stored as an array of name/id strings, edited as one
+        // comma-joined text field.
+        private static ChainEntryViewModel EntryFromJson(JToken t)
+        {
+            string mon = t["mon"] is JArray monArr
+                ? string.Join(", ", monArr.Values<string>())
+                : (string?)t["mon"] ?? "";
+            return new ChainEntryViewModel
+            {
+                Qid = (int?)t["qid"] ?? 0,
+                Area = (string?)t["area"] ?? "",
+                Frame = (string?)t["frame"] ?? "",
+                Pad = (string?)t["pad"] ?? "Spawn",
+                Items = (int?)t["items"] ?? (int?)t["iters"] ?? 1,
+                Mon = mon
+            };
+        }
+
+        private static JObject EntryToJson(ChainEntryViewModel ent)
+        {
+            JObject o = new()
+            {
+                ["qid"] = ent.Qid,
+                ["area"] = ent.Area?.Trim() ?? "",
+                ["frame"] = ent.Frame?.Trim() ?? "",
+                ["pad"] = string.IsNullOrWhiteSpace(ent.Pad) ? "Spawn" : ent.Pad.Trim(),
+                ["items"] = ent.Items < 1 ? 1 : ent.Items
+            };
+            string[] mons = (ent.Mon ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (mons.Length > 0)
+            {
+                o["mon"] = new JArray(mons);
+            }
+            return o;
         }
 
         [RelayCommand]
@@ -139,14 +169,7 @@ namespace Launcher.ViewModels
                     continue;
                 }
 
-                entries.Add(new JObject
-                {
-                    ["qid"] = ent.Qid,
-                    ["area"] = ent.Area?.Trim() ?? "",
-                    ["frame"] = ent.Frame?.Trim() ?? "",
-                    ["pad"] = string.IsNullOrWhiteSpace(ent.Pad) ? "Spawn" : ent.Pad.Trim(),
-                    ["items"] = ent.Items < 1 ? 1 : ent.Items
-                });
+                entries.Add(EntryToJson(ent));
             }
             _connection.SendCommand("SaveChain", new JObject
             {
@@ -182,14 +205,7 @@ namespace Launcher.ViewModels
                     continue;
                 }
 
-                entries.Add(new JObject
-                {
-                    ["qid"] = ent.Qid,
-                    ["area"] = ent.Area?.Trim() ?? "",
-                    ["frame"] = ent.Frame?.Trim() ?? "",
-                    ["pad"] = string.IsNullOrWhiteSpace(ent.Pad) ? "Spawn" : ent.Pad.Trim(),
-                    ["items"] = ent.Items < 1 ? 1 : ent.Items
-                });
+                entries.Add(EntryToJson(ent));
             }
             JObject obj = new()
             {
@@ -217,14 +233,7 @@ namespace Launcher.ViewModels
                         ChainEditorEntries.Clear();
                         foreach (JToken t in arr)
                         {
-                            ChainEditorEntries.Add(new ChainEntryViewModel
-                            {
-                                Qid = (int?)t["qid"] ?? 0,
-                                Area = (string?)t["area"] ?? "",
-                                Frame = (string?)t["frame"] ?? "",
-                                Pad = (string?)t["pad"] ?? "Spawn",
-                                Items = (int?)t["items"] ?? (int?)t["iters"] ?? 1
-                            });
+                            ChainEditorEntries.Add(EntryFromJson(t));
                         }
                         break;
                     }

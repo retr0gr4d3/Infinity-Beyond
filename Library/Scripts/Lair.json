@@ -1,0 +1,140 @@
+{
+  "Lair": [
+    {
+      "qid": 19,
+      "area": "lair",
+      "frame": "Enter",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "206"
+      ],
+      "_note": "Water Draconians  [206=Water Draconian]"
+    },
+    {
+      "qid": 20,
+      "area": "lair",
+      "frame": "R2",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "17"
+      ],
+      "_note": "The Wyverns  [17=Wyvern]"
+    },
+    {
+      "qid": 40,
+      "area": "lair",
+      "frame": "R4",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "15",
+        "205",
+        "14",
+        "204"
+      ],
+      "_note": "Two Types of Venom  [205=Venom Draconian, 204=Purple Draconian]"
+    },
+    {
+      "qid": 41,
+      "area": "lair",
+      "frame": "R5",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "12",
+        "202"
+      ],
+      "_note": "In the Dark  [202=Dark Draconian]"
+    },
+    {
+      "qid": 42,
+      "area": "lair",
+      "frame": "R6",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "11",
+        "12",
+        "13",
+        "14",
+        "15",
+        "16",
+        "199",
+        "201",
+        "202",
+        "203",
+        "204",
+        "205",
+        "206"
+      ],
+      "_note": "Using the Scales  [199=Fire Draconian, 201=Bronze Draconian, 202=Dark Draconian, 203=Golden Draconian, 204=Purple Draconian, 205=Venom Draconian, 206=Water Draconian]"
+    },
+    {
+      "qid": 43,
+      "area": "lair",
+      "frame": "R4",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "11",
+        "201"
+      ],
+      "_note": "The Bronze Age  [201=Bronze Draconian]"
+    },
+    {
+      "qid": 44,
+      "area": "lair",
+      "frame": "R4",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "13",
+        "203"
+      ],
+      "_note": "The Golden Age  [203=Golden Draconian]"
+    },
+    {
+      "qid": 45,
+      "area": "lair",
+      "frame": "R6",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "199"
+      ],
+      "_note": "Beings of Fire  [199=Fire Draconian]"
+    },
+    {
+      "qid": 46,
+      "area": "lair",
+      "frame": "R6",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "207"
+      ],
+      "_note": "Vasalkar, the Red Dragon  [207=Red Dragon]"
+    },
+    {
+      "qid": 47,
+      "area": "lair",
+      "frame": "R7",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "223"
+      ],
+      "_note": "To the Hoard!  [223=Hoard Guard]"
+    },
+    {
+      "qid": 59,
+      "area": "lair",
+      "frame": "R8",
+      "pad": "Up",
+      "items": 1,
+      "_note": "Find DragonSlayer Armor"
+    }
+  ]
+}
