@@ -114,7 +114,7 @@ namespace BeyondAgent.Util
         // Brief delay between consecutive turn-ins / iterations so we don't
         // trip the server's per-action spam cooldown (observed: tryQuestComplete
         // back-to-back returns rNotify "Spam Detected").
-        public float InterIterCooldown = 1.5f;
+        public float InterIterCooldown = 2.5f;
 
         // --- state ---
         public RunState State { get; private set; } = RunState.Idle;
@@ -227,6 +227,28 @@ namespace BeyondAgent.Util
                 TrackMovement();
                 if (IsMapLoading())
                 {
+                    return;
+                }
+
+                // Global rate-limit backoff. The server answers too-fast
+                // requests (accept / complete / interact) with an rNotify
+                // "Spam Detected: wait before attempting this action again".
+                // Hammering through it used to FAIL the whole chain; instead,
+                // when we see it, pause ALL actions for a few seconds and let
+                // it clear — nothing is lost, we just slow down.
+                if (RuntimeEvents.LastNotifyTime > _lastSpamSeen)
+                {
+                    string nlow = (RuntimeEvents.LastNotifyMsg ?? "").ToLowerInvariant();
+                    if (nlow.Contains("spam") || nlow.Contains("wait before"))
+                    {
+                        _lastSpamSeen = RuntimeEvents.LastNotifyTime;
+                        _spamBackoffUntil = Time.time + SpamBackoffSec;
+                        Log($"  [rate-limit] server asked us to slow down — backing off {SpamBackoffSec:0}s");
+                    }
+                }
+                if (Time.time < _spamBackoffUntil)
+                {
+                    StatusLine = $"rate-limited — waiting {_spamBackoffUntil - Time.time:0.0}s";
                     return;
                 }
 
@@ -1156,13 +1178,17 @@ namespace BeyondAgent.Util
             }
         }
 
-        // Complete a Cutscene objective (QOType 5, e.g. "Find the Bones" plays
-        // cutscene 35). RefArray[0] is the cutscene/dialog id. Faithful path:
-        // request the cutscene so the client plays it; our auto-skip patch ends
-        // it, and Dialogger_Manager.EndPressed then auto-sends watchCutscene when
-        // HasCutsceneObjective — crediting it, same as watching it in-world.
-        // Fallback: if no credit lands, send watchCutscene directly (works on
-        // our server; harmless if already credited).
+        // Complete a Cutscene objective (QOType 5, e.g. "Find the Bones" is
+        // cutscene 35). RefArray[0] is the cutscene/dialog id.
+        //
+        // We send watchCutscene DIRECTLY rather than playing the cutscene. The
+        // client's own completion path (Dialogger_Manager.EndPressed) sends the
+        // exact same RequestWatchCutscene(id) with no other context, so the
+        // server can't tell the difference and credits it. Crucially this avoids
+        // the BLACK-SCREEN bug that a triggered RequestGetCutscene left when the
+        // played cutscene didn't cleanly tear down its black overlay — and it
+        // never touches the user's Cutscene Auto-Skip toggle. Retries are widely
+        // spaced so they can't trip the server's spam guard.
         private void TickCutscene(QuestTurninItem obj)
         {
             SuppressAutoskills();
@@ -1170,7 +1196,7 @@ namespace BeyondAgent.Util
             if (obj.QOID != _csQoid)
             {
                 _csQoid = obj.QOID;
-                _csPhase = 0;
+                _csSentAt = -1f;
             }
 
             int progress = SumObjectiveProgress(Quest.Get(QuestID));
@@ -1189,37 +1215,24 @@ namespace BeyondAgent.Util
                 return;
             }
 
-            if (_csPhase == 0)
+            if (_csSentAt < 0f || Time.time - _csSentAt > CutsceneRetrySec)
             {
-                // Force auto-skip so the cutscene ends by itself (a bot can't
-                // press "End"), then trigger it. EndPressed auto-sends the
-                // watchCutscene that credits the objective.
-                BeyondAgentClass.autoSkipCutscenes = true;
-                Log($"  [cutscene] triggering cutscene {csid} for '{obj.Name}'");
-                try { AEC.Instance.sendRequest(new RequestGetCutscene(csid)); } catch { }
-                _csSentAt = Time.time;
-                _csPhase = 1;
-            }
-            else if (_csPhase == 1 && Time.time - _csSentAt > 6f)
-            {
-                Log($"  [cutscene] no credit after play — sending watchCutscene({csid}) directly");
-                try { AEC.Instance.sendRequest(new RequestWatchCutscene(csid)); } catch { }
-                _csSentAt = Time.time;
-                _csPhase = 2;
-            }
-            else if (_csPhase == 2 && Time.time - _csSentAt > 6f)
-            {
-                // Retry the direct send once more, then let the hunt timeout
-                // surface it if the server just won't credit.
+                Log($"  [cutscene] watchCutscene({csid}) for '{obj.Name}'");
                 try { AEC.Instance.sendRequest(new RequestWatchCutscene(csid)); } catch { }
                 _csSentAt = Time.time;
             }
-            StatusLine = $"cutscene {csid} for '{obj.Name}' ({Time.time - _csSentAt:0.0}s)";
+            StatusLine = $"completing cutscene {csid} for '{obj.Name}' ({StateAge():0.0}s)";
             CheckHuntTimeout();
         }
         private int _csQoid = -1;
-        private int _csPhase;
-        private float _csSentAt;
+        private float _csSentAt = -1f;
+        public float CutsceneRetrySec = 4f;
+
+        // Global rate-limit backoff, driven from Tick(): the server's "Spam
+        // Detected" rNotify sets a short window during which we send nothing.
+        private float _lastSpamSeen = -1f;
+        private float _spamBackoffUntil;
+        public float SpamBackoffSec = 6f;
 
         // Trigger a machine exactly as a mouse click would: MapMachine.Interact()
         // is public and runs the whole action pipeline, including the
@@ -1410,7 +1423,13 @@ namespace BeyondAgent.Util
                 string lower = msg.ToLowerInvariant();
                 if (lower.Contains("spam") || lower.Contains("wait before"))
                 {
-                    Fail($"server rate-limited turn-in: \"{msg}\" — bump InterIterCooldown");
+                    // Rate-limited, NOT a real rejection — back off and re-send
+                    // the turn-in rather than killing the whole chain (the old
+                    // behaviour, which stranded the runner mid-chain).
+                    _spamBackoffUntil = Time.time + SpamBackoffSec;
+                    _lastSpamSeen = RuntimeEvents.LastNotifyTime;
+                    Log($"  turn-in rate-limited — backing off {SpamBackoffSec:0}s and retrying");
+                    EnterState(RunState.TurningIn);
                     return;
                 }
                 if (lower.Contains("requirement") || lower.Contains("haven't")
@@ -1733,7 +1752,7 @@ namespace BeyondAgent.Util
                 _navFrame = null;
                 _interactQoid = -1;
                 _csQoid = -1;
-                _csPhase = 0;
+                _csSentAt = -1f;
                 _interactVisited.Clear();
                 _path?.Cancel();
             }
