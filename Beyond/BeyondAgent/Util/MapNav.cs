@@ -32,7 +32,8 @@ namespace BeyondAgent.Util
             public string Name = "";
             public string Frame = "";
             public UnityEngine.GameObject Go;
-            public bool Interactable;   // active + collider enabled (not spent/gated)
+            public BoxCollider2D Collider;   // cached; drives Interactable each refresh
+            public bool Interactable;        // active + collider enabled (not spent/gated)
         }
 
         /// <summary>Every cell/frame name in the loaded map (empty if none loaded).</summary>
@@ -49,11 +50,43 @@ namespace BeyondAgent.Util
             return [];
         }
 
+        // The machine set of a map is fixed (all cells instantiate with the map
+        // prefab), so we scan it ONCE per map and cache it — keyed by the area
+        // name, invalidated when the area changes or the cached objects are
+        // destroyed (map reload). Only the cheap live state (active + collider
+        // enabled, which flips as cells toggle and machines get spent) is
+        // refreshed per call. This turns a full FindObjectsByType scan every
+        // tick into an in-memory loop.
+        private static string _cacheKey;
+        private static List<MachineInfo> _cache;
+
         /// <summary>
         /// Every MapMachine across all cells (inactive included), tagged with the
-        /// cell it lives in. Cheap enough to call on demand.
+        /// cell it lives in. Cached per map; only live interactable-state is
+        /// refreshed each call.
         /// </summary>
         public static List<MachineInfo> AllMachines()
+        {
+            string key = "";
+            try { key = Area.currentArea?.Name ?? ""; } catch { }
+
+            bool valid = _cache != null && key.Length > 0 && key == _cacheKey
+                && (_cache.Count == 0 || _cache[0].Go != null);   // Unity null = destroyed
+            if (!valid)
+            {
+                _cache = ScanMachines();
+                _cacheKey = key;
+            }
+
+            foreach (MachineInfo m in _cache)
+            {
+                m.Interactable = m.Go != null && m.Go.activeInHierarchy
+                    && (m.Collider == null || m.Collider.enabled);
+            }
+            return _cache;
+        }
+
+        private static List<MachineInfo> ScanMachines()
         {
             List<MachineInfo> outp = [];
             try
@@ -67,13 +100,12 @@ namespace BeyondAgent.Util
                     {
                         continue;
                     }
-                    BoxCollider2D col = mm.gameObject.GetComponent<BoxCollider2D>();
                     outp.Add(new MachineInfo
                     {
                         Name = mm.gameObject.name ?? "",
                         Frame = FrameOf(mm.transform, cells),
                         Go = mm.gameObject,
-                        Interactable = mm.gameObject.activeInHierarchy && (col == null || col.enabled),
+                        Collider = mm.gameObject.GetComponent<BoxCollider2D>(),
                     });
                 }
             }
