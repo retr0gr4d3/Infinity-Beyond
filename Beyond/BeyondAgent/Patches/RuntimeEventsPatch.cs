@@ -18,6 +18,13 @@ namespace BeyondAgent.Patches
         // ResponseNotify (Cmd="rNotify")
         public static string LastNotifyMsg = "";
         public static float LastNotifyTime = -1f;
+
+        // Dialogger cutscene lifecycle (StartCutscene / EndPressed). The join
+        // cutscene after a cross-area tfer blocks server-side quest requests
+        // while it plays; QuestRunner waits on THIS instead of a fixed sleep.
+        public static bool CutsceneActive;
+        public static float LastCutsceneStartTime = -1f;
+        public static float LastCutsceneEndTime = -1f;
     }
 
     [HarmonyPatch(typeof(ResponseQuestComplete), nameof(ResponseQuestComplete.Execute))]
@@ -48,6 +55,28 @@ namespace BeyondAgent.Patches
 
             RuntimeEvents.LastNotifyMsg = __instance.msg ?? "";
             RuntimeEvents.LastNotifyTime = Time.time;
+        }
+    }
+
+    [HarmonyPatch(typeof(Dialogger_Manager), nameof(Dialogger_Manager.StartCutscene))]
+    public static class CutsceneStartedPatch
+    {
+        public static void Postfix()
+        {
+            RuntimeEvents.CutsceneActive = true;
+            RuntimeEvents.LastCutsceneStartTime = Time.time;
+        }
+    }
+
+    // EndPressed is both the user's "End" button and what the auto-skip patch
+    // invokes, so every cutscene exit funnels through here.
+    [HarmonyPatch(typeof(Dialogger_Manager), nameof(Dialogger_Manager.EndPressed))]
+    public static class CutsceneEndedPatch
+    {
+        public static void Postfix()
+        {
+            RuntimeEvents.CutsceneActive = false;
+            RuntimeEvents.LastCutsceneEndTime = Time.time;
         }
     }
 }

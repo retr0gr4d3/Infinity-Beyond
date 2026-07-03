@@ -2,6 +2,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace BeyondAgent.Util
 {
@@ -21,6 +22,21 @@ namespace BeyondAgent.Util
             public string frame = "";  // "" = stay in current frame (no moveToCell)
             public string pad = "Spawn";
             public int items = 1;
+            // Target monster filter for the hunt: display names (case-insensitive
+            // substring match) and/or numeric catalog ids. Empty = any hostile in
+            // frame. Names make the same entry work on live AQW, where the client
+            // never sees the server's kill-credit RefIDs.
+            public List<string> mons = [];
+
+            // Comma-joined view for the editors (both directions).
+            public string MonText
+            {
+                get => string.Join(", ", mons);
+                set => mons = [.. (value ?? "")
+                    .Split(',')
+                    .Select(s => s.Trim())
+                    .Where(s => s.Length > 0)];
+            }
 
             public override string ToString()
             {
@@ -141,14 +157,31 @@ namespace BeyondAgent.Util
                         continue;
                     }
 
-                    entries.Add(new Entry
+                    Entry entry = new()
                     {
                         qid = qid,
                         area = (string)e["area"] ?? "",
                         frame = (string)e["frame"] ?? "",
                         pad = string.IsNullOrEmpty((string)e["pad"]) ? "Spawn" : (string)e["pad"],
                         items = Math.Max(1, (int?)e["items"] ?? (int?)e["iters"] ?? 1),
-                    });
+                    };
+                    // "mon" is either an array of names/ids or one comma string.
+                    if (e["mon"] is JArray monArr)
+                    {
+                        foreach (JToken m in monArr)
+                        {
+                            string s = ((string)m ?? "").Trim();
+                            if (s.Length > 0)
+                            {
+                                entry.mons.Add(s);
+                            }
+                        }
+                    }
+                    else if (e["mon"] != null)
+                    {
+                        entry.MonText = (string)e["mon"];
+                    }
+                    entries.Add(entry);
                 }
                 if (entries.Count > 0)
                 {

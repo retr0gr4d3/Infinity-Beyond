@@ -1,0 +1,100 @@
+{
+  "Forest Zards": [
+    {
+      "qid": 236,
+      "area": "forest",
+      "frame": "Enter",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "388"
+      ],
+      "_note": " Zard Hunting 102  [388=Frogzard]"
+    },
+    {
+      "qid": 237,
+      "area": "forest",
+      "frame": "R12",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "7",
+        "1",
+        "105"
+      ],
+      "_note": "The Many Zardmen  [7=Zardman Spear, 1=Zardman Grunt, 105=Zardman Grunt]"
+    },
+    {
+      "qid": 238,
+      "area": "forest",
+      "frame": "R3",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "412"
+      ],
+      "_note": "Horcs vs Zards  [412=Horc Advance]"
+    },
+    {
+      "qid": 239,
+      "area": "forest",
+      "frame": "R12",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "7"
+      ],
+      "_note": "Zardmen Spearmen  [7=Zardman Spear]"
+    },
+    {
+      "qid": 240,
+      "area": "forest",
+      "frame": "Enter",
+      "pad": "spawn",
+      "items": 1,
+      "_note": "Zard for Breakfast? Ewww (has non-hunt objectives)"
+    },
+    {
+      "qid": 241,
+      "area": "forest",
+      "frame": "R4",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "1",
+        "105"
+      ],
+      "_note": "Gruntin' 'em Grunts  [1=Zardman Grunt, 105=Zardman Grunt]"
+    },
+    {
+      "qid": 242,
+      "area": "forest",
+      "frame": "Enter",
+      "pad": "spawn",
+      "items": 1,
+      "_note": "Find the Lucky Zard (has non-hunt objectives)"
+    },
+    {
+      "qid": 243,
+      "area": "forest",
+      "frame": "R14",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "414"
+      ],
+      "_note": "The Brutes, the Chief and the Hunter  [414=Horc Brute]"
+    },
+    {
+      "qid": 244,
+      "area": "forest",
+      "frame": "R15",
+      "pad": "Spawn",
+      "items": 1,
+      "mon": [
+        "423"
+      ],
+      "_note": "Chief of 'em Zards  [423=Zardman Chief]"
+    }
+  ]
+}

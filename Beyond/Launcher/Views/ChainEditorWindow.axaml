@@ -11,7 +11,7 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="30"
         WindowDecorations="BorderOnly"
-        Width="600" Height="530">
+        Width="660" Height="530">
 
     <DockPanel Classes="WindowRoot" LastChildFill="True">
         <v:TitleBar DockPanel.Dock="Top" Title="Quest Chain Editor"/>
@@ -35,7 +35,7 @@
             <ListBox Grid.Row="2" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4" ItemsSource="{Binding ChainEditorEntries}">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:ChainEntryViewModel">
-                        <Grid ColumnDefinitions="50,110,90,80,60,Auto" ColumnSpacing="8" Margin="0,2">
+                        <Grid ColumnDefinitions="50,95,75,65,50,120,Auto" ColumnSpacing="8" Margin="0,2">
                             <!-- Qid -->
                             <TextBox Grid.Column="0" Text="{Binding Qid}" PlaceholderText="QID"/>
                             <!-- Area -->
@@ -46,8 +46,11 @@
                             <TextBox Grid.Column="3" Text="{Binding Pad}" PlaceholderText="Pad"/>
                             <!-- Items -->
                             <TextBox Grid.Column="4" Text="{Binding Items}" PlaceholderText="Iters"/>
+                            <!-- Target monsters (names/ids, comma-separated; empty = any) -->
+                            <TextBox Grid.Column="5" Text="{Binding Mon}" PlaceholderText="Monsters"
+                                     ToolTip.Tip="Target monster names/ids, comma-separated. Empty = any hostile in the frame."/>
                             <!-- Remove button -->
-                            <Button Grid.Column="5" Content="-"
+                            <Button Grid.Column="6" Content="-"
                                     Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).RemoveChainEditorEntryCommand}"
                                     CommandParameter="{Binding}"
                                     Width="28" HorizontalContentAlignment="Center"/>
