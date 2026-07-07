@@ -329,7 +329,14 @@ namespace Launcher
 
         private void StartUnityProcessDeferred(int width, int height)
         {
-            if (_childHwnd == IntPtr.Zero || _processStarted)
+            // On Windows we require the host child HWND (the game re-parents into
+            // it). On macOS there is no cross-process window embedding, so the game
+            // launches as its own top-level window — everything else (Cecil patch,
+            // named pipe, tool windows) works the same.
+            // ponytail: mac runs the game un-embedded; true in-tab embedding is the
+            // deferred window-model decision — layer it here when settled.
+            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            if ((isWindows && _childHwnd == IntPtr.Zero) || _processStarted)
             {
                 return;
             }
@@ -424,10 +431,13 @@ namespace Launcher
                         }
                     }
 
+                    // -parentHWND is a Windows-only Unity arg; only pass it when we
+                    // actually have a host window to embed into.
+                    string embedArg = isWindows && _childHwnd != IntPtr.Zero ? $"-parentHWND {(long)_childHwnd} " : "";
                     ProcessStartInfo psi = new()
                     {
                         FileName = gameExe,
-                        Arguments = $"-parentHWND {(long)_childHwnd} -screen-width {width} -screen-height {height}",
+                        Arguments = $"{embedArg}-screen-width {width} -screen-height {height}",
                         WorkingDirectory = Path.GetDirectoryName(gameExe),
                         UseShellExecute = false
                     };
