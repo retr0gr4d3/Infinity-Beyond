@@ -117,7 +117,15 @@ namespace Launcher.ViewModels
         // Per-session pipe name. Bound to UnityWindowHost.PipeName (so the spawned
         // game's agent serves this exact pipe) and handed to the connection. Unique
         // per launcher session so multiple accounts coexist.
-        public string SessionPipeName { get; } = "BeyondAgent_" + System.Guid.NewGuid().ToString("N");
+        //
+        // Keep this SHORT. On macOS/Linux a "named pipe" is a Unix domain socket
+        // whose path is $TMPDIR + "CoreFxPipe_" + this name, and the OS caps that
+        // full path at 104 bytes (103 usable) — macOS's per-user $TMPDIR alone is
+        // ~49 chars. A full 32-char GUID here pushed the path to 104 and the agent
+        // could never bind its pipe, so the launcher never connected. 8 hex chars
+        // (32 bits) is ample uniqueness for the handful of local sessions a user
+        // runs at once while leaving comfortable headroom under the limit.
+        public string SessionPipeName { get; } = "Beyond_" + System.Guid.NewGuid().ToString("N")[..8];
 
         // Title shows in the session tab strip; IsSelected drives which session's
         // view is visible (all stay alive so every embedded game keeps running).
