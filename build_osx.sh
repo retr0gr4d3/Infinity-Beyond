@@ -18,6 +18,8 @@
 #   MAC_RID=osx-x64 ./build_osx.sh                          # force the mac RID
 #   TARGETS="mac" ./build_osx.sh                            # only build macOS
 set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SLN="$ROOT/Beyond/Beyond.sln"
 LAUNCHER_CSPROJ="$ROOT/Beyond/Launcher/Launcher.csproj"
 BUILD_DIR="$ROOT/Beyond/build"
