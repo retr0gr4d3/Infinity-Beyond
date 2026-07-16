@@ -56,8 +56,10 @@ UserData/
 !/Beyond/Beyond.sln
 
 # Keep the build scripts (the broad *build* rule above would otherwise ignore build.sh)
-!/build.sh
-!/build.bat
+!/build_osx.sh
+!/build_win.bat
+!/clean.bat
+!/clean.sh
 
 BeyondLauncher*
 

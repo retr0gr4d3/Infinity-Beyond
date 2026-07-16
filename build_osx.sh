@@ -1,41 +1,30 @@
 #!/usr/bin/env bash
 #
-# build.sh — build & package Infinity-Beyond (BeyondAgent mod + Avalonia launcher)
-# for BOTH macOS and Windows from a single run on a Mac/Linux host.
+# build_osx.sh — build & package Infinity-Beyond (BeyondAgent mod + Avalonia launcher)
+# for macOS from a single run on a Mac/Linux host.
 #
 # Produces two ZIPs in the repo root:
 #   BeyondLauncher_macos_<rid>_<timestamp>.zip   — BeyondLauncher.app bundle
-#   BeyondLauncher_win-x64_<timestamp>.zip       — BeyondLauncher.exe + deps
 #
 # The agent DLL (BeyondAgent.dll) is platform-agnostic (netstandard2.1), so the
-# same file ships in both packages; only the launcher differs per RID. Cross-
-# publishing is framework-dependent, so the target machine needs the .NET 10
-# runtime installed.
+# same file ships in both packages; only the launcher differs per RID.
 #
 # It also deploys the freshly built mod into THIS machine's game install (the
 # managed dir it prompts for), so a Mac dev can build + test in one step.
 #
-# NOTE: the Windows launcher re-parents the native game window via Win32 and is
-# only functional on Windows; the macOS launcher floats the game window over its
-# tab panel (see MacEmbed). Both are produced here regardless of host.
-#
 # Usage:
-#   ./build.sh
-#   AQWI_GAME_DIR="/path/to/AQW Infinity" ./build.sh   # skip the prompt
-#   MAC_RID=osx-x64 ./build.sh                          # force the mac RID
-#   WIN_RID=win-x64 ./build.sh                          # force the win RID
-#   TARGETS="mac" ./build.sh                            # only build macOS
-#   TARGETS="win" ./build.sh                            # only build Windows
+#   ./build_osx.sh
+#   AQWI_GAME_DIR="/path/to/AQW Infinity" ./build_osx.sh   # skip the prompt
+#   MAC_RID=osx-x64 ./build_osx.sh                          # force the mac RID
+#   TARGETS="mac" ./build_osx.sh                            # only build macOS
 set -euo pipefail
-
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SLN="$ROOT/Beyond/Beyond.sln"
 LAUNCHER_CSPROJ="$ROOT/Beyond/Launcher/Launcher.csproj"
 BUILD_DIR="$ROOT/Beyond/build"
 DEST="$ROOT"
 
 echo "========================================================"
-echo " Building Infinity-Beyond Launcher + Mod (macOS + Windows)"
+echo " Building Infinity-Beyond Launcher + Mod (macOS)"
 echo "========================================================"
 echo
 
@@ -57,17 +46,13 @@ if [ -z "$DOTNET" ]; then
 fi
 
 # --- Target runtime identifiers -------------------------------------------
-# macOS RID defaults to the host architecture; Windows RID defaults to win-x64.
-# Both are overridable, and TARGETS selects which packages to produce.
-if [ -z "${MAC_RID:-}" ]; then
-    case "$(uname -m)" in
-        arm64|aarch64) MAC_RID="osx-arm64" ;;
-        x86_64)        MAC_RID="osx-x64" ;;
-        *)             echo "ERROR: unsupported architecture '$(uname -m)'. Set MAC_RID=osx-arm64 or MAC_RID=osx-x64."; exit 1 ;;
-    esac
+# macOS RIDs to package. Packages both osx-x64 and osx-arm64 by default.
+if [ -n "${MAC_RID:-}" ]; then
+    MAC_RIDS="$MAC_RID"
+else
+    MAC_RIDS="${MAC_RIDS:-osx-x64 osx-arm64}"
 fi
-WIN_RID="${WIN_RID:-win-x64}"
-TARGETS="${TARGETS:-mac win}"
+TARGETS="${TARGETS:-mac}"
 
 # --- Resolve the game directory -------------------------------------------
 # The mod is compiled against the game's managed assemblies, so we need the
@@ -119,7 +104,7 @@ fi
 
 echo "Game directory : $GAME_DIR"
 echo "Managed folder : $MANAGED_DIR"
-echo "Targets        : $TARGETS  (mac RID: $MAC_RID, win RID: $WIN_RID)"
+echo "Targets        : $TARGETS  (mac RIDs: $MAC_RIDS)"
 echo
 
 # --- Build the solution (mod + launcher) ----------------------------------
@@ -139,7 +124,9 @@ PRODUCED=()
 publish_launcher() {
     local rid="$1"
     echo "Publishing launcher for $rid..." >&2
-    "$DOTNET" publish "$LAUNCHER_CSPROJ" -c Release -r "$rid" --self-contained false >&2
+    # DebugType=none / DebugSymbols=false: no .pdb in the shipped publish output.
+    "$DOTNET" publish "$LAUNCHER_CSPROJ" -c Release -r "$rid" --self-contained false \
+        -p:DebugType=none -p:DebugSymbols=false >&2
     echo "$ROOT/Beyond/Launcher/bin/Release/net10.0/$rid/publish"
 }
 
@@ -169,6 +156,8 @@ package_macos() {
     # reads as an instant crash on double-click). .NET probes the executable's
     # own directory for these, so copy them flat into Contents/MacOS.
     cp -R "$publish/." "$app/Contents/MacOS/"
+    # Drop any .pdb debug symbols (e.g. stale ones from an earlier debug build).
+    find "$app/Contents/MacOS" -name '*.pdb' -delete 2>/dev/null || true
     chmod +x "$app/Contents/MacOS/BeyondLauncher"
 
     local dylib_count=0 dylib
@@ -246,61 +235,15 @@ PLIST
     PRODUCED+=("$DEST/$zip_name")
 }
 
-# --- Windows package: BeyondLauncher.exe + deps ---------------------------
-package_windows() {
-    local rid="$1"
-    local publish build_out stage
-    publish="$(publish_launcher "$rid")"
-    build_out="$ROOT/Beyond/Launcher/bin/Release/net10.0/$rid"
-
-    if [ ! -f "$publish/BeyondLauncher.exe" ]; then
-        echo "ERROR: published windows launcher not found at: $publish/BeyondLauncher.exe"
-        exit 1
-    fi
-
-    echo "Assembling Windows package ($rid)..."
-    stage="$DEST/BeyondLauncher"
-    rm -rf "$stage"
-    mkdir -p "$stage"
-
-    # Single-file publish emits BeyondLauncher.exe plus its native libs beside it
-    # (native libs aren't embedded by default). Copy the whole publish folder, then
-    # backfill the native dlls from the plain build output in case this host's
-    # publish left them there instead.
-    cp -R "$publish/." "$stage/"
-    local dll
-    for dll in av_libglesv2.dll libHarfBuzzSharp.dll libSkiaSharp.dll; do
-        [ -f "$build_out/$dll" ] && cp "$build_out/$dll" "$stage/"
-    done
-    if [ ! -f "$stage/libSkiaSharp.dll" ]; then
-        echo "WARNING: libSkiaSharp.dll not found for $rid — the Windows launcher"
-        echo "         will crash on startup without it. Check the publish output."
-    fi
-
-    # Agent + Harmony mod files.
-    [ -f "$BUILD_DIR/BeyondAgent.dll" ] && cp "$BUILD_DIR/BeyondAgent.dll" "$stage/"
-    [ -f "$BUILD_DIR/0Harmony.dll" ]    && cp "$BUILD_DIR/0Harmony.dll"    "$stage/"
-
-    # Strip macOS xattrs so they don't become ._AppleDouble noise on Windows.
-    command -v xattr >/dev/null 2>&1 && xattr -cr "$stage" 2>/dev/null || true
-
-    local zip_name="BeyondLauncher_${rid}_${DATETIME}.zip"
-    echo "Packaging $zip_name..."
-    if command -v ditto >/dev/null 2>&1; then
-        ( cd "$DEST" && ditto --norsrc --noextattr -c -k --keepParent "BeyondLauncher" "$zip_name" )
-    else
-        ( cd "$DEST" && zip -qry "$zip_name" "BeyondLauncher" )
-    fi
-    rm -rf "$stage"
-    PRODUCED+=("$DEST/$zip_name")
-}
-
 # --- Build the requested packages -----------------------------------------
 for target in $TARGETS; do
     case "$target" in
-        mac|macos|osx) package_macos "$MAC_RID" ;;
-        win|windows)   package_windows "$WIN_RID" ;;
-        *) echo "WARNING: unknown target '$target' (expected mac|win) — skipping." ;;
+        mac|macos|osx)
+            for rid in $MAC_RIDS; do
+                package_macos "$rid"
+            done
+            ;;
+        *) echo "WARNING: unknown target '$target' (expected mac) — skipping." ;;
     esac
 done
 
