@@ -31,9 +31,9 @@
                     </Grid>
                     <Grid ColumnDefinitions="Auto,*,Auto,*,Auto" ColumnSpacing="8">
                         <TextBlock Text="Ignore C2S:" VerticalAlignment="Center" FontSize="11" Foreground="#8F909A"/>
-                        <TextBox Grid.Column="1" Text="{Binding IgnoredClientPacketsInput}" Watermark="RequestAttackInput,..." FontSize="11"/>
+                        <TextBox Grid.Column="1" Text="{Binding IgnoredClientPacketsInput}" PlaceholderText="RequestAttackInput,..." FontSize="11"/>
                         <TextBlock Grid.Column="2" Text="Ignore S2C:" VerticalAlignment="Center" FontSize="11" Foreground="#8F909A"/>
-                        <TextBox Grid.Column="3" Text="{Binding IgnoredServerPacketsInput}" Watermark="ResponseAttack,..." FontSize="11"/>
+                        <TextBox Grid.Column="3" Text="{Binding IgnoredServerPacketsInput}" PlaceholderText="ResponseAttack,..." FontSize="11"/>
                         <Button Grid.Column="4" Content="Apply" Command="{Binding ApplySnifferFilterCommand}"/>
                     </Grid>
                 </StackPanel>

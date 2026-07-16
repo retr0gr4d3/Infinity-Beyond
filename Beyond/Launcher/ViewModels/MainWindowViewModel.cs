@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Launcher.ViewModels
 {
@@ -117,7 +118,15 @@ namespace Launcher.ViewModels
         // Per-session pipe name. Bound to UnityWindowHost.PipeName (so the spawned
         // game's agent serves this exact pipe) and handed to the connection. Unique
         // per launcher session so multiple accounts coexist.
-        public string SessionPipeName { get; } = "BeyondAgent_" + System.Guid.NewGuid().ToString("N");
+        //
+        // Keep this SHORT. On macOS/Linux a "named pipe" is a Unix domain socket
+        // whose path is $TMPDIR + "CoreFxPipe_" + this name, and the OS caps that
+        // full path at 104 bytes (103 usable) — macOS's per-user $TMPDIR alone is
+        // ~49 chars. A full 32-char GUID here pushed the path to 104 and the agent
+        // could never bind its pipe, so the launcher never connected. 8 hex chars
+        // (32 bits) is ample uniqueness for the handful of local sessions a user
+        // runs at once while leaving comfortable headroom under the limit.
+        public string SessionPipeName { get; } = "Beyond_" + System.Guid.NewGuid().ToString("N")[..8];
 
         // Title shows in the session tab strip; IsSelected drives which session's
         // view is visible (all stay alive so every embedded game keeps running).
@@ -576,6 +585,22 @@ namespace Launcher.ViewModels
             _connection.SendCommand(type, null);
         }
 
+        // macOS window embedding. The host panel streams its on-screen rectangle
+        // (already converted to AppKit points, bottom-left origin) and whether its
+        // tab is active; the agent repositions the game's own NSWindow to match.
+        // No-op on Windows, where embedding uses HWND reparenting instead.
+        public void SendMacEmbed(double x, double y, double w, double h, bool visible)
+        {
+            _connection.SendCommand("MacEmbed", new JObject
+            {
+                ["X"] = x,
+                ["Y"] = y,
+                ["W"] = w,
+                ["H"] = h,
+                ["Visible"] = visible
+            });
+        }
+
         // --- Floating tool windows ---
         // Each tool window is a singleton: opening it again re-focuses the live
         // instance, and closing it clears the cached reference.
@@ -595,6 +620,15 @@ namespace Launcher.ViewModels
             }
 
             T window = new() { DataContext = this };
+            // macOS: the game window floats over the launcher (see MacEmbed) at a
+            // level just above normal. Tool windows must out-rank it or they'd be
+            // buried behind the game; Topmost puts them at the floating level (above
+            // the game). Not needed on Windows, where the game reparents into the
+            // panel instead of floating.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                window.Topmost = true;
+            }
             _toolWindows[typeof(T)] = window;
             window.Closed += (_, _) => _toolWindows.Remove(typeof(T));
             window.Show(desktop.MainWindow!);

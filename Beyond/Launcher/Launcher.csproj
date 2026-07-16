@@ -3,19 +3,27 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AssemblyName>BeyondLauncher</AssemblyName>
     <Company>Retr0gr4d3</Company>
     <Product>Beyond</Product>
-    <Version>0.1.4</Version>
+    <Version>0.2.0</Version>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
-    <ApplicationIcon>Assets\Beyond.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- Windows-only build inputs. The RID is supplied at publish time (build.bat
+       passes -r win-x64; a mac build passes -r osx-arm64/-osx-x64), so it's not
+       hardcoded here. app.manifest and the .ico are Windows-only and choke a mac
+       build, so they only apply for a Windows RID. Gate on the RID (not the host
+       OS) so each build script can cross-build the other platform — e.g. produce
+       an osx package from a Windows host without the .ico choking the mac publish. -->
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win'))">
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Beyond.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>BeyondAgent</AssemblyName>
-    <Version>0.1.4</Version>
+    <Version>0.2.0</Version>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <TargetFramework>netstandard2.1</TargetFramework>
