@@ -285,13 +285,15 @@ package_macos_production() {
                 [ -f "$dylib" ] || continue
                 local name; name="$(basename "$dylib")"
                 local exists=0
-                local check_name
-                for check_name in "${dylib_names[@]}"; do
-                    if [ "$check_name" == "$name" ]; then
-                        exists=1
-                        break
-                    fi
-                done
+                if [ ${#dylib_names[@]} -gt 0 ]; then
+                    local check_name
+                    for check_name in "${dylib_names[@]}"; do
+                        if [ "$check_name" == "$name" ]; then
+                            exists=1
+                            break
+                        fi
+                    done
+                fi
                 if [ $exists -eq 0 ]; then
                     dylib_names+=("$name")
                 fi
@@ -299,28 +301,30 @@ package_macos_production() {
         done
 
         # Merge each dylib
-        local name
-        for name in "${dylib_names[@]}"; do
-            local paths_to_merge=()
-            local idx
-            for idx in "${!rids[@]}"; do
-                local bdir="${build_out_dirs[$idx]}"
-                local pdir="${publish_dirs[$idx]}"
-                if [ -f "$bdir/$name" ]; then
-                    paths_to_merge+=("$bdir/$name")
-                elif [ -f "$pdir/$name" ]; then
-                    paths_to_merge+=("$pdir/$name")
+        if [ ${#dylib_names[@]} -gt 0 ]; then
+            local name
+            for name in "${dylib_names[@]}"; do
+                local paths_to_merge=()
+                local idx
+                for idx in "${!rids[@]}"; do
+                    local bdir="${build_out_dirs[$idx]}"
+                    local pdir="${publish_dirs[$idx]}"
+                    if [ -f "$bdir/$name" ]; then
+                        paths_to_merge+=("$bdir/$name")
+                    elif [ -f "$pdir/$name" ]; then
+                        paths_to_merge+=("$pdir/$name")
+                    fi
+                done
+
+                if [ ${#paths_to_merge[@]} -eq $rid_count ]; then
+                    echo "Merging universal library: $name"
+                    lipo -create "${paths_to_merge[@]}" -output "$app/Contents/MacOS/$name"
+                else
+                    echo "Copying library (not present in all architectures): $name"
+                    cp "${paths_to_merge[0]}" "$app/Contents/MacOS/"
                 fi
             done
-
-            if [ ${#paths_to_merge[@]} -eq $rid_count ]; then
-                echo "Merging universal library: $name"
-                lipo -create "${paths_to_merge[@]}" -output "$app/Contents/MacOS/$name"
-            else
-                echo "Copying library (not present in all architectures): $name"
-                cp "${paths_to_merge[0]}" "$app/Contents/MacOS/"
-            fi
-        done
+        fi
 
         # 4. Agent + Harmony mod files
         [ -f "$BUILD_DIR/BeyondAgent.dll" ] && cp "$BUILD_DIR/BeyondAgent.dll" "$app/Contents/MacOS/"
