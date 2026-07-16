@@ -383,14 +383,6 @@ for target in $TARGETS; do
     esac
 done
 
-# --- Deploy the mod into THIS machine's game install ----------------------
-# So a Mac dev can build + test in one step. Platform-agnostic agent DLL, so it
-# works regardless of which packages were produced above.
-echo
-echo "Deploying mod into local game: $MANAGED_DIR"
-[ -f "$BUILD_DIR/BeyondAgent.dll" ] && cp "$BUILD_DIR/BeyondAgent.dll" "$MANAGED_DIR/"
-[ -f "$BUILD_DIR/0Harmony.dll" ]    && cp "$BUILD_DIR/0Harmony.dll"    "$MANAGED_DIR/"
-
 echo
 echo "Standalone Launcher and Mod packaged successfully!"
 echo
@@ -398,5 +390,4 @@ echo "Packages:"
 for p in "${PRODUCED[@]}"; do
     echo "  $p"
 done
-echo "(The BeyondAgent mod was also deployed into: $MANAGED_DIR)"
 echo
