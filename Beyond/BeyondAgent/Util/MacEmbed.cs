@@ -272,11 +272,46 @@ namespace BeyondAgent.Util
             return MsgIntRet(app, Sel("processIdentifier"));
         }
 
+        private static bool IsValidWindow(IntPtr win)
+        {
+            if (win == IntPtr.Zero)
+            {
+                return false;
+            }
+            IntPtr nsApp = Msg(objc_getClass("NSApplication"), Sel("sharedApplication"));
+            if (nsApp == IntPtr.Zero)
+            {
+                return false;
+            }
+            IntPtr windows = Msg(nsApp, Sel("windows"));
+            if (windows == IntPtr.Zero)
+            {
+                return false;
+            }
+            long count = (long)Msg(windows, Sel("count"));
+            for (long i = 0; i < count; i++)
+            {
+                IntPtr w = MsgNint(windows, Sel("objectAtIndex:"), (nint)i);
+                if (w == win)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private static IntPtr ResolveWindow()
         {
             if (_window != IntPtr.Zero)
             {
-                return _window;
+                if (IsValidWindow(_window))
+                {
+                    return _window;
+                }
+                Diag($"[MacEmbed] cached window 0x{_window.ToInt64():x} is no longer valid. Re-resolving.");
+                _window = IntPtr.Zero;
+                _styled = false;
+                _shown = false;
             }
 
             IntPtr nsApp = Msg(objc_getClass("NSApplication"), Sel("sharedApplication"));

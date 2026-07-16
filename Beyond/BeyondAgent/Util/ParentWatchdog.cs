@@ -58,9 +58,13 @@ namespace BeyondAgent.Util
 
             if (kill(_launcherPid, 0) != 0)
             {
-                _quitting = true;
-                Debug.LogWarning($"[ParentWatchdog] launcher pid {_launcherPid} is gone — quitting game.");
-                Application.Quit();
+                int errno = Marshal.GetLastWin32Error();
+                if (errno == 3) // ESRCH: No such process
+                {
+                    _quitting = true;
+                    Debug.LogWarning($"[ParentWatchdog] launcher pid {_launcherPid} is gone (ESRCH) — quitting game.");
+                    Application.Quit();
+                }
             }
         }
     }

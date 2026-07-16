@@ -92,10 +92,12 @@ if [ ! -d "$GAME_DIR" ]; then
     exit 1
 fi
 
-# Discover the "<name>_Data/Managed" folder (release-name agnostic). On macOS the
-# game may be an .app bundle, so search recursively for Assembly-CSharp.dll under
-# a Managed folder rather than assuming a top-level *_Data layout.
-MANAGED_DIR="$(find "$GAME_DIR" -type f -name Assembly-CSharp.dll -path '*/Managed/*' 2>/dev/null | head -n 1 | xargs -0 dirname 2>/dev/null || true)"
+FOUND_DLL="$(find "$GAME_DIR" -type f -name Assembly-CSharp.dll -path '*/Managed/*' 2>/dev/null | head -n 1 || true)"
+if [ -n "$FOUND_DLL" ]; then
+    MANAGED_DIR="$(dirname "$FOUND_DLL")"
+else
+    MANAGED_DIR=""
+fi
 if [ -z "$MANAGED_DIR" ]; then
     echo
     echo "ERROR: Could not find \"Managed/Assembly-CSharp.dll\" under:"

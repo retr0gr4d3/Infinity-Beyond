@@ -131,8 +131,9 @@ namespace Launcher
                             $"=> sent x={x:0.#} y={y:0.#}");
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    DebugLog($"[MacGeom] failed to compute geometry: {ex.Message}");
                     return; // not laid out yet; try again next tick
                 }
             }
