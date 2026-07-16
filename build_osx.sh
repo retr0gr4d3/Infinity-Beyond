@@ -78,8 +78,10 @@ case "$GAME_DIR" in
     \"*\") GAME_DIR="${GAME_DIR#\"}"; GAME_DIR="${GAME_DIR%\"}" ;;
     \'*\') GAME_DIR="${GAME_DIR#\'}"; GAME_DIR="${GAME_DIR%\'}" ;;
 esac
-# 3. Remove backslash escapes (e.g. "AQW\ Worlds" -> "AQW Worlds").
-GAME_DIR="${GAME_DIR//\\/}"
+# 3. Remove backslash escapes (e.g. "AQW\ Worlds" -> "AQW Worlds") but keep path separators.
+GAME_DIR="${GAME_DIR//\\ / }"
+GAME_DIR="${GAME_DIR//\\\"/\"}"
+GAME_DIR="${GAME_DIR//\\\'/\'}"
 # 4. Expand a leading ~ to the home directory.
 case "$GAME_DIR" in
     "~")   GAME_DIR="$HOME" ;;

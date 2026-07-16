@@ -28,6 +28,11 @@ namespace BeyondAgent.Util
         [DllImport("libc", SetLastError = true)]
         private static extern int kill(int pid, int sig);
 
+        // POSIX errno values relevant for kill(2) probes.
+        // These mirror the standard C errno values used by the native kill implementation.
+        private const int EPERM = 1;  // Operation not permitted — process exists but we lack rights
+        private const int ESRCH = 3;  // No such process
+
         public static void Tick()
         {
             if (!_isMac || _quitting)
@@ -59,11 +64,30 @@ namespace BeyondAgent.Util
             if (kill(_launcherPid, 0) != 0)
             {
                 int errno = Marshal.GetLastWin32Error();
-                if (errno == 3) // ESRCH: No such process
+                // For kill(pid, 0):
+                //   ESRCH => process does not exist
+                //   EPERM => process exists but we lack permission to signal it
+                // Any other errno is unexpected here; we log it and treat the launcher
+                // as unavailable to avoid hanging the game on a broken watchdog.
+                switch (errno)
                 {
-                    _quitting = true;
-                    Debug.LogWarning($"[ParentWatchdog] launcher pid {_launcherPid} is gone (ESRCH) — quitting game.");
-                    Application.Quit();
+                    case ESRCH: // No such process
+                        _quitting = true;
+                        Debug.LogWarning($"[ParentWatchdog] launcher pid {_launcherPid} is gone (ESRCH) — quitting game.");
+                        Application.Quit();
+                        break;
+
+                    case EPERM: // Process exists, but we don't have permission to signal it
+                        Debug.LogWarning($"[ParentWatchdog] kill(launcher pid {_launcherPid}, 0) failed with EPERM — launcher likely still running but inaccessible; disabling watchdog for this session.");
+                        // Treat the launcher as unavailable and stop polling to avoid log spam.
+                        _launcherPid = 0;
+                        break;
+
+                    default:
+                        _quitting = true;
+                        Debug.LogWarning($"[ParentWatchdog] kill(launcher pid {_launcherPid}, 0) failed with errno={errno} — treating launcher as unavailable and quitting game.");
+                        Application.Quit();
+                        break;
                 }
             }
         }
