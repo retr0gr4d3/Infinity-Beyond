@@ -67,8 +67,26 @@ if [ -z "$GAME_DIR" ]; then
     echo "(The folder — or .app bundle — that contains the game and its *_Data folder.)"
     read -r -p "Game directory: " GAME_DIR
 fi
-# Strip any surrounding quotes a user may have pasted in.
-GAME_DIR="${GAME_DIR%\"}"; GAME_DIR="${GAME_DIR#\"}"
+# Normalize whatever the user gave us. Paths get pasted in a variety of forms —
+# wrapped in quotes, with a leading ~, or with backslash-escaped spaces from
+# drag-and-drop / tab-completion — and `read -r` keeps all of that literal, which
+# makes a perfectly valid folder look like it "doesn't exist". Clean it up so the
+# common cases just work.
+# 1. Trim surrounding whitespace (incl. a stray trailing space from a paste).
+GAME_DIR="${GAME_DIR#"${GAME_DIR%%[![:space:]]*}"}"
+GAME_DIR="${GAME_DIR%"${GAME_DIR##*[![:space:]]}"}"
+# 2. Strip one layer of surrounding single or double quotes.
+case "$GAME_DIR" in
+    \"*\") GAME_DIR="${GAME_DIR#\"}"; GAME_DIR="${GAME_DIR%\"}" ;;
+    \'*\') GAME_DIR="${GAME_DIR#\'}"; GAME_DIR="${GAME_DIR%\'}" ;;
+esac
+# 3. Remove backslash escapes (e.g. "AQW\ Worlds" -> "AQW Worlds").
+GAME_DIR="${GAME_DIR//\\/}"
+# 4. Expand a leading ~ to the home directory.
+case "$GAME_DIR" in
+    "~")   GAME_DIR="$HOME" ;;
+    "~/"*) GAME_DIR="$HOME/${GAME_DIR#\~/}" ;;
+esac
 
 if [ ! -d "$GAME_DIR" ]; then
     echo
@@ -123,9 +141,34 @@ APP="$DEST/BeyondLauncher.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-# Copy the full publish output (executable + native .dylib dependencies).
+# Copy the full publish output (executable + managed assemblies + deps.json).
 cp -R "$LAUNCHER_PUBLISH/." "$APP/Contents/MacOS/"
 chmod +x "$APP/Contents/MacOS/BeyondLauncher"
+
+# Copy the native .dylib dependencies next to the executable.
+#
+# A framework-dependent publish with a RID ("dotnet publish -r $RID
+# --self-contained false") does NOT copy the RID-specific native assets into
+# the publish folder — only the plain "dotnet build" output gets them. Without
+# libSkiaSharp/libHarfBuzzSharp/libAvaloniaNative the launcher aborts on the
+# first frame (Avalonia's Skia renderer throws in a static initializer, which
+# reads as an instant crash on double-click). .NET probes the executable's own
+# directory for these, so copy them flat into Contents/MacOS.
+LAUNCHER_BUILD_OUT="$ROOT/Beyond/Launcher/bin/Release/net10.0/$RID"
+dylib_count=0
+for dylib in "$LAUNCHER_BUILD_OUT"/*.dylib; do
+    [ -f "$dylib" ] || continue
+    cp "$dylib" "$APP/Contents/MacOS/"
+    dylib_count=$((dylib_count + 1))
+done
+if [ "$dylib_count" -eq 0 ]; then
+    echo "ERROR: no native .dylib files found in:"
+    echo "  $LAUNCHER_BUILD_OUT"
+    echo "The launcher will crash on startup without them (missing libSkiaSharp)."
+    echo "Make sure the 'dotnet build' step above completed for $RID."
+    exit 1
+fi
+echo "Bundled $dylib_count native .dylib dependencies."
 
 # Copy the agent + Harmony mod files next to the launcher.
 [ -f "$BUILD_DIR/BeyondAgent.dll" ] && cp "$BUILD_DIR/BeyondAgent.dll" "$APP/Contents/MacOS/"

@@ -283,9 +283,10 @@ namespace Launcher.ViewModels
                         // Target monster filter (names/ids) — the hunt targets
                         // only these. Dropping it here would silently break
                         // any library chain authored with specific mobs.
-                        if (t["mon"] != null)
+                        JToken? mon = t["mon"];
+                        if (mon != null)
                         {
-                            entry["mon"] = t["mon"].DeepClone();
+                            entry["mon"] = mon.DeepClone();
                         }
                         entries.Add(entry);
                     }

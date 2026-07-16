@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using System;
+using System.Runtime.InteropServices;
 
 namespace Launcher.Views
 {
@@ -28,7 +29,16 @@ namespace Launcher.Views
 
         private void AboutButtonClick(object sender, RoutedEventArgs e)
         {
-            new AboutWindow().ShowDialog(this);
+            AboutWindow about = new();
+            // macOS: the embedded game window floats above the launcher (level 1),
+            // so like the tool windows the About dialog must be Topmost (level 3)
+            // or the game covers it. Not needed on Windows (game reparents into the
+            // panel instead of floating).
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                about.Topmost = true;
+            }
+            about.ShowDialog(this);
         }
 
         protected override void OnClosed(EventArgs e)

@@ -33,6 +33,151 @@ namespace Launcher
             }
 
             StartUnityProcessDeferred(width, height);
+
+            // macOS has no HWND reparenting, so instead of hosting the game in a
+            // child window we let it stay a top-level window and continuously push
+            // this panel's on-screen rect to the agent, which glues the game's own
+            // NSWindow over it. See MacEmbed on the agent side.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && _macFollowTimer == null)
+            {
+                _macFollowTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+                _macFollowTimer.Tick += (s, e) => PushMacGeometry();
+                _macFollowTimer.Start();
+            }
+        }
+
+        // --- macOS overlay-follow embedding ---------------------------------------
+        // Raised (macOS only) whenever the host panel's screen rect or visibility
+        // changes. Carries an AppKit frame: (x, y) is the bottom-left origin in
+        // points, (w, h) the size in points, and visible whether this tab is shown.
+        // SessionView forwards it to the owning view-model, which sends it over the
+        // agent pipe.
+        public event Action<double, double, double, double, bool>? EmbedGeometryChanged;
+
+        private DispatcherTimer? _macFollowTimer;
+        private double _macLastX, _macLastY, _macLastW, _macLastH;
+        private bool _macLastVisible;
+        private bool _macSentOnce;
+        private int _macTicksSinceSend;
+        private bool _macLoggedRaw;
+
+        // ~1s at the 100ms follow cadence. We re-push the current geometry this
+        // often even when nothing changed: the first on-change send fires ~100ms
+        // after load, but the agent's pipe isn't connected until a few seconds
+        // later, so that send is silently dropped (SendCommand no-ops with no
+        // active connection). With a stable panel rect nothing would ever change
+        // again, so without this heartbeat the agent would never receive geometry
+        // and the game window would float free instead of embedding.
+        private const int MacResendEveryTicks = 10;
+
+        private void PushMacGeometry()
+        {
+            if (TopLevel.GetTopLevel(this) is not Window top || VisualRoot == null)
+            {
+                return;
+            }
+
+            bool visible = IsEffectivelyVisible && top.WindowState != WindowState.Minimized;
+
+            double w = Bounds.Width;
+            double h = Bounds.Height;
+            double x = _macLastX;
+            double y = _macLastY;
+
+            if (visible && w > 0 && h > 0)
+            {
+                try
+                {
+                    // Convert this panel's on-screen rect to an AppKit frame:
+                    // points, bottom-left origin relative to the primary screen.
+                    //
+                    // PointToScreen and Screen.Bounds are reported in the same
+                    // coordinate unit as each other, so we divide BOTH by the
+                    // screen's own scaling to land in AppKit points. Do NOT use the
+                    // window's RenderScaling here: on macOS that's the Retina
+                    // backing-store factor (2), not the screen coordinate scale
+                    // (which the backend reports as Screen.Scaling — 1 for a
+                    // "looks-like 1710x1112" display). Mixing the two divides the
+                    // position by 2 while leaving the screen height unscaled, which
+                    // lands the window at half its real offset.
+                    PixelPoint topLeft = this.PointToScreen(new Point(0, 0));
+
+                    Screen? primary = top.Screens?.Primary;
+                    double screenScale = primary != null && primary.Scaling > 0 ? primary.Scaling : 1.0;
+                    double xPts = topLeft.X / screenScale;
+                    double yTopPts = topLeft.Y / screenScale;
+                    double primaryHeightPts = primary != null
+                        ? primary.Bounds.Height / screenScale
+                        : yTopPts + h;
+
+                    x = xPts;
+                    y = primaryHeightPts - (yTopPts + h);
+
+                    // One-shot dump of the raw inputs so a "window lands in the
+                    // wrong spot" bug is diagnosable from launch_debug.log without
+                    // guessing whether PointToScreen is px or pts, etc.
+                    if (!_macLoggedRaw)
+                    {
+                        _macLoggedRaw = true;
+                        PixelPoint winPos = top.Position;
+                        Screen? host = top.Screens?.ScreenFromVisual(this);
+                        DebugLog(
+                            $"[MacGeom] topLeft=({topLeft.X},{topLeft.Y}) renderScaling={top.RenderScaling} screenScale={screenScale} " +
+                            $"winPos=({winPos.X},{winPos.Y}) winClientSize=({top.ClientSize.Width}x{top.ClientSize.Height}) " +
+                            $"panelWH=({w}x{h}) " +
+                            $"primaryBounds=({primary?.Bounds.X},{primary?.Bounds.Y},{primary?.Bounds.Width},{primary?.Bounds.Height}) " +
+                            $"primaryScaling={primary?.Scaling} primaryHeightPts={primaryHeightPts} " +
+                            $"hostScreen=({host?.Bounds.X},{host?.Bounds.Y},{host?.Bounds.Width},{host?.Bounds.Height}) hostScaling={host?.Scaling} " +
+                            $"=> sent x={x:0.#} y={y:0.#}");
+                    }
+                }
+                catch
+                {
+                    return; // not laid out yet; try again next tick
+                }
+            }
+
+            _macTicksSinceSend++;
+            const double eps = 0.5;
+            bool changed = !_macSentOnce
+                || visible != _macLastVisible
+                || Math.Abs(x - _macLastX) > eps
+                || Math.Abs(y - _macLastY) > eps
+                || Math.Abs(w - _macLastW) > eps
+                || Math.Abs(h - _macLastH) > eps;
+            // Send on change for immediacy, and on the heartbeat interval so a send
+            // dropped while the agent pipe was still connecting is recovered.
+            if (!changed && _macTicksSinceSend < MacResendEveryTicks)
+            {
+                return;
+            }
+
+            _macLastX = x;
+            _macLastY = y;
+            _macLastW = w;
+            _macLastH = h;
+            _macLastVisible = visible;
+            _macSentOnce = true;
+            _macTicksSinceSend = 0;
+            EmbedGeometryChanged?.Invoke(x, y, w, h, visible);
+        }
+
+        // Append a line to the launcher's launch_debug.log (same file
+        // StartUnityProcessDeferred writes). Best-effort; never throws.
+        private static void DebugLog(string msg)
+        {
+            try
+            {
+                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UserData", "launch_debug.log");
+                string dir = Path.GetDirectoryName(logPath)!;
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] {msg}\n");
+            }
+            catch { }
         }
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
@@ -444,6 +589,10 @@ namespace Launcher
                     // Tell the agent which named pipe to serve for this session.
                     string pipeName = string.IsNullOrWhiteSpace(PipeName) ? "BeyondAgent" : PipeName;
                     psi.Environment[EnvPipeName] = pipeName;
+                    // macOS overlay-follow: the agent floats the game window above
+                    // the launcher, so it needs the launcher's pid to know when to
+                    // hide (frontmost app is neither the game nor us).
+                    psi.Environment["BEYOND_LAUNCHER_PID"] = Environment.ProcessId.ToString();
                     if (!string.IsNullOrEmpty(PresetUsername))
                     {
                         psi.Environment["BEYOND_USER"] = PresetUsername;
@@ -637,6 +786,9 @@ namespace Launcher
         {
             _resizeTimer?.Stop();
             _resizeTimer = null;
+
+            _macFollowTimer?.Stop();
+            _macFollowTimer = null;
 
             if (_inputAttached)
             {

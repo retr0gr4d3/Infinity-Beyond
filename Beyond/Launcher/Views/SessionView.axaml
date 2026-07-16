@@ -209,7 +209,7 @@
 
                 <!-- Footer Area -->
                 <Separator Grid.Row="2" Margin="0" Height="1" Background="#202026" VerticalAlignment="Top"/>
-                <TextBlock Grid.Row="2" Text="v0.1.4 (Beyond Standalone Edition)" FontSize="9" Foreground="#44454E" HorizontalAlignment="Center" Margin="10,12"/>
+                <TextBlock Grid.Row="2" Text="v0.2.0 (Beyond Standalone Edition)" FontSize="9" Foreground="#44454E" HorizontalAlignment="Center" Margin="10,12"/>
             </Grid>
         </Border>
 
@@ -229,7 +229,8 @@
 
         <!-- Embedded Unity Game Viewer -->
         <Grid Grid.Column="2" Background="#000000">
-            <local:UnityWindowHost PipeName="{Binding SessionPipeName}"
+            <local:UnityWindowHost x:Name="GameHost"
+                                   PipeName="{Binding SessionPipeName}"
                                    PresetUsername="{Binding PresetUsername}"
                                    PresetPassword="{Binding PresetPassword}"
                                    PresetNickname="{Binding PresetNickname}"

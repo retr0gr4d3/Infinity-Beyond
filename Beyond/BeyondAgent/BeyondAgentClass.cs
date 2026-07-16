@@ -529,6 +529,12 @@ namespace BeyondAgent
                 }
             }
             try { ProcessLauncherCommands(); } catch (System.Exception ex) { BeyondLog.Error($"ProcessLauncherCommands error: {ex}"); }
+            // macOS overlay-follow: re-evaluate frontmost-app gating so the floating
+            // game window hides promptly when the user switches to an unrelated app.
+            try { Util.MacEmbed.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"MacEmbed tick: {ex.Message}"); }
+            // macOS: quit the game if the launcher process is gone (no Job Object
+            // equivalent on mac, so nothing else reaps an orphaned game window).
+            try { Util.ParentWatchdog.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"ParentWatchdog tick: {ex.Message}"); }
             // Tick the quest runner every frame. It's a no-op when Idle/Done/Failed.
             try { questRunner?.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"QuestRunner tick: {ex.Message}"); }
 
@@ -5044,6 +5050,18 @@ namespace BeyondAgent
                         }
 
                         SendStatusUpdate();
+                    }
+                    else if (type == "MacEmbed")
+                    {
+                        // macOS overlay-follow embedding: reposition the game's own
+                        // NSWindow over the launcher's tab panel. Runs on the Unity
+                        // main thread (== AppKit main thread), as AppKit requires.
+                        BeyondAgent.Util.MacEmbed.Apply(
+                            (double)cmd["X"],
+                            (double)cmd["Y"],
+                            (double)cmd["W"],
+                            (double)cmd["H"],
+                            (bool)cmd["Visible"]);
                     }
                     else if (type == "SkipCutscene")
                     {
