@@ -318,7 +318,10 @@ package_macos_production() {
 
                 if [ ${#paths_to_merge[@]} -eq $rid_count ]; then
                     echo "Merging universal library: $name"
-                    lipo -create "${paths_to_merge[@]}" -output "$app/Contents/MacOS/$name"
+                    if ! lipo -create "${paths_to_merge[@]}" -output "$app/Contents/MacOS/$name" 2>/dev/null; then
+                        echo "lipo failed to merge $name (possibly identical or already universal). Copying directly..."
+                        cp "${paths_to_merge[0]}" "$app/Contents/MacOS/"
+                    fi
                 else
                     echo "Copying library (not present in all architectures): $name"
                     cp "${paths_to_merge[0]}" "$app/Contents/MacOS/"
