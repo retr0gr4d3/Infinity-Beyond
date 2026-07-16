@@ -121,66 +121,21 @@ PRODUCED=()
 
 # Publish the launcher for a RID and echo its publish dir (on stdout; all build
 # chatter goes to stderr so command substitution captures only the path).
-# Framework-dependent single-file, so the output is one BeyondLauncher[.exe]
-# plus native libs.
+# Self-contained single-file, so the output includes the .NET runtime.
 publish_launcher() {
     local rid="$1"
     echo "Publishing launcher for $rid..." >&2
     # DebugType=none / DebugSymbols=false: no .pdb in the shipped publish output.
-    "$DOTNET" publish "$LAUNCHER_CSPROJ" -c Release -r "$rid" --self-contained false \
+    "$DOTNET" publish "$LAUNCHER_CSPROJ" -c Release -r "$rid" --self-contained true \
         -p:DebugType=none -p:DebugSymbols=false >&2
     echo "$ROOT/Beyond/Launcher/bin/Release/net10.0/$rid/publish"
 }
 
-# --- macOS package: BeyondLauncher.app ------------------------------------
-package_macos() {
-    local rid="$1"
-    local publish build_out app
-    publish="$(publish_launcher "$rid")"
-    build_out="$ROOT/Beyond/Launcher/bin/Release/net10.0/$rid"
-
-    local bin="$publish/BeyondLauncher"
-    if [ ! -f "$bin" ]; then
-        echo "ERROR: published mac launcher not found at: $bin"
-        exit 1
-    fi
-
-    echo "Assembling BeyondLauncher.app ($rid)..."
-    app="$DEST/BeyondLauncher.app"
-    rm -rf "$app"
-    mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-
-    # Copy the full publish output (single-file binary + deps.json), then the
-    # native .dylib deps. A framework-dependent RID publish does NOT copy the
-    # RID-specific native assets into the publish folder — only the plain build
-    # output gets them. Without libSkiaSharp/libHarfBuzzSharp/libAvaloniaNative
-    # the launcher aborts on the first frame (Skia throws in a static init, which
-    # reads as an instant crash on double-click). .NET probes the executable's
-    # own directory for these, so copy them flat into Contents/MacOS.
-    cp -R "$publish/." "$app/Contents/MacOS/"
-    # Drop any .pdb debug symbols (e.g. stale ones from an earlier debug build).
-    find "$app/Contents/MacOS" -name '*.pdb' -delete 2>/dev/null || true
-    chmod +x "$app/Contents/MacOS/BeyondLauncher"
-
-    local dylib_count=0 dylib
-    for dylib in "$build_out"/*.dylib; do
-        [ -f "$dylib" ] || continue
-        cp "$dylib" "$app/Contents/MacOS/"
-        dylib_count=$((dylib_count + 1))
-    done
-    if [ "$dylib_count" -eq 0 ]; then
-        echo "ERROR: no native .dylib files found in: $build_out"
-        echo "The launcher will crash on startup without them (missing libSkiaSharp)."
-        exit 1
-    fi
-    echo "Bundled $dylib_count native .dylib dependencies."
-
-    # Agent + Harmony mod files next to the launcher.
-    [ -f "$BUILD_DIR/BeyondAgent.dll" ] && cp "$BUILD_DIR/BeyondAgent.dll" "$app/Contents/MacOS/"
-    [ -f "$BUILD_DIR/0Harmony.dll" ]    && cp "$BUILD_DIR/0Harmony.dll"    "$app/Contents/MacOS/"
-
+# --- Helper to generate Info.plist and Icon for macOS app bundle -----------
+generate_resources() {
+    local app="$1"
+    
     # Generate an .icns icon from the PNG if the macOS image tools are available
-    # (they aren't on Linux — the icon is optional, the app runs without it).
     local icon_name="" src_png="$ROOT/Beyond/Launcher/Assets/Beyond.png"
     if [ -f "$src_png" ] && command -v sips >/dev/null 2>&1 && command -v iconutil >/dev/null 2>&1; then
         local iconset; iconset="$(mktemp -d)/Beyond.iconset"
@@ -219,31 +174,203 @@ package_macos() {
 </plist>
 PLIST
 
-    # Strip macOS extended attributes (com.apple.provenance/quarantine, etc.) so
-    # they don't end up as ._AppleDouble sidecar files inside the archive.
+    # Strip macOS extended attributes
     command -v xattr >/dev/null 2>&1 && xattr -cr "$app" 2>/dev/null || true
+}
 
-    local zip_name="BeyondLauncher_macos_${rid}_${DATETIME}.zip"
-    echo "Packaging $zip_name..."
-    if command -v ditto >/dev/null 2>&1; then
-        # ditto preserves the bundle structure and the executable bit correctly;
-        # --norsrc --noextattr keep resource forks / xattrs out of the zip.
-        ( cd "$DEST" && ditto --norsrc --noextattr -c -k --keepParent "BeyondLauncher.app" "$zip_name" )
-    else
-        # Linux fallback: zip preserves the +x bit we set above.
-        ( cd "$DEST" && zip -qry "$zip_name" "BeyondLauncher.app" )
-    fi
+# --- Assembles a single-architecture app bundle at a given path ------------
+assemble_app_bundle() {
+    local app="$1"
+    local publish="$2"
+    local build_out="$3"
+
+    echo "Assembling app bundle at $app..."
     rm -rf "$app"
-    PRODUCED+=("$DEST/$zip_name")
+    mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+
+    # Copy the full publish output (single-file binary + deps.json)
+    cp -R "$publish/." "$app/Contents/MacOS/"
+    # Drop any .pdb debug symbols
+    find "$app/Contents/MacOS" -name '*.pdb' -delete 2>/dev/null || true
+    chmod +x "$app/Contents/MacOS/BeyondLauncher"
+
+    # Backfill native dylibs from build output
+    local dylib_count=0 dylib
+    for dylib in "$build_out"/*.dylib; do
+        [ -f "$dylib" ] || continue
+        cp "$dylib" "$app/Contents/MacOS/"
+        dylib_count=$((dylib_count + 1))
+    done
+
+    # Backfill native dylibs from publish folder if any are there
+    for dylib in "$publish"/*.dylib; do
+        [ -f "$dylib" ] || continue
+        if [ ! -f "$app/Contents/MacOS/$(basename "$dylib")" ]; then
+            cp "$dylib" "$app/Contents/MacOS/"
+            dylib_count=$((dylib_count + 1))
+        fi
+    done
+
+    # Agent + Harmony mod files next to the launcher.
+    [ -f "$BUILD_DIR/BeyondAgent.dll" ] && cp "$BUILD_DIR/BeyondAgent.dll" "$app/Contents/MacOS/"
+    [ -f "$BUILD_DIR/0Harmony.dll" ]    && cp "$BUILD_DIR/0Harmony.dll"    "$app/Contents/MacOS/"
+
+    generate_resources "$app"
+}
+
+# --- Packages macOS launcher for production in 1 ZIP ------------------------
+package_macos_production() {
+    local rids=($MAC_RIDS)
+    local rid_count=${#rids[@]}
+
+    if [ $rid_count -eq 0 ]; then
+        echo "ERROR: No macOS RIDs specified."
+        exit 1
+    fi
+
+    local publish_dirs=()
+    local build_out_dirs=()
+    local rid
+
+    for rid in "${rids[@]}"; do
+        local pub; pub="$(publish_launcher "$rid")"
+        publish_dirs+=("$pub")
+        build_out_dirs+=("$ROOT/Beyond/Launcher/bin/Release/net10.0/$rid")
+    done
+
+    local zip_name=""
+    if [ $rid_count -eq 1 ]; then
+        # Only one architecture specified - no merging needed.
+        local rid="${rids[0]}"
+        local app="$DEST/BeyondLauncher.app"
+        assemble_app_bundle "$app" "${publish_dirs[0]}" "${build_out_dirs[0]}"
+        
+        zip_name="BeyondLauncher_macos_${rid}_${DATETIME}.zip"
+        echo "Packaging $zip_name..."
+        if command -v ditto >/dev/null 2>&1; then
+            ( cd "$DEST" && ditto --norsrc --noextattr -c -k --keepParent "BeyondLauncher.app" "$zip_name" )
+        else
+            ( cd "$DEST" && zip -qry "$zip_name" "BeyondLauncher.app" )
+        fi
+        rm -rf "$app"
+        PRODUCED+=("$DEST/$zip_name")
+
+    elif command -v lipo >/dev/null 2>&1; then
+        # Multiple architectures and lipo is available -> Build universal binary app bundle
+        echo "lipo found. Creating universal macOS binary..."
+        local app="$DEST/BeyondLauncher.app"
+        rm -rf "$app"
+        mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+
+        # 1. Copy the contents of the first RID to initialize structure
+        cp -R "${publish_dirs[0]}/." "$app/Contents/MacOS/"
+        find "$app/Contents/MacOS" -name '*.pdb' -delete 2>/dev/null || true
+        
+        # 2. Merge the main executables
+        local exe_paths=()
+        local pub
+        for pub in "${publish_dirs[@]}"; do
+            exe_paths+=("$pub/BeyondLauncher")
+        done
+        lipo -create "${exe_paths[@]}" -output "$app/Contents/MacOS/BeyondLauncher"
+        chmod +x "$app/Contents/MacOS/BeyondLauncher"
+
+        # 3. Find and merge native dylibs from all build and publish directories
+        local dylib_names=()
+        local dir
+        for dir in "${build_out_dirs[@]}" "${publish_dirs[@]}"; do
+            [ -d "$dir" ] || continue
+            local dylib
+            for dylib in "$dir"/*.dylib; do
+                [ -f "$dylib" ] || continue
+                local name; name="$(basename "$dylib")"
+                local exists=0
+                local check_name
+                for check_name in "${dylib_names[@]}"; do
+                    if [ "$check_name" == "$name" ]; then
+                        exists=1
+                        break
+                    fi
+                done
+                if [ $exists -eq 0 ]; then
+                    dylib_names+=("$name")
+                fi
+            done
+        done
+
+        # Merge each dylib
+        local name
+        for name in "${dylib_names[@]}"; do
+            local paths_to_merge=()
+            local idx
+            for idx in "${!rids[@]}"; do
+                local bdir="${build_out_dirs[$idx]}"
+                local pdir="${publish_dirs[$idx]}"
+                if [ -f "$bdir/$name" ]; then
+                    paths_to_merge+=("$bdir/$name")
+                elif [ -f "$pdir/$name" ]; then
+                    paths_to_merge+=("$pdir/$name")
+                fi
+            done
+
+            if [ ${#paths_to_merge[@]} -eq $rid_count ]; then
+                echo "Merging universal library: $name"
+                lipo -create "${paths_to_merge[@]}" -output "$app/Contents/MacOS/$name"
+            else
+                echo "Copying library (not present in all architectures): $name"
+                cp "${paths_to_merge[0]}" "$app/Contents/MacOS/"
+            fi
+        done
+
+        # 4. Agent + Harmony mod files
+        [ -f "$BUILD_DIR/BeyondAgent.dll" ] && cp "$BUILD_DIR/BeyondAgent.dll" "$app/Contents/MacOS/"
+        [ -f "$BUILD_DIR/0Harmony.dll" ]    && cp "$BUILD_DIR/0Harmony.dll"    "$app/Contents/MacOS/"
+
+        # 5. Generate plist and resources
+        generate_resources "$app"
+
+        # 6. Package
+        zip_name="BeyondLauncher_macos_universal_${DATETIME}.zip"
+        echo "Packaging universal ZIP $zip_name..."
+        if command -v ditto >/dev/null 2>&1; then
+            ( cd "$DEST" && ditto --norsrc --noextattr -c -k --keepParent "BeyondLauncher.app" "$zip_name" )
+        else
+            ( cd "$DEST" && zip -qry "$zip_name" "BeyondLauncher.app" )
+        fi
+        rm -rf "$app"
+        PRODUCED+=("$DEST/$zip_name")
+
+    else
+        # Multiple architectures and lipo is NOT available -> Package both separate apps into 1 ZIP
+        echo "lipo not found. Packaging both architecture bundles into a single ZIP..."
+        local stage_dir="$DEST/BeyondLauncher_all"
+        rm -rf "$stage_dir"
+        mkdir -p "$stage_dir"
+
+        local idx
+        for idx in "${!rids[@]}"; do
+            local rid="${rids[$idx]}"
+            local app_name="BeyondLauncher_${rid}.app"
+            assemble_app_bundle "$stage_dir/$app_name" "${publish_dirs[$idx]}" "${build_out_dirs[$idx]}"
+        done
+
+        zip_name="BeyondLauncher_macos_all_${DATETIME}.zip"
+        echo "Packaging $zip_name..."
+        if command -v ditto >/dev/null 2>&1; then
+            ( cd "$stage_dir" && ditto --norsrc --noextattr -c -k . "$DEST/$zip_name" )
+        else
+            ( cd "$stage_dir" && zip -qry "$DEST/$zip_name" . )
+        fi
+        rm -rf "$stage_dir"
+        PRODUCED+=("$DEST/$zip_name")
+    fi
 }
 
 # --- Build the requested packages -----------------------------------------
 for target in $TARGETS; do
     case "$target" in
         mac|macos|osx)
-            for rid in $MAC_RIDS; do
-                package_macos "$rid"
-            done
+            package_macos_production
             ;;
         *) echo "WARNING: unknown target '$target' (expected mac) — skipping." ;;
     esac

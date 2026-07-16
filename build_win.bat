@@ -200,6 +200,7 @@ if %ERRORLEVEL% equ 0 (
     echo                 is_exe = ^(f == "BeyondLauncher" and "Contents/MacOS" in rel_path^) or ^(f == "BeyondLauncher.exe"^)
     echo                 zinfo = zipfile.ZipInfo^(rel_path^)
     echo                 zinfo.create_system = 3
+    echo                 zinfo.compress_type = zipfile.ZIP_DEFLATED
     echo                 zinfo.external_attr = ^(0o100755 if is_exe else 0o100644^) ^<^< 16
     echo                 with open^(file_path, "rb"^) as fp:
     echo                     zipf.writestr^(zinfo, fp.read^(^)^)
