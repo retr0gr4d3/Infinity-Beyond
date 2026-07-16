@@ -77,12 +77,12 @@ namespace BeyondAgent.Patches
             }
             catch { return; }
 
-            // Drop filter: queue any rejected reward drops for dusting.
-            // Cheap prefilter so we only parse reward packets.
-            if (rawJson.Contains("\"rewardPlayer\""))
+            // Drop filter runs off a main-thread scan of Game.lootItems (see
+            // DropFilterEngine.Tick). The only thing we watch for here is the
+            // server's anti-spam reply, so the filter can back off its loot pace.
+            if (rawJson.Contains("Spam Detected"))
             {
-                try { DropFilterEngine.HandleRewardPacket(rawJson); }
-                catch (System.Exception ex) { BeyondLog.Error($"[DropFilter] reward parse: {ex.Message}"); }
+                try { DropFilterEngine.NotifySpamDetected(); } catch { }
             }
 
             if (BeyondAgentClass.snifferServerActive)

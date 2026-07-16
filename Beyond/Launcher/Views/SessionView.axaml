@@ -209,7 +209,7 @@
 
                 <!-- Footer Area -->
                 <Separator Grid.Row="2" Margin="0" Height="1" Background="#202026" VerticalAlignment="Top"/>
-                <TextBlock Grid.Row="2" Text="v0.1.3 (Beyond Standalone Edition)" FontSize="9" Foreground="#44454E" HorizontalAlignment="Center" Margin="10,12"/>
+                <TextBlock Grid.Row="2" Text="v0.1.4 (Beyond Standalone Edition)" FontSize="9" Foreground="#44454E" HorizontalAlignment="Center" Margin="10,12"/>
             </Grid>
         </Border>
 

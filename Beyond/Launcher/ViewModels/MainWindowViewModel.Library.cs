@@ -272,14 +272,22 @@ namespace Launcher.ViewModels
                             continue;
                         }
 
-                        entries.Add(new JObject
+                        JObject entry = new()
                         {
                             ["qid"] = qid,
                             ["area"] = (string?)t["area"] ?? "",
                             ["frame"] = (string?)t["frame"] ?? "",
                             ["pad"] = string.IsNullOrWhiteSpace((string?)t["pad"]) ? "Spawn" : (string?)t["pad"],
                             ["items"] = (int?)t["items"] ?? (int?)t["iters"] ?? 1
-                        });
+                        };
+                        // Target monster filter (names/ids) — the hunt targets
+                        // only these. Dropping it here would silently break
+                        // any library chain authored with specific mobs.
+                        if (t["mon"] != null)
+                        {
+                            entry["mon"] = t["mon"].DeepClone();
+                        }
+                        entries.Add(entry);
                     }
 
                     if (entries.Count > 0)

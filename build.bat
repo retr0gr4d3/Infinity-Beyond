@@ -6,13 +6,21 @@ set SLN=%ROOT%Beyond\Beyond.sln
 set LAUNCHER_PUBLISH=%ROOT%Beyond\Launcher\bin\Release\net10.0\win-x64\publish
 set DEST=%ROOT:~0,-1%
 
+set "PS="
+where powershell >nul 2>&1 && set "PS=powershell"
+if not defined PS where pwsh >nul 2>&1 && set "PS=pwsh"
+if not defined PS (
+    echo ERROR: Neither "powershell" nor "pwsh" was found on PATH.
+    echo PowerShell is required to package the build into a ZIP archive.
+    pause
+    exit /b 1
+)
+
 echo ========================================================
 echo  Building Infinity-Beyond Standalone Launcher and Mod
 echo ========================================================
 echo.
 
-:: --- Resolve the game directory (needed to compile the mod against the game's
-::     managed assemblies). Set AQWI_GAME_DIR to skip the prompt. -------------
 set "GAME_DIR=%AQWI_GAME_DIR%"
 if not defined GAME_DIR (
     echo Enter the path to your AdventureQuest Worlds Infinity install folder.
@@ -28,7 +36,6 @@ if not exist "%GAME_DIR%\" (
     exit /b 1
 )
 
-:: Discover the "<name>_Data\Managed" folder by pattern (release-name agnostic).
 set "MANAGED_DIR="
 for /d %%D in ("%GAME_DIR%\*_Data") do (
     if exist "%%D\Managed\Assembly-CSharp.dll" set "MANAGED_DIR=%%D\Managed"
@@ -79,7 +86,6 @@ if not exist "%LAUNCHER_PUBLISH%\BeyondLauncher.exe" (
     exit /b 1
 )
 
-:: Clean up old dll/pdb/json clutter from root folder
 del /Q "%DEST%\*.dll" >nul 2>&1
 del /Q "%DEST%\*.pdb" >nul 2>&1
 del /Q "%DEST%\*.json" >nul 2>&1
@@ -87,11 +93,9 @@ del /Q "%DEST%\Beyond.exe" >nul 2>&1
 del /Q "%DEST%\BeyondLauncher.exe" >nul 2>&1
 if exist "%DEST%\runtimes" rmdir /S /Q "%DEST%\runtimes"
 
-:: Copy published files from publish dir
 copy /Y "%LAUNCHER_PUBLISH%\BeyondLauncher.exe" "%DEST%\" >nul
 if exist "%LAUNCHER_PUBLISH%\BeyondLauncher.pdb" copy /Y "%LAUNCHER_PUBLISH%\BeyondLauncher.pdb" "%DEST%\" >nul
 
-:: Copy native dependencies directly to root
 set NATIVE_SRC=%ROOT%Beyond\Launcher\bin\Release\net10.0\win-x64
 if exist "%NATIVE_SRC%\libSkiaSharp.dll" (
     copy /Y "%NATIVE_SRC%\av_libglesv2.dll" "%DEST%\" >nul
@@ -99,7 +103,6 @@ if exist "%NATIVE_SRC%\libSkiaSharp.dll" (
     copy /Y "%NATIVE_SRC%\libSkiaSharp.dll" "%DEST%\" >nul
 )
 
-:: Copy agent and harmony mod files to root
 set BUILD_DIR=%ROOT%Beyond\build
 if exist "%BUILD_DIR%\BeyondAgent.dll" (
     copy /Y "%BUILD_DIR%\BeyondAgent.dll" "%DEST%\" >nul
@@ -108,12 +111,13 @@ if exist "%BUILD_DIR%\0Harmony.dll" (
     copy /Y "%BUILD_DIR%\0Harmony.dll" "%DEST%\" >nul
 )
 
-:: Create a zip package with date and time
 echo.
 echo Packaging build into a ZIP archive...
 echo.
 
-for /f "tokens=*" %%i in ('powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-dd_HH-mm-ss'"') do set DATETIME=%%i
+set "DATETIME="
+for /f "usebackq tokens=*" %%i in (`%PS% -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss"`) do set "DATETIME=%%i"
+if not defined DATETIME set "DATETIME=build"
 set "ZIP_NAME=BeyondLauncher_%DATETIME%.zip"
 set "TEMP_ZIP_DIR=%DEST%\BeyondLauncher"
 
@@ -127,11 +131,30 @@ if exist "%DEST%\libSkiaSharp.dll" copy /Y "%DEST%\libSkiaSharp.dll" "%TEMP_ZIP_
 if exist "%DEST%\BeyondAgent.dll" copy /Y "%DEST%\BeyondAgent.dll" "%TEMP_ZIP_DIR%\" >nul
 if exist "%DEST%\0Harmony.dll" copy /Y "%DEST%\0Harmony.dll" "%TEMP_ZIP_DIR%\" >nul
 
-powershell -NoProfile -Command "Compress-Archive -Path '%TEMP_ZIP_DIR%' -DestinationPath '%DEST%\%ZIP_NAME%' -Force"
+if exist "%DEST%\%ZIP_NAME%" del /F /Q "%DEST%\%ZIP_NAME%"
+
+%PS% -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Compress-Archive -Path '%TEMP_ZIP_DIR%\*' -DestinationPath '%DEST%\%ZIP_NAME%' -Force; exit 0 } catch { Write-Host ('Compress-Archive failed: ' + $_.Exception.Message); exit 1 }"
+
+if errorlevel 1 (
+    echo.
+    echo ERROR: Failed to create the ZIP archive.
+    echo Staged files were left in: %TEMP_ZIP_DIR%
+    echo Deployed binaries were left in the root folder for inspection.
+    pause
+    exit /b 1
+)
+
+if not exist "%DEST%\%ZIP_NAME%" (
+    echo.
+    echo ERROR: ZIP archive was not created at "%DEST%\%ZIP_NAME%".
+    echo Staged files were left in: %TEMP_ZIP_DIR%
+    echo Deployed binaries were left in the root folder for inspection.
+    pause
+    exit /b 1
+)
 
 rmdir /S /Q "%TEMP_ZIP_DIR%"
 
-:: Clean up deployed binaries from root folder to leave only the ZIP
 if exist "%DEST%\BeyondLauncher.exe" del /F /Q "%DEST%\BeyondLauncher.exe"
 if exist "%DEST%\BeyondLauncher.pdb" del /F /Q "%DEST%\BeyondLauncher.pdb"
 if exist "%DEST%\av_libglesv2.dll" del /F /Q "%DEST%\av_libglesv2.dll"

@@ -83,5 +83,13 @@ namespace Launcher.ViewModels
             get;
             set => SetProperty(ref field, value);
         } = 1;
+        // Target monster names/ids, comma-separated ("Wyvern, 206"). Empty = any
+        // hostile in frame. Names let the same chain work on live AQW where the
+        // client never sees the server's kill-credit ids.
+        public string Mon
+        {
+            get;
+            set => SetProperty(ref field, value);
+        } = "";
     }
 }

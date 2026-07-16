@@ -385,6 +385,7 @@ namespace BeyondAgent
             ItemCatalog.Init();
             MusicCatalog.Init();
             QuestChains.Init();
+            QuestDB.Init();
 
             string userDir = System.IO.Path.Combine(BeyondEnv.UserDataDirectory, "Beyond");
             System.IO.Directory.CreateDirectory(userDir);
@@ -531,8 +532,8 @@ namespace BeyondAgent
             // Tick the quest runner every frame. It's a no-op when Idle/Done/Failed.
             try { questRunner?.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"QuestRunner tick: {ex.Message}"); }
 
-            // Flush any drops the filter rejected — sends discardDrop on the main thread.
-            try { Util.DropFilterEngine.DrainDiscards(); } catch (System.Exception ex) { BeyondLog.Error($"DropFilter drain: {ex.Message}"); }
+            // Scan the loot inventory and act on keep/reject matches (main thread).
+            try { Util.DropFilterEngine.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"DropFilter tick: {ex.Message}"); }
 
             // Pet combat-anim driver — no-op when toggle off or no pet.
             try { PetCombatAnimDriver.Tick(); } catch (System.Exception ex) { BeyondLog.Error($"PetCombatAnim tick: {ex.Message}"); }
@@ -3875,7 +3876,8 @@ namespace BeyondAgent
                               area = e.area,
                               frame = e.frame,
                               pad = e.pad,
-                              items = e.items
+                              items = e.items,
+                              mons = [.. e.mons]
                           }) :
                           [];
                 errorMsg = null;
@@ -3944,7 +3946,7 @@ namespace BeyondAgent
             y += 22f;
 
             // ---- Entries header ----
-            GUI.Label(new Rect(p, y, W - (p * 2), 18), "Entries:   qid | area | frame | pad | iters | -", labelStyle);
+            GUI.Label(new Rect(p, y, W - (p * 2), 18), "Entries:   qid | area | frame | pad | iters | mon (names/ids, comma) | -", labelStyle);
             y += 20f;
 
             // ---- Entries scroll list ----
@@ -3962,7 +3964,8 @@ namespace BeyondAgent
                 string sframe = GUI.TextField(new Rect(140, ey, 68, 26), ent.frame ?? "", textFieldStyle); ent.frame = sframe;
                 string spad = GUI.TextField(new Rect(214, ey, 58, 26), ent.pad ?? "Spawn", textFieldStyle); ent.pad = spad;
                 string sitems = GUI.TextField(new Rect(278, ey, 38, 26), ent.items.ToString(), textFieldStyle); int.TryParse(sitems, out int itemsval); ent.items = itemsval < 1 ? 1 : itemsval;
-                if (GUI.Button(new Rect(322, ey, 28, 26), "-", closeButtonStyle)) { _chainEditState.entries.RemoveAt(i); break; }
+                string smon = GUI.TextField(new Rect(322, ey, 140, 26), ent.MonText, textFieldStyle); ent.MonText = smon;
+                if (GUI.Button(new Rect(468, ey, 28, 26), "-", closeButtonStyle)) { _chainEditState.entries.RemoveAt(i); break; }
                 _chainEditState.entries[i] = ent;
             }
             if (GUI.Button(new Rect(0, _chainEditState.entries.Count * 32f, 28, 26), "+", closeButtonStyle))
@@ -4205,6 +4208,10 @@ namespace BeyondAgent
                     ["pad"] = string.IsNullOrEmpty(ent.pad) ? "Spawn" : ent.pad,
                     ["items"] = ent.items < 1 ? 1 : ent.items
                 };
+                if (ent.mons.Count > 0)
+                {
+                    o["mon"] = new JArray(ent.mons);
+                }
                 arr.Add(o);
             }
             return arr;
@@ -4782,7 +4789,8 @@ namespace BeyondAgent
                                 area = e.area ?? "",
                                 frame = e.frame ?? "",
                                 pad = e.pad ?? "Spawn",
-                                e.items
+                                e.items,
+                                mon = e.mons
                             });
                         }
                         chainsDict[kv.Key] = entries;
@@ -5679,51 +5687,19 @@ namespace BeyondAgent
                     {
                         try
                         {
-                            // Filter items/rarities with accept/reject action
-                            JArray itemsJson = (JArray)cmd["Items"];
-                            JArray itemIdsJson = (JArray)cmd["ItemIds"];
-                            JArray raritiesJson = (JArray)cmd["Rarities"];
-                            string action = (string)cmd["Action"] ?? "Accept";
+                            // Two raw comma-separated lists. Keep -> auto-loot,
+                            // Reject -> auto-dust. Parsing lives in the engine so
+                            // the "Name:rarity" syntax has one source of truth.
+                            // Diagnostic: record the exact payload the launcher sent so a
+                            // stale-launcher key mismatch is visible in packets.jsonl.
+                            try { Util.PacketLog.Write("s2c", $"{{\"Cmd\":\"__dropfilter\",\"msg\":\"handler received: {cmd.ToString(Newtonsoft.Json.Formatting.None).Replace("\"", "'")}\"}}", synthetic: true); } catch { }
 
-                            var itemNames = new System.Collections.Generic.List<string>();
-                            if (itemsJson != null)
-                            {
-                                foreach (var item in itemsJson)
-                                {
-                                    itemNames.Add(item.ToString());
-                                }
-                            }
+                            string keepRaw = (string)cmd["Keep"] ?? "";
+                            string rejectRaw = (string)cmd["Reject"] ?? "";
+                            bool deleteOthers = (bool?)cmd["DeleteOthers"] ?? false;
 
-                            var itemIds = new System.Collections.Generic.List<int>();
-                            if (itemIdsJson != null)
-                            {
-                                foreach (var id in itemIdsJson)
-                                {
-                                    itemIds.Add((int)id);
-                                }
-                            }
-
-                            var rarities = new System.Collections.Generic.List<string>();
-                            if (raritiesJson != null)
-                            {
-                                foreach (var rarity in raritiesJson)
-                                {
-                                    rarities.Add(rarity.ToString().ToLower());
-                                }
-                            }
-
-                            string desc = itemNames.Count > 0
-                                ? $"items: {string.Join(", ", itemNames)}"
-                                : itemIds.Count > 0
-                                    ? $"item IDs: {string.Join(", ", itemIds)}"
-                                    : rarities.Count > 0
-                                        ? $"rarities: {string.Join(", ", rarities)}"
-                                        : "(no filter)";
-
-                            BeyondLog.Msg($"[Launcher] Drop filter: {action} {desc}");
-
-                            // Apply actual filter
-                            Util.DropFilterEngine.ApplyDropFilter(itemNames, itemIds, rarities, action);
+                            Util.DropFilterEngine.ApplyDropFilter(keepRaw, rejectRaw, deleteOthers);
+                            BeyondLog.Msg($"[Launcher] Drop filter applied. Keep=[{keepRaw}] Reject=[{rejectRaw}] DeleteOthers={deleteOthers}");
                         }
                         catch (System.Exception ex)
                         {

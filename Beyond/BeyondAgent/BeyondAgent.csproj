@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>BeyondAgent</AssemblyName>
-    <Version>0.1.3</Version>
+    <Version>0.1.4</Version>
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -129,6 +129,10 @@
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
       <HintPath>$(AqwiManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.Physics2DModule">
+      <HintPath>$(AqwiManagedDir)\UnityEngine.Physics2DModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
