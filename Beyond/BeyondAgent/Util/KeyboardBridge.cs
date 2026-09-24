@@ -13,13 +13,15 @@ namespace BeyondAgent.Util
     // launcher Keyboard.current never sees a key, and every game bind that
     // polls it is dead - Enter-to-chat, WASD, skills 1-6.
     //
-    // WM_KEYDOWN still reaches the focused child window, so legacy
-    // UnityEngine.Input works. That is what the game itself used until the
-    // 2026-09-19 update moved its binds to InputManager/Keyboard.current, which
-    // is when this broke.
+    // WM_KEYDOWN still reaches the focused child window, but legacy
+    // UnityEngine.Input can't be relied on to see it either: on some machines
+    // it reads nothing while WM_CHAR text still arrives (user logs,
+    // 2026-09-24: textChars>0 with zero bridge events). So on Windows the key
+    // state comes straight from Win32 (Win32Keys below), gated on the game
+    // window having keyboard focus; legacy Input remains the source elsewhere.
     //
-    // So bridge one into the other: read legacy Input each frame and queue it
-    // as a keyboard state event. One event feeds every consumer at once -
+    // Either way, bridge it into the Input System: read the key state each
+    // frame and queue it as a keyboard state event. One event feeds every consumer at once -
     // Keyboard.current polling, InputActions, the UI module - rather than
     // patching each call site in the game.
     //
@@ -81,32 +83,48 @@ namespace BeyondAgent.Util
                 VerifyDelivered(keyboard);
             }
 
-            // A key pressed and released between two frames is invisible to
-            // GetKey, so the bridge never forwards it. Log it so short taps
-            // being dropped shows up (low frame rates make this likelier).
-            if (Input.anyKeyDown)
+            bool win32 = Win32Keys.Supported;
+            bool focused = true;
+            if (win32)
             {
-                LogSubFrameTaps();
+                focused = Win32Keys.Refresh();
+                // Unfocused: report nothing held, which also releases any key
+                // that was down when focus left (no stuck WASD).
+                if (!focused && _lastLo == 0 && _lastHi == 0)
+                {
+                    return;
+                }
             }
-
-            // Idle fast path: nothing held now and nothing held last frame.
-            if (!Input.anyKey && _lastLo == 0 && _lastHi == 0)
+            else
             {
-                return;
+                // A key pressed and released between two frames is invisible to
+                // GetKey, so the bridge never forwards it. Log it so short taps
+                // being dropped shows up (low frame rates make this likelier).
+                if (Input.anyKeyDown)
+                {
+                    LogSubFrameTaps();
+                }
+
+                // Idle fast path: nothing held now and nothing held last frame.
+                if (!Input.anyKey && _lastLo == 0 && _lastHi == 0)
+                {
+                    return;
+                }
             }
 
             KeyboardState state = default;
             ulong lo = 0;
             ulong hi = 0;
-            foreach (KeyValuePair<Key, KeyCode> pair in Keys)
+            foreach (Key key in ActiveKeys)
             {
-                if (!Input.GetKey(pair.Value))
+                bool down = win32 ? focused && Win32Keys.IsDown(key) : Input.GetKey(Keys[key]);
+                if (!down)
                 {
                     continue;
                 }
 
-                state.Press(pair.Key);
-                int bit = (int)pair.Key;
+                state.Press(key);
+                int bit = (int)key;
                 if (bit < 64)
                 {
                     lo |= 1UL << bit;
@@ -133,6 +151,8 @@ namespace BeyondAgent.Util
             _verifyPending = true;
         }
 
+        private static IEnumerable<Key> ActiveKeys => Win32Keys.Supported ? Win32Keys.Keys : Keys.Keys;
+
         private static bool IsSet(ulong lo, ulong hi, Key key)
         {
             int bit = (int)key;
@@ -146,7 +166,7 @@ namespace BeyondAgent.Util
             int down = 0;
             int up = 0;
             int held = 0;
-            foreach (Key key in Keys.Keys)
+            foreach (Key key in ActiveKeys)
             {
                 bool was = IsSet(oldLo, oldHi, key);
                 bool now = IsSet(lo, hi, key);
@@ -178,11 +198,11 @@ namespace BeyondAgent.Util
             bool redact = InputDiagnostics.ShouldRedactKeys;
             int mismatches = 0;
             System.Text.StringBuilder sb = new();
-            foreach (KeyValuePair<Key, KeyCode> pair in Keys)
+            foreach (Key key in ActiveKeys)
             {
-                bool expected = IsSet(_lastLo, _lastHi, pair.Key);
+                bool expected = IsSet(_lastLo, _lastHi, key);
                 bool actual;
-                try { actual = keyboard[pair.Key].isPressed; }
+                try { actual = keyboard[key].isPressed; }
                 catch { continue; }
                 if (expected == actual)
                 {
@@ -191,7 +211,7 @@ namespace BeyondAgent.Util
                 mismatches++;
                 if (!redact)
                 {
-                    sb.Append($" {pair.Key}(sent {(expected ? "down" : "up")}, reads {(actual ? "down" : "up")})");
+                    sb.Append($" {key}(sent {(expected ? "down" : "up")}, reads {(actual ? "down" : "up")})");
                 }
             }
 
