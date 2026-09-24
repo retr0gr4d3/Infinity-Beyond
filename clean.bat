@@ -59,6 +59,10 @@ if exist "%DEST%\BeyondLauncher_*.zip" (
     del /F /Q "%DEST%\BeyondLauncher_*.zip"
     echo   - Deleted generated ZIP packages
 )
+if exist "%DEST%\BeyondLauncher" (
+    rmdir /S /Q "%DEST%\BeyondLauncher"
+    echo   - Removed BeyondLauncher folder
+)
 
 :: 2. Delete build/bin/obj folders recursively
 echo.

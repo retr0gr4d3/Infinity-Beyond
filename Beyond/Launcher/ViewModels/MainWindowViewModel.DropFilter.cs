@@ -17,30 +17,30 @@ namespace Launcher.ViewModels
     {
         // Drops to auto-loot into the inventory.
         [ObservableProperty]
-        private string _keepListInput = "";
+        private string keepListInput = "";
 
         // Drops to auto-dust.
         [ObservableProperty]
-        private string _rejectListInput = "";
+        private string rejectListInput = "";
 
         // Strict whitelist: dust every drop NOT in the keep list. Disables the
         // reject box (it's redundant when everything unlisted is deleted).
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(RejectEnabled))]
-        private bool _deleteOthers;
+        private bool deleteOthers;
 
         public bool RejectEnabled => !DeleteOthers;
 
         // Status feedback
         [ObservableProperty]
-        private string _dropFilterStatus = "Ready";
+        private string dropFilterStatus = "Ready";
 
         // Running state drives the Start/Stop toggle button
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(FilterToggleLabel))]
-        private bool _isFilterRunning;
+        private bool isFilterRunning;
 
-        public string FilterToggleLabel => IsFilterRunning ? "Stop Filter" : "Start Filter";
+        public string FilterToggleLabel => IsFilterRunning ? "Disable Filter" : "Enable Filter";
 
         [RelayCommand]
         private void ToggleDropFilter()
@@ -50,7 +50,7 @@ namespace Launcher.ViewModels
             {
                 _connection.SendCommand("ClearDropFilter", null);
                 IsFilterRunning = false;
-                DropFilterStatus = "Stopped";
+                DropFilterStatus = "Disabled";
                 return;
             }
 

@@ -36,7 +36,23 @@ echo ========================================================
 echo.
 
 set "GAME_DIR=%AQWI_GAME_DIR%"
+
+:: Auto-detect a Steam install before prompting.
+set "STEAM_SUB=steamapps\common\AdventureQuest Worlds Unity Playtest"
+if not defined GAME_DIR if exist "%ProgramFiles(x86)%\Steam\%STEAM_SUB%\" set "GAME_DIR=%ProgramFiles(x86)%\Steam\%STEAM_SUB%"
 if not defined GAME_DIR (
+    echo Searching all drives for Steam install...
+    for %%D in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
+        if exist "%%D:\Steam\%STEAM_SUB%\" (
+            set "GAME_DIR=%%D:\Steam\%STEAM_SUB%"
+            goto :FoundGame
+        )
+    )
+)
+:FoundGame
+
+if not defined GAME_DIR (
+    echo Could not auto-detect AQW Infinity.
     echo Enter the path to your AdventureQuest Worlds Infinity install folder.
     echo ^(The folder that contains the game's .exe and its *_Data folder.^)
     set /p "GAME_DIR=Game directory: "

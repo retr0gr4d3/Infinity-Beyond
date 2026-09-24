@@ -30,7 +30,7 @@
                 <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Keep (loot to inventory)" Classes="Header" Margin="0"/>
-                        <TextBox Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" Padding="8" CornerRadius="4" Foreground="#E2E4E9" Text="{Binding KeepListInput}" MinHeight="60" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBox Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" Padding="8" CornerRadius="4" Foreground="#E2E4E9" Text="{Binding KeepListInput}" PlaceholderText="*gem:epic, *gem:legendary, *gem:mythic" MinHeight="60" TextWrapping="Wrap" AcceptsReturn="True"/>
                         <CheckBox IsChecked="{Binding DeleteOthers}" Foreground="#E2E4E9" FontSize="11" Content="Delete all other drops (keep only the items listed above)"/>
                     </StackPanel>
                 </Border>
@@ -39,7 +39,7 @@
                 <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12" IsEnabled="{Binding RejectEnabled}">
                     <StackPanel Spacing="8">
                         <TextBlock Text="Reject (dust)" Classes="Header" Margin="0"/>
-                        <TextBox Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" Padding="8" CornerRadius="4" Foreground="#E2E4E9" Text="{Binding RejectListInput}" MinHeight="60" TextWrapping="Wrap" AcceptsReturn="True"/>
+                        <TextBox Background="#16161A" BorderBrush="#2A2A32" BorderThickness="1" Padding="8" CornerRadius="4" Foreground="#E2E4E9" Text="{Binding RejectListInput}" PlaceholderText="*gem:common, *gem:uncommon, *gem:rare, *nonac" MinHeight="60" TextWrapping="Wrap" AcceptsReturn="True"/>
                     </StackPanel>
                 </Border>
 
