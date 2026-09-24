@@ -85,8 +85,8 @@ echo Targets        : %TARGETS%  (win RID: %WIN_RID%)
 echo.
 
 rem --- Build the solution (mod + launcher) --------------------------------
-rem Builds BeyondAgent.dll (+ 0Harmony.dll) into Beyond\build and deploys the mod
-rem into the local game; the launcher is published per-RID in the subroutines.
+rem Builds BeyondAgent.dll (+ 0Harmony.dll) into Beyond\build; the launcher is
+rem published per-RID in the subroutines and installs the mod into the game at launch.
 dotnet build "%SLN%" -c Release -p:AqwiGameDir="%GAME_DIR%" -p:AqwiManagedDir="%MANAGED_DIR%"
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -114,7 +114,6 @@ echo Standalone Launcher and Mod packaged successfully!
 echo.
 echo Packages:
 for %%p in (%PRODUCED%) do echo   %%p
-echo (The BeyondAgent mod was also deployed into: %MANAGED_DIR%)
 echo.
 echo Closing in 3 seconds...
 timeout /t 3 /nobreak >nul

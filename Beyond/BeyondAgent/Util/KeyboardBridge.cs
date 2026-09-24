@@ -51,12 +51,42 @@ namespace BeyondAgent.Util
         private static ulong _lastLo;
         private static ulong _lastHi;
 
+        // Diagnostics (see InputDiagnostics): number of state events queued so
+        // far, and a pending check that the last one reached Keyboard.current.
+        public static int QueuedCount { get; private set; }
+        private static bool _verifyPending;
+        private static bool _loggedNoKeyboard;
+
         public static void Tick()
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null)
             {
+                if (!_loggedNoKeyboard)
+                {
+                    BeyondLog.Warning("[KeyboardBridge] Keyboard.current is null - nothing to feed, all game binds dead until a keyboard device appears");
+                    _loggedNoKeyboard = true;
+                }
                 return;
+            }
+            if (_loggedNoKeyboard)
+            {
+                BeyondLog.Msg("[KeyboardBridge] Keyboard.current is back: " + InputDiagnostics.Describe(keyboard));
+                _loggedNoKeyboard = false;
+            }
+
+            if (_verifyPending)
+            {
+                _verifyPending = false;
+                VerifyDelivered(keyboard);
+            }
+
+            // A key pressed and released between two frames is invisible to
+            // GetKey, so the bridge never forwards it. Log it so short taps
+            // being dropped shows up (low frame rates make this likelier).
+            if (Input.anyKeyDown)
+            {
+                LogSubFrameTaps();
             }
 
             // Idle fast path: nothing held now and nothing held last frame.
@@ -95,9 +125,107 @@ namespace BeyondAgent.Util
                 return;
             }
 
+            LogEdges(_lastLo, _lastHi, lo, hi);
             _lastLo = lo;
             _lastHi = hi;
             InputSystem.QueueStateEvent(keyboard, state);
+            QueuedCount++;
+            _verifyPending = true;
+        }
+
+        private static bool IsSet(ulong lo, ulong hi, Key key)
+        {
+            int bit = (int)key;
+            return bit < 64 ? (lo & (1UL << bit)) != 0 : (hi & (1UL << (bit - 64))) != 0;
+        }
+
+        private static void LogEdges(ulong oldLo, ulong oldHi, ulong lo, ulong hi)
+        {
+            bool redact = InputDiagnostics.ShouldRedactKeys;
+            System.Text.StringBuilder sb = new();
+            int down = 0;
+            int up = 0;
+            int held = 0;
+            foreach (Key key in Keys.Keys)
+            {
+                bool was = IsSet(oldLo, oldHi, key);
+                bool now = IsSet(lo, hi, key);
+                if (now)
+                {
+                    held++;
+                }
+                if (was == now)
+                {
+                    continue;
+                }
+                if (now) { down++; } else { up++; }
+                if (!redact)
+                {
+                    sb.Append(now ? " +" : " -").Append(key);
+                }
+            }
+
+            string keys = redact ? $" +{down} -{up} (key names hidden: text field focused or not in game)" : sb.ToString();
+            BeyondLog.Verbose($"[KeyboardBridge] queue #{QueuedCount + 1}:{keys}; {held} held");
+        }
+
+        // Runs the frame after a queue: the Input System has processed the
+        // event by now, so Keyboard.current should match what we sent. A
+        // mismatch means the event was dropped (focus flush, disabled device)
+        // or something else wrote conflicting state.
+        private static void VerifyDelivered(Keyboard keyboard)
+        {
+            bool redact = InputDiagnostics.ShouldRedactKeys;
+            int mismatches = 0;
+            System.Text.StringBuilder sb = new();
+            foreach (KeyValuePair<Key, KeyCode> pair in Keys)
+            {
+                bool expected = IsSet(_lastLo, _lastHi, pair.Key);
+                bool actual;
+                try { actual = keyboard[pair.Key].isPressed; }
+                catch { continue; }
+                if (expected == actual)
+                {
+                    continue;
+                }
+                mismatches++;
+                if (!redact)
+                {
+                    sb.Append($" {pair.Key}(sent {(expected ? "down" : "up")}, reads {(actual ? "down" : "up")})");
+                }
+            }
+
+            if (mismatches == 0)
+            {
+                BeyondLog.Verbose($"[KeyboardBridge] queue #{QueuedCount} delivered: Keyboard.current matches");
+            }
+            else
+            {
+                BeyondLog.Warning($"[KeyboardBridge] queue #{QueuedCount} NOT reflected in Keyboard.current, {mismatches} key(s) differ:{sb}; " +
+                                  $"kbd enabled={keyboard.enabled} appFocused={Application.isFocused} bg={InputSystem.settings.backgroundBehavior}");
+            }
+        }
+
+        private static void LogSubFrameTaps()
+        {
+            bool redact = InputDiagnostics.ShouldRedactKeys;
+            int count = 0;
+            System.Text.StringBuilder sb = new();
+            foreach (KeyValuePair<Key, KeyCode> pair in Keys)
+            {
+                if (Input.GetKeyDown(pair.Value) && !Input.GetKey(pair.Value))
+                {
+                    count++;
+                    if (!redact)
+                    {
+                        sb.Append(' ').Append(pair.Key);
+                    }
+                }
+            }
+            if (count > 0)
+            {
+                BeyondLog.Warning($"[KeyboardBridge] {count} key tap(s) shorter than one frame, never forwarded:{(redact ? " (names hidden)" : sb.ToString())}");
+            }
         }
 
         private static Dictionary<Key, KeyCode> BuildMap()
@@ -140,6 +268,7 @@ namespace BeyondAgent.Util
                     BeyondLog.Error($"[KeyboardBridge] no KeyCode for Key.{probe} — binds using it stay dead");
                 }
             }
+            BeyondLog.Verbose($"[KeyboardBridge] mapped {map.Count} Input System keys to legacy KeyCodes");
 
             return map;
         }

@@ -60,19 +60,6 @@
     <Message Importance="high" Text="[Infinity-Beyond] DLL → $(MSBuildProjectDirectory)\..\build\$(AssemblyName).dll" />
   </Target>
 
-  <!-- Deploy directly into the game's Managed folder -->
-  <Target Name="PostBuild" AfterTargets="Build" Condition="Exists('$(AqwiManagedDir)')">
-    <PropertyGroup>
-      <NugetPkgRoot Condition="'$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)</NugetPkgRoot>
-      <NugetPkgRoot Condition="'$(NugetPkgRoot)' == ''">$(UserProfile)\.nuget\packages\</NugetPkgRoot>
-      <HarmonyPkgDll>$(NugetPkgRoot)lib.harmony\2.4.2\lib\net48\0Harmony.dll</HarmonyPkgDll>
-    </PropertyGroup>
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll" DestinationFolder="$(AqwiManagedDir)" />
-    <Copy SourceFiles="$(OutputPath)0Harmony.dll" DestinationFolder="$(AqwiManagedDir)" Condition="Exists('$(OutputPath)0Harmony.dll')" />
-    <Copy SourceFiles="$(HarmonyPkgDll)" DestinationFolder="$(AqwiManagedDir)" Condition="!Exists('$(OutputPath)0Harmony.dll') and Exists('$(HarmonyPkgDll)')" />
-    <Message Importance="high" Text="[Infinity-Beyond] Deployed Agent and Harmony to $(AqwiManagedDir)" />
-  </Target>
-
   <ItemGroup>
     <EmbeddedResource Include="Data\quests.json" />
     <EmbeddedResource Include="Data\shops.json" />

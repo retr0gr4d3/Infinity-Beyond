@@ -9,8 +9,8 @@
 # The agent DLL (BeyondAgent.dll) is platform-agnostic (netstandard2.1), so the
 # same file ships in both packages; only the launcher differs per RID.
 #
-# It also deploys the freshly built mod into THIS machine's game install (the
-# managed dir it prompts for), so a Mac dev can build + test in one step.
+# The game install is only compiled against; the launcher installs the mod into
+# the game itself at launch, from the copy bundled beside it.
 #
 # Usage:
 #   ./build_osx.sh

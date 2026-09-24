@@ -48,4 +48,19 @@
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
+
+  <!-- The launcher copies BeyondAgent.dll + 0Harmony.dll from its own folder
+       into the game at launch, so put them beside the exe exactly like the
+       release zip does. Dev runs then load the same agent end users get,
+       never a copy left behind in the game's Managed folder. -->
+  <PropertyGroup>
+    <AgentBuildDir>$(MSBuildProjectDirectory)\..\build\</AgentBuildDir>
+  </PropertyGroup>
+  <Target Name="CopyAgentBesideLauncher" AfterTargets="Build">
+    <Copy SourceFiles="$(AgentBuildDir)BeyondAgent.dll;$(AgentBuildDir)0Harmony.dll"
+          DestinationFolder="$(OutDir)"
+          Condition="Exists('$(AgentBuildDir)BeyondAgent.dll')" />
+    <Warning Text="BeyondAgent.dll not found in Beyond\build - build BeyondAgent first or the launcher will run without the mod."
+             Condition="!Exists('$(AgentBuildDir)BeyondAgent.dll')" />
+  </Target>
 </Project>

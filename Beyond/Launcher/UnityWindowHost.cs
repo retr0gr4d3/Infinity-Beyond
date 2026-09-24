@@ -731,6 +731,7 @@ namespace Launcher
                             // Sync Avalonia focus and Win32 focus
                             this.Focus();
                             SetFocus(unityHwnd);
+                            Trace.WriteLine($"[Input] click on game: focus was 0x{currentFocus.ToInt64():X}, SetFocus(game 0x{unityHwnd.ToInt64():X}) -> now 0x{GetGlobalFocusedWindow().ToInt64():X}");
                         }
                     }
                 }
@@ -750,7 +751,12 @@ namespace Launcher
             IntPtr unityHwnd = GetUnityHwnd();
             if (unityHwnd != IntPtr.Zero)
             {
-                SetFocus(unityHwnd);
+                IntPtr prev = SetFocus(unityHwnd);
+                Trace.WriteLine($"[Input] host got focus -> SetFocus(game 0x{unityHwnd.ToInt64():X}): prev=0x{prev.ToInt64():X} now=0x{GetFocus().ToInt64():X}");
+            }
+            else
+            {
+                Trace.WriteLine("[Input] host got focus but no game window yet");
             }
         }
 
@@ -777,11 +783,21 @@ namespace Launcher
                 _inputAttached = true;
                 _gameThreadId = gameThread;
                 _guiThreadId = guiThread;
+                Trace.WriteLine($"[Input] AttachThreadInput ok: launcher thread {guiThread} -> game thread {gameThread} (hwnd 0x{unityHwnd.ToInt64():X})");
                 // Give the game initial focus so the login field is typeable
                 // immediately; clicking launcher controls moves focus back.
-                SetFocus(unityHwnd);
+                IntPtr prev = SetFocus(unityHwnd);
+                Trace.WriteLine($"[Input] initial SetFocus(game): prev=0x{prev.ToInt64():X} now=0x{GetFocus().ToInt64():X}");
+            }
+            else if (!_attachFailureLogged)
+            {
+                // Retried every resize tick; log the first failure only.
+                _attachFailureLogged = true;
+                Trace.WriteLine($"[Input] AttachThreadInput FAILED (win32 error {Marshal.GetLastWin32Error()}): launcher thread {guiThread} -> game thread {gameThread}. Keystrokes will not reach the game.");
             }
         }
+
+        private bool _attachFailureLogged;
 
         protected override void DestroyNativeControlCore(IPlatformHandle control)
         {
