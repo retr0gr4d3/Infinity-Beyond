@@ -1270,10 +1270,26 @@ namespace BeyondAgent.Util
                 // Find the first incomplete objective. If none, we're ready to
                 // turn in. The quest def's Turnins are the source of truth here —
                 // we don't try to interpret them, just check completion per QOID.
-                nextObjective = NextIncompleteObjective(q);
+                //
+                // A quest listed again in the next entry is split across maps
+                // (pirates q289: fish and chickens on seaside, wyverns on
+                // pirates). This entry hunts only the kill objectives whose
+                // monsters it can pick out on this map, then leaves the rest
+                // and the turn-in to the next entry.
+                List<QuestChains.Entry> entries = IsFarming ? FarmEntries : ChainEntries;
+                bool continuesInNextEntry = entries != null
+                    && ChainIndex + 1 < entries.Count
+                    && entries[ChainIndex + 1].qid == QuestID;
+                nextObjective = continuesInNextEntry ? NextObjectiveHere(q) : NextIncompleteObjective(q);
                 if (nextObjective == null)
                 {
                     StopAutoskills();
+                    if (continuesInNextEntry)
+                    {
+                        Log($"  nothing more for quest {QuestID} on this map; the next entry continues it");
+                        AdvanceChainOrFinish();
+                        return;
+                    }
                     Log("  all objectives complete; turning in");
                     EnterState(RunState.TurningIn);
                     return;
@@ -2138,6 +2154,27 @@ namespace BeyondAgent.Util
             return null;
         }
 
+        // The first incomplete kill objective whose own monsters this map
+        // holds (see ObjectiveFocus), for an entry that hands its quest on to
+        // the next one. Objectives it can't place are left for that entry.
+        private QuestTurninItem NextObjectiveHere(Quest q)
+        {
+            PlayerQuestData pq = Entity.mainPlayer?.Quests;
+            if (q?.Turnins == null || pq == null)
+            {
+                return null;
+            }
+
+            foreach (QuestTurninItem t in q.Turnins)
+            {
+                if (!pq.IsObjectiveComplete(t.QOID) && ObjectiveFocus(t) != null)
+                {
+                    return t;
+                }
+            }
+            return null;
+        }
+
         private int SumObjectiveProgress(Quest q)
         {
             if (q?.Turnins == null)
@@ -2381,9 +2418,9 @@ namespace BeyondAgent.Util
             // empty without one): with no hint, "any hostile" stays the rule
             // rather than a guess from names alone.
             int best = scores.Count == 0 ? 0 : scores.Values.Max();
-            if (best == 0 || scores.Values.All(s => s == best))
+            if (best == 0)
             {
-                return null;   // names don't tell the candidates apart
+                return null;   // no candidate shares a word with the objective
             }
             return [.. scores.Where(kv => kv.Value == best).Select(kv => kv.Key)];
         }
