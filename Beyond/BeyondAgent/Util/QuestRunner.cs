@@ -2348,8 +2348,9 @@ namespace BeyondAgent.Util
         // our cell long after its own objective is done, and never walks to
         // the other one's cell (aranx: Infinity Manticore in R4, Earth
         // Elementals in R2/R3). Narrow it per objective, most specific first:
-        //   1. the objective's own RefArray MonIDs, when any are on this map;
-        //   2. among monsters the entry's `mon` hint already accepts, those
+        //   1. an "objective=monster" token in `mon` ("Egg=447");
+        //   2. the objective's own RefArray MonIDs, when any are on this map;
+        //   3. among monsters the entry's `mon` hint already accepts, those
         //      whose name best matches the objective's ("Space Zards" →
         //      Space Zard, "Wyvern pacified" → Wyvern).
         // null = no narrowing; use the union. Memoized per frame since
@@ -2385,11 +2386,27 @@ namespace BeyondAgent.Util
                 }
             }
 
+            // An explicit hint in the entry's `mon` list wins: "Egg=447" sends
+            // the objective whose name contains "Egg" to monster 447. It covers
+            // objectives no monster name gives away (pirates q296's Lucky
+            // Gonden Egg drops from Seaside Chickens).
+            List<string> hinted = [];
+            foreach (string tok in TargetMons)
+            {
+                int eq = tok.IndexOf('=');
+                string objPart = eq > 0 ? tok[..eq].Trim() : "";
+                if (objPart.Length > 0 && (obj.Name ?? "").IndexOf(objPart, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    hinted.Add(tok[(eq + 1)..].Trim());
+                }
+            }
+
             // Best name score per hostile MonID the union accepts. One MonID
             // can carry several display names (asteroid's "Stamper" is a
             // Space Sneevil), so keep the best.
             HashSet<string> want = NameWords(obj.Name);
             Dictionary<int, int> scores = [];
+            HashSet<int> hintedHere = [];
             bool refsHere = false;
             try
             {
@@ -2398,6 +2415,10 @@ namespace BeyondAgent.Util
                     if (m == null || m.reactionType != Entity.ReactionType.Hostile)
                     {
                         continue;
+                    }
+                    if (hinted.Any(h => TokenMatches(m, h)))
+                    {
+                        hintedHere.Add(m.ID);
                     }
                     refsHere |= refs.Contains(m.ID);
                     if (TargetMons.Count == 0 || !MatchesAnySignal(m, obj))
@@ -2410,6 +2431,10 @@ namespace BeyondAgent.Util
             }
             catch { }
 
+            if (hintedHere.Count > 0)
+            {
+                return hintedHere;
+            }
             if (refsHere)
             {
                 return refs;
@@ -2452,6 +2477,16 @@ namespace BeyondAgent.Util
         private int _focusAt = -1;
         private int _focusQoid = -1;
 
+        // A `mon` token: a catalog id ("447") or a name substring ("Chicken").
+        private static bool TokenMatches(Monster m, string tok)
+        {
+            if (int.TryParse(tok, out int id))
+            {
+                return m.ID == id;
+            }
+            return tok.Length > 0 && (m.Name ?? "").IndexOf(tok, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private bool MatchesAnySignal(Monster m, QuestTurninItem obj)
         {
             bool hasSignal = false;
@@ -2459,17 +2494,11 @@ namespace BeyondAgent.Util
             if (TargetMons.Count > 0)
             {
                 hasSignal = true;
-                string name = m.Name ?? "";
                 foreach (string tok in TargetMons)
                 {
-                    if (int.TryParse(tok, out int id))
-                    {
-                        if (m.ID == id)
-                        {
-                            return true;
-                        }
-                    }
-                    else if (name.IndexOf(tok, StringComparison.OrdinalIgnoreCase) >= 0)
+                    // An "objective=monster" hint's monster joins the union too.
+                    int eq = tok.IndexOf('=');
+                    if (TokenMatches(m, eq >= 0 ? tok[(eq + 1)..].Trim() : tok))
                     {
                         return true;
                     }
