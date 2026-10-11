@@ -563,11 +563,8 @@ namespace Launcher
                         Trace.WriteLine("MelonLoader detected. Disabling built-in modifications (restoring original assembly if needed).");
                         try
                         {
-                            string assemblyPath = Path.Combine(managedDir, "Assembly-CSharp.dll");
-                            string backupPath = assemblyPath + ".bak";
-                            if (File.Exists(backupPath))
+                            if (AssemblyPatcher.Restore(managedDir))
                             {
-                                File.Copy(backupPath, assemblyPath, true);
                                 Trace.WriteLine("Restored original Assembly-CSharp.dll from backup.");
                             }
                         }

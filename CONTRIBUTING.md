@@ -54,12 +54,12 @@ A custom MSBuild `PostBuild` target in [`Beyond/BeyondAgent/BeyondAgent.csproj`]
 ### 2. Bootstrapping & Assembly Injection
 When you click **Launch** in the Launcher, it initializes the session. Before launching the game client process:
 1. The Launcher invokes [`AssemblyPatcher.cs`](Beyond/Launcher/AssemblyPatcher.cs).
-2. It opens the game's original `Assembly-CSharp.dll` (saving a `.dll.bak` backup if it's the first time patching).
+2. It opens the game's original `Assembly-CSharp.dll`.
 3. Using **Mono.Cecil**, it patches the `AEC.Start()` method (which runs when the game's core engine initializes) to insert a call to:
    ```csharp
    Infinity_TestMod.BeyondLifecycle.Create();
    ```
-4. It writes the patched assembly back to the game's `Managed` directory.
+4. It backs up the unpatched DLL as `.dll.unpatched-<sha256>.bak` (one per client version) and `.dll.bak` (the newest original), then swaps the patched assembly into the game's `Managed` directory. When MelonLoader is detected it restores only a backup from the installed client's build.
 
 ### 3. Startup & IPC Initialization
 When the game client executes:
