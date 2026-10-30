@@ -392,6 +392,7 @@ namespace BeyondAgent
             MusicCatalog.Init();
             QuestChains.Init();
             QuestDB.Init();
+            questRunner.OnProgressChanged = SendQuestRunnerState;
 
             string userDir = System.IO.Path.Combine(BeyondEnv.UserDataDirectory, "Beyond");
             System.IO.Directory.CreateDirectory(userDir);
@@ -3812,7 +3813,8 @@ namespace BeyondAgent
                         questRunnerLogScroll.y = float.MaxValue;
                     }
                 };
-                questRunner.StartChain(currentChainName, QuestChains.Get(currentChainName));
+                questRunner.StartChain(currentChainName, QuestChains.Get(currentChainName),
+                    QuestChains.GetFarm(currentChainName), 0, QuestChains.GetBuy(currentChainName));
             }
             GUI.enabled = true;
 
@@ -4106,7 +4108,29 @@ namespace BeyondAgent
 
                 // Read existing user file as JObject so we preserve unknown keys / comments
                 JObject root = System.IO.File.Exists(chainFile) ? Newtonsoft.Json.Linq.JObject.Parse(System.IO.File.ReadAllText(chainFile)) : [];
-                root[nm] = EntriesToJArray(_chainEditState.entries);
+                // This editor only edits the story entries — carry over the
+                // chain's class and farm list (from any source) so a save here
+                // doesn't silently drop them.
+                QuestChains.Classes.TryGetValue(nm, out string keepClass);
+                List<QuestChains.Entry> keepFarm = QuestChains.GetFarm(nm);
+                if (!string.IsNullOrEmpty(keepClass) || keepFarm != null)
+                {
+                    JObject chain = [];
+                    if (!string.IsNullOrEmpty(keepClass))
+                    {
+                        chain["class"] = keepClass;
+                    }
+                    chain["entries"] = EntriesToJArray(_chainEditState.entries);
+                    if (keepFarm != null)
+                    {
+                        chain["farm"] = EntriesToJArray(keepFarm);
+                    }
+                    root[nm] = chain;
+                }
+                else
+                {
+                    root[nm] = EntriesToJArray(_chainEditState.entries);
+                }
                 System.IO.File.WriteAllText(chainFile,
                     root.ToString(Newtonsoft.Json.Formatting.Indented));
 
@@ -4729,6 +4753,7 @@ namespace BeyondAgent
         {
             Dictionary<string, object> settings = new()
             {
+                { "monsterFarmingProtocol", 1 },
                 { "playerAccessLevel", (Entity.mainPlayer?.AccessLevel) ?? 0 },
                 { "playerUpgradeDays", (Entity.mainPlayer?.UpgradeDays) ?? 0 },
                 { "isMember", Entity.mainPlayer?.UpgradeDays > 0 },
@@ -4784,6 +4809,70 @@ namespace BeyondAgent
             LauncherServer.Send(payload);
         }
 
+        private static List<object> ChainEntriesForLauncher(List<QuestChains.Entry> list)
+        {
+            List<object> entries = [];
+            foreach (QuestChains.Entry e in list)
+            {
+                entries.Add(new
+                {
+                    e.qid,
+                    area = e.area ?? "",
+                    frame = e.frame ?? "",
+                    pad = e.pad ?? "Spawn",
+                    e.items,
+                    mon = e.mons
+                });
+            }
+            return entries;
+        }
+
+        // Fresh log for a launcher-started run, mirrored to both the in-game
+        // runner window and the launcher's Quest Runner log.
+        private static void WireQuestRunnerLogToLauncher()
+        {
+            questRunnerLog.Clear();
+            questRunner.OnLog = line =>
+            {
+                string formatted = $"{System.DateTime.Now:HH:mm:ss}  {line}";
+                lock (questRunnerLog)
+                {
+                    questRunnerLog.Add(formatted);
+                    if (questRunnerLog.Count > 200)
+                    {
+                        questRunnerLog.RemoveAt(0);
+                    }
+                    questRunnerLogScroll.y = float.MaxValue;
+                }
+                LauncherServer.Send(new { Type = "QuestRunnerLog", Message = formatted });
+            };
+        }
+
+        // Runner progress for the launcher's Start/Stop controls and status
+        // line. Sent on start/stop/advance and with every catalog push.
+        private static void SendQuestRunnerState()
+        {
+            QuestRunner r = questRunner;
+            LauncherServer.Send(new
+            {
+                Type = "QuestRunnerState",
+                Running = r.IsRunning,
+                Paused = r.IsPaused,
+                State = r.State.ToString(),
+                Chain = r.ChainEntries != null ? r.ChainName : "",
+                Farming = r.IsFarming,
+                r.Phase,
+                Goal = r.GoalProgress,
+                Index = r.ChainIndex,
+                Count = r.ChainEntries?.Count ?? 0,
+                FarmPass = r.FarmPass,
+                FarmLoops = r.FarmLoops,
+                r.QuestID,
+                r.StatusLine,
+                r.LastError
+            });
+        }
+
         public void SendCatalogs()
         {
             try
@@ -4830,37 +4919,31 @@ namespace BeyondAgent
 
                 // Send Quest Chains
                 Dictionary<string, List<object>> chainsDict = [];
+                Dictionary<string, List<object>> chainFarms = [];
+                Dictionary<string, string> chainClasses;
+                Dictionary<string, string> chainSources;
                 lock (QuestChains.All)
                 {
                     foreach (KeyValuePair<string, List<QuestChains.Entry>> kv in QuestChains.All)
                     {
-                        List<object> entries = [];
-                        foreach (QuestChains.Entry e in kv.Value)
-                        {
-                            entries.Add(new
-                            {
-                                e.qid,
-                                area = e.area ?? "",
-                                frame = e.frame ?? "",
-                                pad = e.pad ?? "Spawn",
-                                e.items,
-                                mon = e.mons
-                            });
-                        }
-                        chainsDict[kv.Key] = entries;
+                        chainsDict[kv.Key] = ChainEntriesForLauncher(kv.Value);
                     }
-                }
-                Dictionary<string, string> chainClasses;
-                lock (QuestChains.All)
-                {
+                    foreach (KeyValuePair<string, List<QuestChains.Entry>> kv in QuestChains.Farms)
+                    {
+                        chainFarms[kv.Key] = ChainEntriesForLauncher(kv.Value);
+                    }
                     chainClasses = new Dictionary<string, string>(QuestChains.Classes);
+                    chainSources = new Dictionary<string, string>(QuestChains.Sources);
                 }
                 LauncherServer.Send(new
                 {
                     Type = "QuestChains",
                     Chains = chainsDict,
-                    ChainClasses = chainClasses
+                    ChainClasses = chainClasses,
+                    ChainFarms = chainFarms,
+                    ChainSources = chainSources
                 });
+                SendQuestRunnerState();
 
                 // Send Item Catalog
                 List<object> helmsList = [];
@@ -5138,6 +5221,14 @@ namespace BeyondAgent
                         }
                     }
 
+                    else if (type == "RequestFarmingMonsters")
+                    {
+                        MonsterFarmingCatalog.SendMonsters();
+                    }
+                    else if (type == "RequestFarmingDrops")
+                    {
+                        MonsterFarmingCatalog.RequestDrops((int?)cmd["MonsterId"] ?? 0);
+                    }
                     else if (type == "LoadShop")
                     {
                         int shopId = (int)cmd["ShopId"];
@@ -5235,22 +5326,7 @@ namespace BeyondAgent
                         string frame = (string)cmd["Frame"];
                         string pad = (string)cmd["Pad"];
 
-                        questRunnerLog.Clear();
-                        questRunner.OnLog = line =>
-                        {
-                            string formatted = $"{System.DateTime.Now:HH:mm:ss}  {line}";
-                            lock (questRunnerLog)
-                            {
-                                questRunnerLog.Add(formatted);
-                                if (questRunnerLog.Count > 200)
-                                {
-                                    questRunnerLog.RemoveAt(0);
-                                }
-                                questRunnerLogScroll.y = float.MaxValue;
-                            }
-                            LauncherServer.Send(new { Type = "QuestRunnerLog", Message = formatted });
-                        };
-
+                        WireQuestRunnerLogToLauncher();
                         questRunner?.Start(qid, iters, area, frame, pad);
                     }
                     else if (type == "StopQuestRunner")
@@ -5674,13 +5750,23 @@ namespace BeyondAgent
                                     // doesn't specify one (e.g. chain editor re-save).
                                     cls = (string)existingChain["class"];
                                 }
-                                if (!string.IsNullOrEmpty(cls))
+                                // Same for the farm list: absent = keep what's on
+                                // disk; present (even empty) = replace it.
+                                JArray farm = cmd["Farm"] as JArray
+                                    ?? (root[name] as JObject)?["farm"] as JArray;
+                                if (!string.IsNullOrEmpty(cls) || farm is { Count: > 0 })
                                 {
-                                    root[name] = new JObject
+                                    JObject chain = [];
+                                    if (!string.IsNullOrEmpty(cls))
                                     {
-                                        ["class"] = cls,
-                                        ["entries"] = entries
-                                    };
+                                        chain["class"] = cls;
+                                    }
+                                    chain["entries"] = entries;
+                                    if (farm is { Count: > 0 })
+                                    {
+                                        chain["farm"] = farm.DeepClone();
+                                    }
+                                    root[name] = chain;
                                 }
                                 else
                                 {
@@ -5725,23 +5811,9 @@ namespace BeyondAgent
                     else if (type == "RunChain")
                     {
                         string name = (string)cmd["Name"];
-                        if (!string.IsNullOrEmpty(name))
+                        if (!string.IsNullOrEmpty(name) && !questRunner.IsRunning)
                         {
-                            questRunnerLog.Clear();
-                            questRunner.OnLog = line =>
-                            {
-                                string formatted = $"{System.DateTime.Now:HH:mm:ss}  {line}";
-                                lock (questRunnerLog)
-                                {
-                                    questRunnerLog.Add(formatted);
-                                    if (questRunnerLog.Count > 200)
-                                    {
-                                        questRunnerLog.RemoveAt(0);
-                                    }
-                                    questRunnerLogScroll.y = float.MaxValue;
-                                }
-                                LauncherServer.Send(new { Type = "QuestRunnerLog", Message = formatted });
-                            };
+                            WireQuestRunnerLogToLauncher();
                             // Optional class/skillset chosen on the chain tab — apply it
                             // (forcing the combo live) before the run begins.
                             string skillsetName = (string)cmd["Skillset"];
@@ -5753,8 +5825,65 @@ namespace BeyondAgent
                                     SendStatusUpdate();
                                 }
                             }
-                            questRunner?.StartChain(name, QuestChains.Get(name));
+                            // Farm phase: on unless the launcher says otherwise
+                            // (older launchers don't send the flag).
+                            bool farm = (bool?)cmd["Farm"] ?? true;
+                            int farmLoops = (int?)cmd["FarmLoops"] ?? 0;
+                            questRunner?.StartChain(name, QuestChains.Get(name),
+                                farm ? QuestChains.GetFarm(name) : null, farmLoops, QuestChains.GetBuy(name));
                         }
+                    }
+                    else if (type == "RunScript")
+                    {
+                        // A script file loaded in the launcher's Load Script window,
+                        // sent inline — runs without being in any chain catalog.
+                        string name = (string)cmd["Name"] ?? "Script";
+                        List<QuestChains.Entry> entries = cmd["Entries"] is JArray ea ? QuestChains.ParseEntries(ea) : [];
+                        List<QuestChains.Entry> farm = cmd["Farm"] is JArray fa ? QuestChains.ParseEntries(fa) : null;
+                        QuestChains.BuyPlan buy = QuestChains.BuyPlan.Parse(cmd["Buy"]);
+                        BeyondLog.Msg($"[Launcher] RunScript '{name}': {entries.Count} entries, {farm?.Count ?? 0} farm, buy={(buy != null ? buy.shop.ToString() : "none")}, runner {questRunner.State}");
+                        string refusal = questRunner.IsRunning ? "a script is already running"
+                            : entries.Count == 0 && farm is not { Count: > 0 } && buy == null ? "the script has no steps (quests need qid > 0, hunts need \"hunt\")"
+                            : null;
+                        if (refusal != null)
+                        {
+                            LauncherServer.Send(new { Type = "QuestRunnerLog", Message = $"{System.DateTime.Now:HH:mm:ss}  [refused] {refusal}" });
+                        }
+                        else
+                        {
+                            WireQuestRunnerLogToLauncher();
+                            string skillsetName = (string)cmd["Skillset"];
+                            if (!string.IsNullOrEmpty(skillsetName))
+                            {
+                                int si = savedSkillsets.FindIndex(s => s.Name.Equals(skillsetName, System.StringComparison.OrdinalIgnoreCase));
+                                if (si >= 0 && ApplySkillset(si, forceCombo: true))
+                                {
+                                    SendStatusUpdate();
+                                }
+                            }
+                            bool farmOn = (bool?)cmd["FarmEnabled"] ?? true;
+                            int farmLoops = (int?)cmd["FarmLoops"] ?? 0;
+                            // Farm-only scripts (no story entries) always farm.
+                            questRunner.StartChain(name, entries,
+                                farmOn || entries.Count == 0 ? farm : null, farmLoops, buy);
+                        }
+                    }
+                    else if (type == "PauseQuestRunner")
+                    {
+                        questRunner.Pause();
+                    }
+                    else if (type == "ResumeQuestRunner")
+                    {
+                        questRunner.Resume();
+                    }
+                    else if (type == "ReloadLibrary")
+                    {
+                        // The launcher just (re)downloaded Infinity-Files: pick up
+                        // new/changed scripts and autoskills without a restart.
+                        QuestChains.Init();
+                        LoadLibrarySkillsets();
+                        SendStatusUpdate();
+                        SendCatalogs();
                     }
                     else if (type == "ApplyDropFilter")
                     {

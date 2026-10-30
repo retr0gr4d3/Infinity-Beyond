@@ -1,0 +1,18 @@
+{
+  "Your quest line": {
+    "template": "quest-chain",
+    "description": "Replace the quest IDs and locations with a release quest line.",
+    "entries": [
+      {
+        "qid": 1,
+        "area": "map",
+        "frame": "Enter"
+      },
+      {
+        "qid": 2,
+        "area": "map",
+        "frame": "R2"
+      }
+    ]
+  }
+}

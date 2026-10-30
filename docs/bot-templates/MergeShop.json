@@ -1,0 +1,20 @@
+{
+  "Your merge shop": {
+    "template": "merge-shop",
+    "description": "Replace shop ID and material routes. Rewards and prices come from the live shop. No story quest prerequisite is assumed.",
+    "shop": {
+      "shop": 1,
+      "area": "map"
+    },
+    "farm": [
+      {
+        "hunt": [
+          "Monster name"
+        ],
+        "area": "map",
+        "frame": "R2",
+        "item": "Material name"
+      }
+    ]
+  }
+}

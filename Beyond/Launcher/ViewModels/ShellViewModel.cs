@@ -27,6 +27,9 @@ namespace Launcher.ViewModels
         {
             Configurator.OnLaunchRequested += AddSessionWithCredentials;
             IsConfiguratorSelected = true;
+            // Refresh the script library in the background while the user picks
+            // an account, so it's current before the first game boots.
+            LibraryService.AutoUpdate(Configurator.GameDirectory);
         }
 
         public void AddSessionWithCredentials(string? user, string? pass, string? nickname = null)
@@ -42,6 +45,8 @@ namespace Launcher.ViewModels
             };
             Sessions.Add(session);
             SelectedSession = session;
+            // No-op if it already ran this launch (covers a game dir set after startup).
+            LibraryService.AutoUpdate(Configurator.GameDirectory);
         }
 
         [RelayCommand]

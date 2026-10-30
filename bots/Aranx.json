@@ -1,0 +1,64 @@
+{
+  "Aranx Pets": {
+    "description": "Choose the pet quests you want. Each selected quest runs once; the others are left alone.",
+    "options": [
+      {
+        "name": "Manticore of Infinity",
+        "description": "Manticore of Infinity: 20 Infinity Thread (Infinity Manticore, R4) + 50 Elemental Essence",
+        "farm": [
+          {
+            "qid": 283,
+            "area": "aranx",
+            "frame": "Enter",
+            "pad": "Spawn",
+            "items": 1,
+            "_note": "Manticore of Infinity: 20 Infinity Thread (Infinity Manticore, R4) + 50 Elemental Essence"
+          }
+        ]
+      },
+      {
+        "name": "Manticore of Light",
+        "description": "Manticore of Light: 60 Celestial Thread (Light Manticore, Enter) + 50 Elemental Essence",
+        "farm": [
+          {
+            "qid": 284,
+            "area": "aranx",
+            "frame": "Enter",
+            "pad": "Spawn",
+            "items": 1,
+            "_note": "Manticore of Light: 60 Celestial Thread (Light Manticore, Enter) + 50 Elemental Essence"
+          }
+        ]
+      },
+      {
+        "name": "Manticore of Malice",
+        "description": "Manticore of Malice: 45 Malice contained (Malice Manticore, R2) + 50 Elemental Essence",
+        "farm": [
+          {
+            "qid": 285,
+            "area": "aranx",
+            "frame": "Enter",
+            "pad": "Spawn",
+            "items": 1,
+            "_note": "Manticore of Malice: 45 Malice contained (Malice Manticore, R2) + 50 Elemental Essence"
+          }
+        ]
+      },
+      {
+        "name": "Manticore of Darkness",
+        "description": "Manticore of Darkness: 50 Underworld Essence (Darkness Manticore, R3) + 50 Elemental Essence",
+        "farm": [
+          {
+            "qid": 286,
+            "area": "aranx",
+            "frame": "Enter",
+            "pad": "Spawn",
+            "items": 1,
+            "_note": "Manticore of Darkness: 50 Underworld Essence (Darkness Manticore, R3) + 50 Elemental Essence"
+          }
+        ]
+      }
+    ],
+    "template": "quest-rewards"
+  }
+}

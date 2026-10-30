@@ -1,0 +1,36 @@
+{
+  "Your boss drops": {
+    "template": "monster-drops",
+    "description": "Choose drops to farm. Inventory targets include items already owned.",
+    "options": [
+      {
+        "name": "Boss weapon",
+        "farm": [
+          {
+            "hunt": [
+              "Boss name"
+            ],
+            "area": "map",
+            "frame": "Boss",
+            "item": "Weapon name",
+            "qty": 1
+          }
+        ]
+      },
+      {
+        "name": "Boss armor",
+        "farm": [
+          {
+            "hunt": [
+              "Boss name"
+            ],
+            "area": "map",
+            "frame": "Boss",
+            "item": "Armor name",
+            "qty": 1
+          }
+        ]
+      }
+    ]
+  }
+}

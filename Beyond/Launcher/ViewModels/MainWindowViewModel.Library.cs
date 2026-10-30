@@ -2,164 +2,111 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace Launcher.ViewModels
 {
-    // LibraryWindow: pulls the community content repo (Infinity-Files) into the
-    // agent's UserData/Beyond folder and loads its two content types individually.
+    // LibraryWindow: browses the community content repo (Infinity-Files) that
+    // LibraryService keeps in the agent's UserData/Beyond folder, and starts
+    // scripts straight from the list (Skua's "Start Script" in its script repo).
     //
-    //   - Scripts    : one quest-chain .json per file (Scripts/<Name>.json). Loading
-    //                  one routes each chain through the existing "SaveChain" command,
-    //                  so it merges into chains.json and re-pushes exactly like the
-    //                  Chain Editor's save.
-    //   - Autoskills : a single Autoskills/autoskills.txt holding one pipe-delimited
-    //                  rotation per line. Loading one routes the line through the
-    //                  existing "ImportSkillset" command.
+    //   - Scripts    : one or more quest chains per Scripts/<Name>.json. The agent
+    //                  reads this folder directly, so a downloaded script is
+    //                  runnable immediately — there is no per-script import step.
+    //   - Autoskills : Autoskills/autoskills.txt, one rotation per line. The agent
+    //                  also loads these itself (at boot and on ReloadLibrary).
     //
-    // The download/extract/listing is pure launcher-side file IO; loading into the
-    // live game requires an active session (SendCommand no-ops when disconnected).
+    // After every successful update each connected session is told to reload, so
+    // new scripts show up without restarting the game.
     public partial class MainWindowViewModel
     {
-        // GitHub codeload zip for the default branch. If the repo's default branch
-        // is "master" instead of "main", UpdateLibrary falls back automatically.
-        private const string LibraryZipUrlMain =
-            "https://github.com/retr0gr4d3/Infinity-Files/archive/refs/heads/main.zip";
-        private const string LibraryZipUrlMaster =
-            "https://github.com/retr0gr4d3/Infinity-Files/archive/refs/heads/master.zip";
-
-        private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(2) };
-
-        public ObservableCollection<string> LibraryScripts { get; } = [];
+        public ObservableCollection<LibraryScriptEntry> LibraryScripts { get; } = [];
         public ObservableCollection<string> LibraryAutoskills { get; } = [];
 
-        // Display name -> full pipe line, so Load can replay the exact import string.
-        private readonly Dictionary<string, string> _autoskillLines = [];
+        [ObservableProperty] private LibraryScriptEntry? _selectedLibraryScript;
+        [ObservableProperty] private string _libraryStatus = LibraryService.Status;
+        [ObservableProperty] private bool _libraryBusy = LibraryService.IsBusy;
 
-        [ObservableProperty] private string? _selectedLibraryScript;
-        [ObservableProperty] private string? _selectedLibraryAutoskill;
-        [ObservableProperty] private string _libraryStatus = "Click \"Update Library\" to download the latest scripts and autoskills.";
-        [ObservableProperty] private bool _libraryBusy;
-
-        // <game dir>/UserData/Beyond/Infinity-Files — mirrors BeyondEnv.UserDataDirectory
-        // (which is <game dir>/UserData) on the agent side. Null when no game is configured.
-        private string? LibraryRoot()
+        public bool AutoUpdateLibrary
         {
-            if (string.IsNullOrWhiteSpace(GameDirectory))
+            get => BotSettings.Current.AutoUpdateLibrary;
+            set
             {
-                return null;
+                if (BotSettings.Current.AutoUpdateLibrary != value)
+                {
+                    BotSettings.Current.AutoUpdateLibrary = value;
+                    BotSettings.Current.Save();
+                    OnPropertyChanged();
+                }
             }
-
-            return Path.Combine(GameDirectory, "UserData", "Beyond", "Infinity-Files");
         }
 
-        [RelayCommand]
-        private async Task UpdateLibrary()
+        private void AttachLibraryService()
         {
-            string? root = LibraryRoot();
-            if (root == null)
+            LibraryService.StateChanged += OnLibraryStateChanged;
+            LibraryService.LibraryUpdated += OnLibraryUpdated;
+        }
+
+        private void DetachLibraryService()
+        {
+            LibraryService.StateChanged -= OnLibraryStateChanged;
+            LibraryService.LibraryUpdated -= OnLibraryUpdated;
+        }
+
+        private void OnLibraryStateChanged()
+        {
+            LibraryBusy = LibraryService.IsBusy;
+            LibraryStatus = LibraryService.Status;
+        }
+
+        private void OnLibraryUpdated(string gameDirectory)
+        {
+            if (!string.Equals(gameDirectory, GameDirectory, StringComparison.OrdinalIgnoreCase))
             {
-                LibraryStatus = "No game directory configured — set it in the Configurator first.";
                 return;
             }
 
-            LibraryBusy = true;
-            LibraryStatus = "Downloading Infinity-Files…";
-            try
+            RefreshLibraryLists();
+            LibraryStatus = $"{LibraryService.Status} {LibraryScripts.Count} script(s), {LibraryAutoskills.Count} autoskill(s).";
+            // The game may have booted (and read the old library) before the
+            // pipe connected — in that case reload as soon as it does.
+            _libraryReloadPending = true;
+            SendPendingLibraryReload();
+        }
+
+        private bool _libraryReloadPending;
+
+        // Called on update and on (re)connect.
+        private void SendPendingLibraryReload()
+        {
+            if (_libraryReloadPending && IsConnected)
             {
-                await Task.Run(() => DownloadAndExtract(root));
-                RefreshLibraryLists();
-                LibraryStatus = $"Updated — {LibraryScripts.Count} script(s), {LibraryAutoskills.Count} autoskill(s).";
-            }
-            catch (Exception ex)
-            {
-                LibraryStatus = $"Update failed: {ex.Message}";
-            }
-            finally
-            {
-                LibraryBusy = false;
+                _libraryReloadPending = false;
+                _connection.SendCommand("ReloadLibrary", null);
             }
         }
 
-        // Download the repo zip, extract it, and replace LibraryRoot with the
-        // archive's inner folder. Runs off the UI thread (no ObservableCollection
-        // touches here). Tries the "main" branch, then "master".
-        private static void DownloadAndExtract(string root)
+        [RelayCommand]
+        private Task UpdateLibrary()
         {
-            string tmpZip = Path.Combine(Path.GetTempPath(), $"infinity-files-{Guid.NewGuid():N}.zip");
-            string tmpDir = Path.Combine(Path.GetTempPath(), $"infinity-files-{Guid.NewGuid():N}");
-            try
-            {
-                byte[] data = TryDownload(LibraryZipUrlMain) ?? TryDownload(LibraryZipUrlMaster)
-                    ?? throw new Exception("could not download the repo (checked main and master branches).");
-                File.WriteAllBytes(tmpZip, data);
-
-                Directory.CreateDirectory(tmpDir);
-                ZipFile.ExtractToDirectory(tmpZip, tmpDir);
-
-                // GitHub archives wrap everything in a single "<repo>-<branch>" folder.
-                string inner = Directory.GetDirectories(tmpDir).FirstOrDefault() ?? tmpDir;
-
-                if (Directory.Exists(root))
-                {
-                    Directory.Delete(root, recursive: true);
-                }
-                Directory.CreateDirectory(Path.GetDirectoryName(root)!);
-                CopyDirectory(inner, root);
-            }
-            finally
-            {
-                try { if (File.Exists(tmpZip)) File.Delete(tmpZip); } catch { }
-                try { if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, recursive: true); } catch { }
-            }
-        }
-
-        private static byte[]? TryDownload(string url)
-        {
-            try
-            {
-                using HttpResponseMessage resp = _http.GetAsync(url).GetAwaiter().GetResult();
-                if (!resp.IsSuccessStatusCode)
-                {
-                    return null;
-                }
-
-                return resp.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static void CopyDirectory(string sourceDir, string destDir)
-        {
-            Directory.CreateDirectory(destDir);
-            foreach (string file in Directory.GetFiles(sourceDir))
-            {
-                File.Copy(file, Path.Combine(destDir, Path.GetFileName(file)), overwrite: true);
-            }
-            foreach (string dir in Directory.GetDirectories(sourceDir))
-            {
-                CopyDirectory(dir, Path.Combine(destDir, Path.GetFileName(dir)));
-            }
+            return LibraryService.UpdateAsync(GameDirectory);
         }
 
         // Re-scan the extracted tree. Safe to call when nothing's downloaded yet
         // (empty lists). Must run on the UI thread (touches ObservableCollections).
         public void RefreshLibraryLists()
         {
+            string? prevSelection = SelectedLibraryScript?.Name;
             LibraryScripts.Clear();
             LibraryAutoskills.Clear();
-            _autoskillLines.Clear();
 
-            string? root = LibraryRoot();
+            string bundled = BotStorage.Prepare(GameDirectory);
+            if (Directory.Exists(bundled))
+                foreach (string file in Directory.GetFiles(bundled, "*.json").OrderBy(f => f)) AddLibraryScripts(file);
+            string? root = LibraryService.Root(GameDirectory);
             if (root == null || !Directory.Exists(root))
             {
                 return;
@@ -167,15 +114,6 @@ namespace Launcher.ViewModels
 
             try
             {
-                string scriptsDir = Path.Combine(root, "Scripts");
-                if (Directory.Exists(scriptsDir))
-                {
-                    foreach (string file in Directory.GetFiles(scriptsDir, "*.json").OrderBy(f => f))
-                    {
-                        LibraryScripts.Add(Path.GetFileNameWithoutExtension(file));
-                    }
-                }
-
                 string autoskillsFile = Path.Combine(root, "Autoskills", "autoskills.txt");
                 if (File.Exists(autoskillsFile))
                 {
@@ -188,13 +126,7 @@ namespace Launcher.ViewModels
                         }
 
                         string name = line.Split('|')[0].Trim();
-                        if (name.Length == 0)
-                        {
-                            continue;
-                        }
-
-                        _autoskillLines[name] = line;
-                        if (!LibraryAutoskills.Contains(name))
+                        if (name.Length > 0 && !LibraryAutoskills.Contains(name))
                         {
                             LibraryAutoskills.Add(name);
                         }
@@ -206,114 +138,90 @@ namespace Launcher.ViewModels
                 LibraryStatus = $"Couldn't read library: {ex.Message}";
             }
 
-            if (IsConnected)
+            SelectedLibraryScript = LibraryScripts.FirstOrDefault(s => s.Name == prevSelection);
+        }
+
+        // One list row per chain in the file (a file may hold several). Mirrors
+        // the agent's parse in QuestChains so the list matches what will run.
+        private void AddLibraryScripts(string file)
+        {
+            JObject obj;
+            try
             {
-                _connection.SendCommand("AutoLoadLibrarySkillsets", null);
+                obj = JObject.Parse(File.ReadAllText(file));
+            }
+            catch (Exception)
+            {
+                return; // the agent logs the parse error; just leave it out here
+            }
+
+            foreach (JProperty prop in obj.Properties())
+            {
+                if (prop.Name.StartsWith('_'))
+                {
+                    continue;
+                }
+
+                JObject? form = prop.Value as JObject;
+                JArray? entries = prop.Value as JArray ?? form?["entries"] as JArray;
+                if (entries == null && form?["farm"] is not JArray && form?["options"] is not JArray && form?["buy"] is not JObject)
+                {
+                    continue;
+                }
+                entries ??= [];
+
+                if (LibraryScripts.Any(s => s.FullPath == file && s.Name == prop.Name)) continue;
+                LibraryScripts.Add(new LibraryScriptEntry
+                {
+                    Name = prop.Name,
+                    File = Path.GetFileName(file),
+                    FullPath = file,
+                    Class = (string?)form?["class"] ?? "",
+                    Description = (string?)form?["description"] ?? "",
+                    Steps = entries.Count(t => ((int?)t["qid"] ?? 0) > 0),
+                    Template = (string?)form?["template"] ?? "quest-chain",
+                    Choices = (form?["options"] as JArray)?.Count ?? 0,
+                    FarmSteps = (form?["farm"] as JArray)?.Count(t => ((int?)t["qid"] ?? 0) > 0 || t["hunt"] != null) ?? 0
+                });
             }
         }
 
+        // Skua's script repo "Load": make it the loaded script in the Load Script window.
         [RelayCommand]
-        private void LoadScript(string? name)
+        private void LoadLibraryScript(LibraryScriptEntry? script)
         {
-            name ??= SelectedLibraryScript;
-            string? root = LibraryRoot();
-            if (string.IsNullOrEmpty(name) || root == null)
+            script ??= SelectedLibraryScript;
+            if (script != null && LoadScriptFile(script.FullPath, script.Name))
+            {
+                LibraryStatus = $"Loaded '{script.Name}' — press Start Script.";
+            }
+        }
+
+        // One click (or double-click): load it and start it with the current options.
+        [RelayCommand]
+        private async Task StartLibraryScript(LibraryScriptEntry? script)
+        {
+            script ??= SelectedLibraryScript;
+            if (script == null)
             {
                 return;
             }
 
             if (!IsConnected)
             {
-                LibraryStatus = "Start a session before loading — the game must be running.";
+                LibraryStatus = "Start a session first — the game must be running.";
                 return;
             }
 
-            string path = Path.Combine(root, "Scripts", name + ".json");
-            if (!File.Exists(path))
+            if (IsChainRunning)
             {
-                LibraryStatus = $"Script file not found: {name}.json";
+                LibraryStatus = "A script is already running — stop it first.";
                 return;
             }
 
-            try
+            if (LoadScriptFile(script.FullPath, script.Name))
             {
-                JObject obj = JObject.Parse(File.ReadAllText(path));
-                int loaded = 0;
-                foreach (JProperty prop in obj.Properties())
-                {
-                    // A chain value is either a bare entries array (legacy) or an
-                    // object { "class": "...", "entries": [...] } with a recommended class.
-                    JArray? arr;
-                    string? cls = null;
-                    if (prop.Value is JArray bareArr)
-                    {
-                        arr = bareArr;
-                    }
-                    else if (prop.Value is JObject objVal)
-                    {
-                        arr = objVal["entries"] as JArray;
-                        cls = (string?)objVal["class"];
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                    if (arr == null)
-                    {
-                        continue;
-                    }
-
-                    JArray entries = [];
-                    foreach (JToken t in arr)
-                    {
-                        int qid = (int?)t["qid"] ?? 0;
-                        if (qid <= 0)
-                        {
-                            continue;
-                        }
-
-                        JObject entry = new()
-                        {
-                            ["qid"] = qid,
-                            ["area"] = (string?)t["area"] ?? "",
-                            ["frame"] = (string?)t["frame"] ?? "",
-                            ["pad"] = string.IsNullOrWhiteSpace((string?)t["pad"]) ? "Spawn" : (string?)t["pad"],
-                            ["items"] = (int?)t["items"] ?? (int?)t["iters"] ?? 1
-                        };
-                        // Target monster filter (names/ids) — the hunt targets
-                        // only these. Dropping it here would silently break
-                        // any library chain authored with specific mobs.
-                        JToken? mon = t["mon"];
-                        if (mon != null)
-                        {
-                            entry["mon"] = mon.DeepClone();
-                        }
-                        entries.Add(entry);
-                    }
-
-                    if (entries.Count > 0)
-                    {
-                        JObject save = new()
-                        {
-                            ["Name"] = prop.Name,
-                            ["Entries"] = entries
-                        };
-                        if (!string.IsNullOrEmpty(cls))
-                        {
-                            save["Class"] = cls;
-                        }
-                        _connection.SendCommand("SaveChain", save);
-                        loaded++;
-                    }
-                }
-
-                LibraryStatus = loaded > 0
-                    ? $"Loaded script '{name}' ({loaded} chain(s)) — open the Quest Runner to run it."
-                    : $"Script '{name}' had no usable chains.";
-            }
-            catch (Exception ex)
-            {
-                LibraryStatus = $"Failed to load script '{name}': {ex.Message}";
+                await StartLoadedScript();
             }
         }
     }

@@ -198,6 +198,9 @@ namespace Launcher.ViewModels
             _connection.MusicCatalogReceived += OnMusicCatalogReceived;
             _connection.QuestDirectoryReceived += OnQuestDirectoryReceived;
             _connection.QuestChainsReceived += OnQuestChainsReceived;
+            _connection.QuestRunnerStateReceived += OnQuestRunnerStateReceived;
+            AttachLibraryService();
+            RestoreLastScript();
 
             _connection.Start();
             AddLog("[Launcher] Starting connection service...");
@@ -217,6 +220,21 @@ namespace Launcher.ViewModels
         private void OnConnectionStateChanged(bool connected)
         {
             IsConnected = connected;
+            System.Diagnostics.Trace.WriteLine($"[Session] {Title} mod connection: {(connected ? "connected" : "disconnected")}");
+            if (connected)
+            {
+                SendPendingLibraryReload();
+            }
+            else
+            {
+                IsChainRunning = false;
+                IsRunnerPaused = false;
+                ChainRunStatus = "";
+                if (ScriptStatus is "[Running]" or "[Paused]")
+                {
+                    ScriptStatus = "[Stopped]";
+                }
+            }
             StatusText = connected ? "Mod Loaded" : "Mod Not Loaded";
             StatusColor = connected ? "#4CAF50" : "#FF5252"; // Green / Red
             AddLog(connected ? "[Launcher] Connected to game mod agent." : "[Launcher] Lost connection to game mod agent.");
@@ -227,6 +245,7 @@ namespace Launcher.ViewModels
         // these assignments from echoing straight back to the mod.
         private void OnStatusReceived(JObject settings)
         {
+            _monsterFarmingAvailable = ((int?)settings["monsterFarmingProtocol"] ?? 0) >= 1;
             _isUpdatingFromMod = true;
             try
             {
@@ -580,6 +599,7 @@ namespace Launcher.ViewModels
 
         public void Shutdown()
         {
+            DetachLibraryService();
             _connection.Stop();
         }
 

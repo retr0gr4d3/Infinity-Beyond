@@ -10,7 +10,7 @@ python patch_apk.py --check out.apk
 ```
 
 Nothing here touches the Windows/macOS build. The PC launcher and agent are
-unchanged. This is explained later in the technical breakdown. Thanks, Claude.
+unchanged. This is explained later in the technical breakdown.
 
 ---
 
@@ -135,7 +135,7 @@ ANTICHEAT.md          what anticheat is (and is not) in the stock APK, measured
 
 ---
 
-# Claude's Thesis:
+# Technical breakdown
 
 ## What the Android release actually is
 

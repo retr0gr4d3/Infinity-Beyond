@@ -1,0 +1,20 @@
+{
+  "Mogloween Merge Rewards": {
+    "template": "merge-shop",
+    "description": "Choose rewards from Myx's Candycorn Shop. Discovers Candy Corn sources from live monster drop lists on the shop map, with a Skeleton route as fallback. No story quests.",
+    "shop": {
+      "shop": 2797,
+      "area": "mystcroft"
+    },
+    "farm": [
+      {
+        "hunt": [
+          "534"
+        ],
+        "area": "mystcroft",
+        "frame": "R2",
+        "item": "104739"
+      }
+    ]
+  }
+}

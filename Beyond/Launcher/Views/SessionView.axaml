@@ -72,6 +72,43 @@
                 <!-- Scroll Area for controls -->
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="10" IsVisible="{Binding IsControlPanelEnabled}">
                     <StackPanel Spacing="12">
+                        <!-- Bot: pick a script and start it without opening a tool window -->
+                        <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <StackPanel Spacing="0">
+                                <ToggleButton Classes="CollapseToggle" Name="ToggleBot" IsChecked="True">
+                                    <Grid ColumnDefinitions="*,Auto" Background="Transparent">
+                                        <TextBlock Text="Bot" Classes="Header" VerticalAlignment="Center" Margin="0"/>
+                                        <Panel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,4,0">
+                                            <TextBlock Text="▲" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding #ToggleBot.IsChecked}"/>
+                                            <TextBlock Text="▼" Foreground="{DynamicResource BeyondAccentBrush}" FontSize="10" IsVisible="{Binding !#ToggleBot.IsChecked}"/>
+                                        </Panel>
+                                    </Grid>
+                                </ToggleButton>
+
+                                <!-- Mini "Load Script" (full window: Open Loader) -->
+                                <StackPanel Spacing="8" Margin="0,10,0,0" IsVisible="{Binding #ToggleBot.IsChecked}">
+                                    <StackPanel Spacing="1">
+                                        <TextBlock Text="{Binding ScriptStatus}" FontSize="12" FontWeight="Bold" Foreground="#E2E4E9"/>
+                                        <TextBlock Text="{Binding LoadedScriptFileName}" FontSize="12" Foreground="{DynamicResource BeyondAccentBrush}"
+                                                   IsVisible="{Binding HasLoadedScript}" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding ChainRunStatus}" FontSize="10" Foreground="#8F909A" TextWrapping="Wrap"
+                                                   IsVisible="{Binding ChainRunStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    </StackPanel>
+                                    <Button Content="Bot writer" Command="{Binding OpenBotWriterCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                                    <Button Content="Farm monster drops" Command="{Binding FarmDropsCommand}" Classes="Accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="34"/>
+                                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                                        <Button Content="Load Script" Command="{Binding LoadScriptCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                                        <Button Grid.Column="1" Content="{Binding ScriptToggleText}" Command="{Binding ToggleScriptCommand}" Classes="Accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                                        <Button Grid.Column="2" Content="{Binding PauseScriptText}" Command="{Binding PauseScriptCommand}" IsEnabled="{Binding IsChainRunning}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                        <Button Content="Open Loader" Command="{Binding OpenScriptLoaderWindowCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="28"/>
+                                        <Button Grid.Column="1" Content="Search Scripts" Command="{Binding OpenLibraryWindowCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="28"/>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Direct Controls -->
                         <Border Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
                             <StackPanel Spacing="0">
@@ -144,7 +181,8 @@
                                     <Button Grid.Row="1" Grid.Column="1" Content="Quest Loader" Command="{Binding OpenQuestLoaderWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="2" Grid.Column="0" Content="Autoskills" Command="{Binding OpenAutoskillsCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="2" Grid.Column="1" Content="Quest Runner" Command="{Binding OpenQuestRunnerWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
-                                    <Button Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Content="Library" Command="{Binding OpenLibraryWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
+                                    <Button Grid.Row="3" Grid.Column="0" Content="Load Script" Command="{Binding OpenScriptLoaderWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
+                                    <Button Grid.Row="3" Grid.Column="1" Content="Library" Command="{Binding OpenLibraryWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Content="Drop Filter" Command="{Binding OpenDropFilterWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                     <Button Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Content="Debug" Command="{Binding OpenDebugWindowCommand}" HorizontalAlignment="Stretch" Height="30"/>
                                 </Grid>

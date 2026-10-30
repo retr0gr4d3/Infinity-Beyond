@@ -1,0 +1,22 @@
+{
+  "Mogloween Candy Corn": {
+    "template": "monster-drops",
+    "description": "Farm Candy Corn directly, without story quests or purchasing rewards. Choose the inventory total you want.",
+    "options": [
+      {
+        "name": "Mogloween Candy Corn",
+        "farm": [
+          {
+            "hunt": [
+              "534"
+            ],
+            "area": "mystcroft",
+            "frame": "R2",
+            "item": "104739",
+            "qty": 100
+          }
+        ]
+      }
+    ]
+  }
+}

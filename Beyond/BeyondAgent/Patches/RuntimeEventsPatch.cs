@@ -25,6 +25,32 @@ namespace BeyondAgent.Patches
         public static bool CutsceneActive;
         public static float LastCutsceneStartTime = -1f;
         public static float LastCutsceneEndTime = -1f;
+
+        // ResponseLoadShop: the last shop the server sent (QuestRunner's buy
+        // step reads its items and prices instead of driving the shop UI).
+        public static shopData LastShop;
+        public static float LastShopTime = -1f;
+
+        // ResponseBuyItem: outcome of the last purchase.
+        public static bool LastBuySuccess;
+        public static string LastBuyMessage = "";
+        public static float LastBuyTime = -1f;
+    }
+
+    [HarmonyPatch(typeof(ResponseBuyItem), nameof(ResponseBuyItem.Execute))]
+    public static class ResponseBuyItemPatch
+    {
+        public static void Postfix(ResponseBuyItem __instance)
+        {
+            if (__instance == null)
+            {
+                return;
+            }
+
+            RuntimeEvents.LastBuySuccess = __instance.Success;
+            RuntimeEvents.LastBuyMessage = __instance.Message ?? "";
+            RuntimeEvents.LastBuyTime = Time.time;
+        }
     }
 
     [HarmonyPatch(typeof(ResponseQuestComplete), nameof(ResponseQuestComplete.Execute))]

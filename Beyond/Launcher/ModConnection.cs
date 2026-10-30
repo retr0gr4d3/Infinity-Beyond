@@ -61,6 +61,10 @@ namespace Launcher
         public event Action<JObject>? MusicCatalogReceived;
         public event Action<JObject>? QuestDirectoryReceived;
         public event Action<JObject>? QuestChainsReceived;
+        public event Action<JObject>? QuestRunnerStateReceived;
+        public event Action<JObject>? FarmingShopReceived;
+        public event Action<JObject>? FarmingMonstersReceived;
+        public event Action<JObject>? FarmingDropsReceived;
 
         public ModConnection(string pipeName = DefaultPipeName)
         {
@@ -213,6 +217,15 @@ namespace Launcher
 
                 switch (type)
                 {
+                    case "FarmingMonsters":
+                        Dispatcher.UIThread.Post(() => FarmingMonstersReceived?.Invoke(msg));
+                        break;
+                    case "FarmingDrops":
+                        Dispatcher.UIThread.Post(() => FarmingDropsReceived?.Invoke(msg));
+                        break;
+                    case "FarmingShop":
+                        Dispatcher.UIThread.Post(() => FarmingShopReceived?.Invoke(msg));
+                        break;
                     case "Status":
                         if (msg["Settings"] is JObject settings)
                         {
@@ -275,6 +288,10 @@ namespace Launcher
                         {
                             Dispatcher.UIThread.Post(() => QuestChainsReceived?.Invoke(msg));
                         }
+                        break;
+
+                    case "QuestRunnerState":
+                        Dispatcher.UIThread.Post(() => QuestRunnerStateReceived?.Invoke(msg));
                         break;
                 }
             }

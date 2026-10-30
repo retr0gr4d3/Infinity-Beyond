@@ -11,7 +11,7 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="30"
         WindowDecorations="BorderOnly"
-        Width="620" Height="560">
+        Width="680" Height="600">
 
     <DockPanel Classes="WindowRoot" LastChildFill="True">
         <v:TitleBar DockPanel.Dock="Top" Title="Library"/>
@@ -24,24 +24,54 @@
                         <TextBlock Grid.Column="0" Text="Community scripts &amp; autoskills from the Infinity-Files repo." FontSize="11" Foreground="#A6A8B2" VerticalAlignment="Center"/>
                         <Button Grid.Column="1" Content="Update Library" Command="{Binding UpdateLibraryCommand}" IsEnabled="{Binding !LibraryBusy}" Classes="Accent" Width="135" Height="30"/>
                     </Grid>
-                    <TextBlock Text="{Binding LibraryStatus}" FontSize="10" Foreground="#8F909A" TextWrapping="Wrap"/>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="{Binding LibraryStatus}" FontSize="10" Foreground="#8F909A" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                        <CheckBox Grid.Column="1" Content="Update automatically on launch" IsChecked="{Binding AutoUpdateLibrary}" FontSize="11"/>
+                    </Grid>
                 </StackPanel>
             </Border>
 
             <!-- Two content columns -->
-            <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="10">
+            <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="10">
                 <!-- Scripts -->
                 <Border Grid.Column="0" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
                     <DockPanel LastChildFill="True">
                         <TextBlock DockPanel.Dock="Top" Text="Scripts (Quest Chains)" Classes="Header" Margin="0,0,0,8"/>
-                        <Button DockPanel.Dock="Bottom" Content="Load Script" Command="{Binding LoadScriptCommand}"
-                                IsEnabled="{Binding SelectedLibraryScript, Converter={x:Static ObjectConverters.IsNotNull}}"
-                                HorizontalAlignment="Stretch" Height="30" Margin="0,8,0,0"/>
-                        <ListBox Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4"
+
+                        <!-- Run controls -->
+                        <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,8,0,0">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                                <CheckBox Content="Farm after chain" IsChecked="{Binding FarmAfterChain}" FontSize="11" VerticalAlignment="Center"
+                                          ToolTip.Tip="When the chain is done (or already completed), keep looping the script's farm quests."/>
+                                <TextBlock Grid.Column="2" Text="Passes" FontSize="10" Foreground="#8F909A" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="3" Text="{Binding FarmLoops}" Width="60" IsEnabled="{Binding FarmAfterChain}"
+                                         ToolTip.Tip="How many times to loop the farm quests. 0 = until stopped."/>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                                <Button Content="Load" Command="{Binding LoadLibraryScriptCommand}"
+                                        IsEnabled="{Binding SelectedLibraryScript, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                                <Button Grid.Column="1" Content="Start" Command="{Binding StartLibraryScriptCommand}" Classes="Accent"
+                                        IsEnabled="{Binding SelectedLibraryScript, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                                <Button Grid.Column="2" Content="Stop" Command="{Binding StopChainCommand}" IsEnabled="{Binding IsChainRunning}"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                            </Grid>
+                            <TextBlock Text="{Binding ChainRunStatus}" FontSize="10" Foreground="{DynamicResource BeyondAccentBrush}" TextWrapping="Wrap"
+                                       IsVisible="{Binding ChainRunStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                        </StackPanel>
+
+                        <!-- Double-click a script to start it (wired in code-behind). -->
+                        <ListBox Name="ScriptList" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4"
                                  ItemsSource="{Binding LibraryScripts}" SelectedItem="{Binding SelectedLibraryScript}">
                             <ListBox.ItemTemplate>
-                                <DataTemplate DataType="x:String">
-                                    <TextBlock Text="{Binding}" Foreground="#E2E4E9" FontSize="12" Margin="4,2"/>
+                                <DataTemplate DataType="vm:LibraryScriptEntry">
+                                    <StackPanel Spacing="2" Margin="4,3">
+                                        <TextBlock Text="{Binding Name}" Foreground="#E2E4E9" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Summary}" Foreground="#8F909A" FontSize="10"/>
+                                        <TextBlock Text="{Binding Description}" Foreground="#A6A8B2" FontSize="10" TextWrapping="Wrap"
+                                                   IsVisible="{Binding HasDescription}"/>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
@@ -52,8 +82,9 @@
                 <Border Grid.Column="1" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="8" Padding="12">
                     <DockPanel LastChildFill="True">
                         <TextBlock DockPanel.Dock="Top" Text="Autoskills (Skillsets)" Classes="Header" Margin="0,0,0,8"/>
+                        <TextBlock DockPanel.Dock="Bottom" Text="Loaded into your skillsets automatically." FontSize="10" Foreground="#656770" TextWrapping="Wrap" Margin="0,8,0,0"/>
                         <ListBox Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4"
-                                 ItemsSource="{Binding LibraryAutoskills}" SelectedItem="{Binding SelectedLibraryAutoskill}">
+                                 ItemsSource="{Binding LibraryAutoskills}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="x:String">
                                     <TextBlock Text="{Binding}" Foreground="#E2E4E9" FontSize="12" Margin="4,2"/>
@@ -64,7 +95,7 @@
                 </Border>
             </Grid>
 
-            <TextBlock Grid.Row="2" Text="Loading merges into your chains / skillsets and needs a running session." FontSize="10" Foreground="#656770" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+            <TextBlock Grid.Row="2" Text="Downloaded scripts are ready to run — no import step. Starting one needs a running session." FontSize="10" Foreground="#656770" Margin="0,8,0,0" HorizontalAlignment="Center"/>
         </Grid>
     </DockPanel>
 </Window>

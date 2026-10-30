@@ -40,6 +40,9 @@ namespace BeyondAgent.Util
             AwaitingComplete,
             Cooldown,
             Respawning,
+            LoadingShop,
+            DiscoveringSources,
+            Buying,
             Done,
             Failed
         }
@@ -70,6 +73,22 @@ namespace BeyondAgent.Util
         public List<QuestChains.Entry> ChainEntries { get; private set; }
         public int ChainIndex { get; private set; }
         public string ChainName { get; private set; } = "";
+
+        // Farm phase: once the chain's own entries are done (or were already
+        // completed), the runner swaps ChainEntries for the chain's farm list
+        // and loops it — FarmLoops passes, 0 = until stopped. Story entries
+        // are skipped when already complete; farm entries never are, since
+        // farm quests are repeatable by definition.
+        public List<QuestChains.Entry> FarmEntries { get; private set; }
+        public int FarmLoops { get; private set; }
+        public int FarmPass { get; private set; }
+        public bool IsFarming { get; private set; }
+        // A farm session runs for hours, so one dropped packet or blocked path
+        // shouldn't end it: retry the current farm entry this many times in a
+        // row (reset by every successful turn-in) before giving up.
+        public int MaxFarmRetries = 3;
+        public float FarmRetryDelaySec = 5f;
+        private int _farmFailures;
 
         // Per-state timeouts. Halt-on-mismatch is the QA value prop.
         public float AcceptTimeout = 5f;
@@ -135,10 +154,57 @@ namespace BeyondAgent.Util
         // Logs are surfaced via this callback to the GUI's event list.
         public Action<string> OnLog;
 
+        // Fired when the run starts/stops or moves to another chain/farm entry,
+        // so the launcher can show progress and flip its Start/Stop controls.
+        public Action OnProgressChanged;
+
         // --- public API ---
 
         public bool IsRunning =>
             State is not RunState.Idle and not RunState.Done and not RunState.Failed;
+
+        // Paused runs keep their place (chain index, farm pass) but stop ticking
+        // and fighting; Resume re-checks travel from the current entry.
+        public bool IsPaused { get; private set; }
+        private RunState _pausedState;
+        private RunState _beforeDeath;
+
+        public void Pause()
+        {
+            if (!IsRunning || IsPaused)
+            {
+                return;
+            }
+
+            _pausedState = State;
+            IsPaused = true;
+            _path?.Cancel();
+            StopAutoskills();
+            StatusLine = "paused";
+            Log("[pause] paused by user");
+            OnProgressChanged?.Invoke();
+        }
+
+        public void Resume()
+        {
+            if (!IsRunning || !IsPaused)
+            {
+                return;
+            }
+
+            IsPaused = false;
+            Log("[resume] resuming");
+            if (_pausedState is RunState.LoadingShop or RunState.Buying or RunState.DiscoveringSources)
+            {
+                if (_pausedState == RunState.DiscoveringSources) _discovery = MonsterFarmingCatalog.BeginDiscovery();
+                EnterState(_pausedState);
+            }
+            else
+            {
+                EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
+            }
+            OnProgressChanged?.Invoke();
+        }
 
         public void Start(int questId, int iterations, string targetArea = "", string targetFrame = "", string targetPad = "Spawn", List<string> targetMons = null)
         {
@@ -150,6 +216,11 @@ namespace BeyondAgent.Util
             ChainEntries = null;
             ChainName = "";
             ChainIndex = 0;
+            ResetFarm(null, 0);
+            Buy = null;
+            _shop = null;
+            _needs.Clear();
+            IsPaused = false;
             Deaths = 0;
             BindEntry(questId, iterations, targetArea, targetFrame, targetPad, targetMons);
             _autoskillsWasOn = BeyondAgentClass.autoskillsActive;
@@ -163,29 +234,448 @@ namespace BeyondAgent.Util
             EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
         }
 
-        public void StartChain(string chainName, List<QuestChains.Entry> entries)
+        // A script run: `entries` once in order (story, skipping completed
+        // quests), then `farmEntries` looped (farmLoops passes, 0 = until
+        // stopped or every step's item goal is met), then `buy` — purchases
+        // from a shop. Any part may be empty, but not all three.
+        public void StartChain(string chainName, List<QuestChains.Entry> entries,
+            List<QuestChains.Entry> farmEntries = null, int farmLoops = 0,
+            QuestChains.BuyPlan buy = null)
         {
             if (IsRunning)
             {
                 return;
             }
 
-            if (entries == null || entries.Count == 0)
+            bool hasStory = entries is { Count: > 0 };
+            if (!hasStory && farmEntries is not { Count: > 0 } && buy == null)
             {
-                Fail("chain is empty");
+                Fail("script is empty");
                 return;
             }
-            ChainEntries = entries;
+            if (buy == null && (entries ?? []).Concat(farmEntries ?? []).Any(e => e.HasGoal && e.goalQty < 0))
+            {
+                Fail("an inventory goal without a quantity requires a merge-shop buy plan");
+                return;
+            }
             ChainName = chainName ?? "";
             ChainIndex = 0;
+            ResetFarm(farmEntries, farmLoops);
+            _shoppingAfterFarm = false;
+            Buy = buy;
+            IsPaused = false;
+            _shop = null;
+            _needs.Clear();
             Deaths = 0;
-
-            QuestChains.Entry first = ChainEntries[ChainIndex];
-            BindEntry(first.qid, first.items, first.area, first.frame, first.pad, first.mons);
             _autoskillsWasOn = BeyondAgentClass.autoskillsActive;
-            Log($"[start] chain '{chainName}' starting at {ChainIndex + 1}/{ChainEntries.Count}: {first}");
-            ChatUtils.SendChatAndLog("Starting Chain", name: "System", channel: "Admin");
-            EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
+            RefreshRunnerKeep();
+
+            string plan = (hasStory ? $"{entries.Count} story step(s)" : "no story")
+                + (FarmEntries != null ? $", then farm {FarmEntries.Count} step(s) {FarmLoopsText()}" : "")
+                + (Buy != null ? $", then buy {Buy.items.Count} item(s) from shop {Buy.shop}" : "");
+            Log($"[start] '{chainName}': {plan}");
+            ChatUtils.SendChatAndLog("Starting activity", name: "System", channel: "Admin");
+
+            if (hasStory)
+            {
+                ChainEntries = entries;
+                QuestChains.Entry first = ChainEntries[0];
+                BindEntry(first.qid, first.items, first.area, first.frame, first.pad, first.mons);
+                Log($"[chain] 1/{ChainEntries.Count}: {first}");
+                EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
+                return;
+            }
+            ChainEntries = [];
+            BeginFarmOrFinish();
+        }
+
+        // --- farm goals & shop ---
+
+        public QuestChains.BuyPlan Buy { get; private set; }
+        public float ProgressPushSec = 3f;
+        private float _lastProgressPush;
+        private shopData _shop;
+        private MaterialDiscoverySession _discovery;
+        private bool _sourcesPlanned;
+        // Material -> total count needed for the buy list (by name and by id),
+        // from the shop's prices. Goals without an explicit qty farm to this.
+        private readonly Dictionary<string, int> _needs = new(StringComparer.OrdinalIgnoreCase);
+        private bool _shoppingAfterFarm;
+        private bool _shopRequested;
+        private float _shopRequestedAt;
+        private bool _shopTferSent;
+        public float ShopLoadTimeout = 12f;
+        private int _buyIndex;
+        private bool _buyWaiting;
+        private float _buySentAt;
+        // Owned count when the last purchase was sent; a confirmed buy that
+        // doesn't raise it stops the loop instead of buying again.
+        private int _buyOwnedBefore = -1;
+        private float _nextBuyAt;
+        public float BuyResponseTimeout = 8f;
+
+        public QuestChains.Entry CurrentStep =>
+            ChainEntries != null && ChainIndex >= 0 && ChainIndex < ChainEntries.Count ? ChainEntries[ChainIndex] : null;
+
+        // Target count for a step's goal item, or -1 when it has no reachable target.
+        private int GoalTarget(QuestChains.Entry step)
+        {
+            if (step is not { HasGoal: true })
+            {
+                return -1;
+            }
+            if (step.goalQty >= 0)
+            {
+                return step.goalQty;
+            }
+            // "until enough": what the buy list needs (0 if it needs none of it).
+            return _needs.TryGetValue(step.goalItem, out int n) ? n : (Buy != null ? 0 : -1);
+        }
+
+        private bool GoalMet(QuestChains.Entry step)
+        {
+            int target = GoalTarget(step);
+            return target >= 0 && ItemGoals.Count(step.goalItem) >= target;
+        }
+
+        private string GoalText(QuestChains.Entry step)
+        {
+            int target = GoalTarget(step);
+            return $"{step.goalItem} {ItemGoals.Count(step.goalItem)}/{(target >= 0 ? target.ToString() : "∞")}";
+        }
+
+        // One-line goal progress for the launcher ("Mogloween Candy Corn 340/1500").
+        public string GoalProgress => CurrentStep is { HasGoal: true } s ? GoalText(s) : "";
+
+        public string Phase => State switch
+        {
+            RunState.LoadingShop => "shop",
+            RunState.DiscoveringSources => "discovery",
+            RunState.Buying => "buy",
+            _ => IsFarming ? "farm" : "story"
+        };
+
+        // Goal items + buy materials are auto-looted while the script runs.
+        private void RefreshRunnerKeep()
+        {
+            HashSet<string> keep = new(StringComparer.OrdinalIgnoreCase);
+            foreach (QuestChains.Entry e in FarmEntries ?? [])
+            {
+                if (e.HasGoal)
+                {
+                    keep.Add(e.goalItem);
+                }
+            }
+            foreach (string k in _needs.Keys)
+            {
+                keep.Add(k);
+            }
+            DropFilterEngine.SetRunnerKeep(keep);
+        }
+
+        // After the story: load the shop (if buying, so "enough" goals are
+        // known), then farm, then buy / finish.
+        private void BeginFarmOrFinish()
+        {
+            if (Buy != null && _shop == null)
+            {
+                _shopRequested = false;
+                _shopTferSent = false;
+                EnterState(RunState.LoadingShop);
+                return;
+            }
+            if (FarmEntries != null)
+            {
+                if (!IsFarming)
+                {
+                    IsFarming = true;
+                    ChainEntries = FarmEntries;
+                    FarmPass = 1;
+                }
+                if (StartFarmStep(0))
+                {
+                    return;
+                }
+                Log("[farm] every goal is already met");
+            }
+            FinishOrBuy();
+        }
+
+        // Start the first farm step at or after `from` whose goal isn't met.
+        private bool StartFarmStep(int from)
+        {
+            for (int i = from; i < FarmEntries.Count; i++)
+            {
+                QuestChains.Entry e = FarmEntries[i];
+                if (GoalMet(e))
+                {
+                    continue;
+                }
+                ChainIndex = i;
+                BindEntry(e.qid, e.items, e.area, e.frame, e.pad, e.mons);
+                Log($"[farm] pass {FarmPass}{(FarmLoops > 0 ? $"/{FarmLoops}" : "")}: {i + 1}/{FarmEntries.Count}: {e}"
+                    + (e.HasGoal ? $" ({GoalText(e)})" : ""));
+                EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
+                OnProgressChanged?.Invoke();
+                return true;
+            }
+            return false;
+        }
+
+        private bool AllFarmGoalsMet()
+        {
+            return FarmEntries != null && FarmEntries.All(e => e.HasGoal && GoalMet(e));
+        }
+
+        private void FinishOrBuy()
+        {
+            if (Buy != null)
+            {
+                if (!string.IsNullOrEmpty(Buy.area) && !AreaMatches(Area.currentArea?.Name ?? "", Buy.area))
+                {
+                    _shoppingAfterFarm = true;
+                    _shopRequested = false;
+                    _shopTferSent = false;
+                    EnterState(RunState.LoadingShop);
+                    return;
+                }
+                _buyIndex = 0;
+                _buyWaiting = false;
+                _buyOwnedBefore = -1;
+                _nextBuyAt = 0f;
+                EnterState(RunState.Buying);
+                OnProgressChanged?.Invoke();
+                return;
+            }
+            Log(IsFarming ? $"[done] farmed '{ChainName}' ({FarmPass} pass(es))" : $"[done] '{ChainName}' complete");
+            EnterState(RunState.Done);
+        }
+
+        private void TickLoadingShop()
+        {
+            // Some shops only load from their own map — go there first.
+            string hereArea = Area.currentArea?.Name ?? "";
+            if (!string.IsNullOrEmpty(Buy.area) && !AreaMatches(hereArea, Buy.area))
+            {
+                if (!_shopTferSent)
+                {
+                    _shopTferSent = true;
+                    _stateEnteredAt = Time.time;
+                    try
+                    {
+                        AEC.Instance.sendRequest(new Request("tfer", [Entity.mainPlayer?.Name ?? "", Buy.area, "0", "Enter", "Spawn"]));
+                        Log($"  [shop] tfer to {Buy.area}");
+                    }
+                    catch { }
+                }
+                if (StateAge() > TferTimeout)
+                {
+                    Fail($"couldn't reach '{Buy.area}' to open shop {Buy.shop}");
+                }
+                StatusLine = $"traveling to {Buy.area} for shop {Buy.shop}";
+                return;
+            }
+
+            if (!_shopRequested)
+            {
+                _shopRequested = true;
+                _shopRequestedAt = Time.time;
+                _stateEnteredAt = Time.time;
+                try
+                {
+                    AEC.Instance.sendRequest(new RequestLoadShop(Buy.shop));
+                    Log($"  [shop] loading shop {Buy.shop}");
+                }
+                catch (Exception ex)
+                {
+                    Fail($"loadShop send failed: {ex.Message}");
+                    return;
+                }
+            }
+
+            shopData loaded = RuntimeEvents.LastShop;
+            if (RuntimeEvents.LastShopTime >= _shopRequestedAt && loaded != null && loaded.shopID == Buy.shop)
+            {
+                _shop = loaded;
+                _needs.Clear();
+                foreach (KeyValuePair<string, int> kv in ItemGoals.Requirements(_shop, Buy))
+                {
+                    _needs[kv.Key] = kv.Value;
+                }
+                foreach ((string item, int qty) in Buy.items)
+                {
+                    ShopItem si = ItemGoals.FindShopItem(_shop, item);
+                    if (si == null)
+                    {
+                        Fail($"shop {Buy.shop} no longer sells {item}; reload the reward list");
+                        return;
+                    }
+                    Log($"  [shop] {item} ×{qty}: costs {string.Join(", ", ItemGoals.Costs(si).Select(c => $"{c.qty} {c.name}"))}");
+                }
+                List<string> needText = [.. _needs.Where(kv => !int.TryParse(kv.Key, out _)).Select(kv => $"{kv.Key} {ItemGoals.Count(kv.Key)}/{kv.Value}")];
+                Log($"  [shop] '{_shop.Name}' loaded — need {(needText.Count > 0 ? string.Join(", ", needText) : "nothing more")}");
+                RefreshRunnerKeep();
+                if (_shoppingAfterFarm)
+                {
+                    FinishOrBuy();
+                }
+                else if (!_sourcesPlanned && Buy.autoDiscover && RequiredMaterials().Any(c => ItemGoals.Count(c.id.ToString()) < c.qty))
+                {
+                    _discovery = MonsterFarmingCatalog.BeginDiscovery();
+                    Log($"[sources] checking live drop lists for {_discovery.Total} monster types on {Area.currentArea?.Name}");
+                    EnterState(RunState.DiscoveringSources);
+                }
+                else
+                {
+                    if (PlanMaterialRoutes(false)) BeginFarmOrFinish();
+                }
+                return;
+            }
+
+            if (StateAge() > ShopLoadTimeout)
+            {
+                Fail($"shop {Buy.shop} didn't load within {ShopLoadTimeout:0}s — wrong shop id, or it only opens from its map/NPC");
+                return;
+            }
+            StatusLine = $"loading shop {Buy.shop}… ({StateAge():0.0}s)";
+        }
+
+        private List<(int id, string name, int qty)> RequiredMaterials()
+        {
+            return Buy.items.Select(i => ItemGoals.FindShopItem(_shop, i.item)).Where(si => si != null)
+                .SelectMany(si => ItemGoals.Costs(si)).GroupBy(c => c.id)
+                .Select(g => (g.Key, g.First().name, _needs.TryGetValue(g.Key.ToString(), out int n) ? n : 0)).ToList();
+        }
+        private void TickDiscoveringSources()
+        {
+            if (!AreaMatches(Area.currentArea?.Name ?? "", _discovery.Area))
+            {
+                Fail("map changed during source discovery; restart this activity on the map to search"); return;
+            }
+            int request = _discovery.Next(Time.time, DateTime.UtcNow);
+            if (request > 0)
+            {
+                try { MonsterFarmingCatalog.RequestDrops(request); }
+                catch (Exception ex) { Log($"[sources] drop request {request} failed: {ex.Message}"); }
+            }
+            StatusLine = $"Discovering material sources: {_discovery.Completed}/{_discovery.Total} monster types";
+            if (_discovery.Finished && PlanMaterialRoutes(true)) BeginFarmOrFinish();
+        }
+        private bool PlanMaterialRoutes(bool useLive)
+        {
+            var planned = new List<QuestChains.Entry>();
+            foreach (var material in RequiredMaterials())
+            {
+                string id = material.id.ToString();
+                if (ItemGoals.Count(id) >= material.qty) continue;
+                var source = useLive ? MonsterFarmingCatalog.FindSource(material.id) : null;
+                if (source != null)
+                {
+                    planned.Add(new QuestChains.Entry { isHunt = true, mons = new List<string> { source.Id.ToString() }, area = source.Area, frame = source.Frame, goalItem = id, goalQty = -1 });
+                    Log($"[sources] {material.name}: {source.Name} ({source.Id}) in {source.Area}/{source.Frame}, confirmed by server drop list");
+                    continue;
+                }
+                var authored = FarmEntries?.FirstOrDefault(e => e.HasGoal && (e.goalItem == id || string.Equals(e.goalItem, material.name?.Trim(), StringComparison.OrdinalIgnoreCase)));
+                if (authored != null) { planned.Add(new QuestChains.Entry { qid = authored.qid, isHunt = authored.isHunt, items = authored.items, mons = authored.mons, area = authored.area, frame = authored.frame, pad = authored.pad, goalItem = id, goalQty = -1 }); Log($"[sources] {material.name}: using script route; no live source confirmed on this map"); continue; }
+                Fail($"no confirmed source for {material.name} on this map and no script route. Visit a source map or add a material route; no farming started."); return false;
+            }
+            FarmEntries = planned.Count > 0 ? planned : null;
+            _sourcesPlanned = true;
+            RefreshRunnerKeep();
+            return true;
+        }
+
+        private void TickBuying()
+        {
+            if (_buyWaiting)
+            {
+                if (RuntimeEvents.LastBuyTime > _buySentAt)
+                {
+                    _buyWaiting = false;
+                    _nextBuyAt = Time.time + InterIterCooldown;
+                    if (!RuntimeEvents.LastBuySuccess)
+                    {
+                        Fail($"purchase refused: {RuntimeEvents.LastBuyMessage}");
+                        return;
+                    }
+                    else
+                    {
+                        Log("  [buy] bought");
+                    }
+                }
+                else if (Time.time - _buySentAt > BuyResponseTimeout)
+                {
+                    Fail("purchase timed out; check inventory before restarting");
+                    return;
+                }
+                StatusLine = "waiting for purchase…";
+                return;
+            }
+            if (Time.time < _nextBuyAt)
+            {
+                StatusLine = $"buy cooldown {_nextBuyAt - Time.time:0.0}s";
+                return;
+            }
+
+            for (; _buyIndex < Buy.items.Count; _buyIndex++)
+            {
+                (string item, int qty) = Buy.items[_buyIndex];
+                ShopItem si = ItemGoals.FindShopItem(_shop, item);
+                if (si == null)
+                {
+                    Fail($"shop {Buy.shop} does not sell {item}");
+                    return;
+                }
+                int owned = ItemGoals.Count(si.ID.ToString());
+                if (owned >= qty)
+                {
+                    _buyOwnedBefore = -1;
+                    continue;
+                }
+                if (_buyOwnedBefore >= 0 && owned <= _buyOwnedBefore)
+                {
+                    Fail($"bought {si.Name} but the inventory still shows {owned}; stopped so nothing is bought twice");
+                    return;
+                }
+                if (!ItemGoals.CanAfford(si, out string missing))
+                {
+                    Fail($"cannot buy {si.Name} — missing {missing}");
+                    return;
+                }
+                try
+                {
+                    AEC.Instance.sendRequest(new RequestBuyItem(si.ID, _shop.shopID, si.ShopItemID));
+                    Log($"  [buy] buying {si.Name} ({owned + 1}/{qty})");
+                    _buyWaiting = true;
+                    _buySentAt = Time.time;
+                    _buyOwnedBefore = owned;
+                }
+                catch (Exception ex)
+                {
+                    Fail($"purchase send failed: {ex.Message}");
+                    return;
+                }
+                return;   // one purchase at a time; same item is re-checked next
+            }
+
+            Log($"[done] '{ChainName}' finished — shopping done");
+            EnterState(RunState.Done);
+        }
+
+        private void ResetFarm(List<QuestChains.Entry> farmEntries, int farmLoops)
+        {
+            FarmEntries = farmEntries is { Count: > 0 } ? farmEntries : null;
+            FarmLoops = Math.Max(0, farmLoops);
+            FarmPass = 0;
+            IsFarming = false;
+            _farmFailures = 0;
+            _sourcesPlanned = false;
+            _discovery = null;
+        }
+
+        private string FarmLoopsText()
+        {
+            return FarmLoops > 0 ? $"× {FarmLoops}" : "until stopped";
         }
 
         private void BindEntry(int qid, int items, string area, string frame, string pad, List<string> mons = null)
@@ -197,6 +687,7 @@ namespace BeyondAgent.Util
             TargetPad = string.IsNullOrEmpty(pad) ? "Spawn" : pad;
             TargetMons = mons ?? [];
             CurrentIteration = 0;
+            _huntObservedFrame = "";
             _acceptRetries = 0;
             LastError = "";
         }
@@ -209,6 +700,7 @@ namespace BeyondAgent.Util
             }
 
             Log("[stop] user requested");
+            IsPaused = false;
             StopAutoskills();
             EnterState(RunState.Idle);
         }
@@ -217,9 +709,16 @@ namespace BeyondAgent.Util
 
         public void Tick()
         {
-            if (!IsRunning)
+            if (!IsRunning || IsPaused)
             {
                 return;
+            }
+
+            // Live goal counts for the launcher ("Candy Corn 340/1500").
+            if (Time.time - _lastProgressPush > ProgressPushSec)
+            {
+                _lastProgressPush = Time.time;
+                OnProgressChanged?.Invoke();
             }
 
             try
@@ -260,6 +759,7 @@ namespace BeyondAgent.Util
                 // standing at the respawn point.
                 if (State != RunState.Respawning && PlayerIsDead())
                 {
+                    _beforeDeath = State;
                     Deaths++;
                     Log($"[death] died during {State} (death #{Deaths}) — waiting for respawn");
                     StopAutoskills();
@@ -277,6 +777,9 @@ namespace BeyondAgent.Util
                     case RunState.AwaitingComplete: TickAwaitComplete(); break;
                     case RunState.Cooldown: TickCooldown(); break;
                     case RunState.Respawning: TickRespawning(); break;
+                    case RunState.LoadingShop: TickLoadingShop(); break;
+                    case RunState.DiscoveringSources: TickDiscoveringSources(); break;
+                    case RunState.Buying: TickBuying(); break;
                 }
             }
             catch (Exception ex)
@@ -295,10 +798,17 @@ namespace BeyondAgent.Util
                 return;
             }
 
-            if (ChainEntries != null && Entity.mainPlayer.Quests != null && Entity.mainPlayer.Quests.isQuestComplete(QuestID))
+            if (SkipIfChainQuestDone())
             {
-                Log($"  quest {QuestID} is already completed, advancing/finishing");
-                AdvanceChainOrFinish();
+                return;
+            }
+
+            // Hunt steps have no quest to accept — straight to killing.
+            if (CurrentStep is { isHunt: true })
+            {
+                CurrentIteration = 1;
+                Iterations = 1;
+                EnterState(RunState.Hunting);
                 return;
             }
 
@@ -372,7 +882,13 @@ namespace BeyondAgent.Util
             }
             // Decide what's next. Always re-check travel before re-accepting
             // — for chain advances the target may differ from current pos.
-            if (CurrentIteration < Iterations)
+            // A farm quest with an item goal stops repeating once it's stocked.
+            bool goalDone = IsFarming && CurrentStep is { HasGoal: true } step && GoalMet(step);
+            if (goalDone)
+            {
+                Log($"  goal reached: {GoalText(CurrentStep)}");
+            }
+            if (CurrentIteration < Iterations && !goalDone)
             {
                 EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
                 return;
@@ -380,27 +896,83 @@ namespace BeyondAgent.Util
             AdvanceChainOrFinish();
         }
 
+        // Story entries the character already finished are skipped up front —
+        // before any travel — so re-running a done chain goes straight to its
+        // farm phase instead of touring every map on the way.
+        private bool SkipIfChainQuestDone()
+        {
+            if (ChainEntries == null || IsFarming || QuestID <= 0
+                || Entity.mainPlayer?.Quests == null
+                || !Entity.mainPlayer.Quests.isQuestComplete(QuestID))
+            {
+                return false;
+            }
+            Log($"  quest {QuestID} is already completed, skipping");
+            AdvanceChainOrFinish();
+            return true;
+        }
+
         private void AdvanceChainOrFinish()
         {
-            if (ChainEntries != null && ChainIndex + 1 < ChainEntries.Count)
+            // Single-quest runner (no chain): just done.
+            if (ChainEntries == null)
             {
-                ChainIndex++;
-                QuestChains.Entry next = ChainEntries[ChainIndex];
-                BindEntry(next.qid, next.items, next.area, next.frame, next.pad, next.mons);
-                Log($"[chain] advancing to {ChainIndex + 1}/{ChainEntries.Count}: {next}");
-                EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
-            }
-            else
-            {
-                Log(ChainEntries != null
-                    ? $"[done] chain '{ChainName}' complete"
-                    : "[done] all iterations complete");
+                Log("[done] all iterations complete");
                 EnterState(RunState.Done);
+                return;
             }
+
+            if (!IsFarming)
+            {
+                if (ChainIndex + 1 < ChainEntries.Count)
+                {
+                    ChainIndex++;
+                    QuestChains.Entry next = ChainEntries[ChainIndex];
+                    BindEntry(next.qid, next.items, next.area, next.frame, next.pad, next.mons);
+                    Log($"[chain] advancing to {ChainIndex + 1}/{ChainEntries.Count}: {next}");
+                    EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
+                    OnProgressChanged?.Invoke();
+                    return;
+                }
+                if (FarmEntries != null || Buy != null)
+                {
+                    Log($"[chain] '{ChainName}' story complete");
+                    BeginFarmOrFinish();
+                    return;
+                }
+                FinishOrBuy();
+                return;
+            }
+
+            // Farming: next unmet step this pass, else the next pass.
+            if (StartFarmStep(ChainIndex + 1))
+            {
+                return;
+            }
+            if (AllFarmGoalsMet())
+            {
+                Log("[farm] all goals reached");
+                FinishOrBuy();
+                return;
+            }
+            if (FarmLoops == 0 || FarmPass < FarmLoops)
+            {
+                FarmPass++;
+                if (StartFarmStep(0))
+                {
+                    return;
+                }
+            }
+            FinishOrBuy();
         }
 
         private void TickTravel()
         {
+            if (SkipIfChainQuestDone())
+            {
+                return;
+            }
+
             string hereArea = Area.currentArea?.Name ?? "";
             string hereFrame = Entity.mainPlayer?.Frame ?? "";
 
@@ -663,59 +1235,84 @@ namespace BeyondAgent.Util
             catch { }
         }
 
+        private string _huntObservedFrame = "";
+        private float _huntFrameSeenAt;
+
         private void TickHunt()
         {
-            Quest q = Quest.Get(QuestID);
-            if (q == null)
+            // Hunt step: no quest — kill the step's monsters for its drop until
+            // the inventory goal is met (progress = item count, not objectives).
+            QuestChains.Entry step = CurrentStep;
+            bool dropHunt = step is { isHunt: true };
+            Quest q = null;
+            QuestTurninItem nextObjective = null;
+            if (dropHunt)
             {
-                Fail($"no quest def cached for {QuestID} — open the quest UI once to populate Quest.Get()");
-                return;
+                if (GoalMet(step))
+                {
+                    StopAutoskills();
+                    Log($"  goal reached: {GoalText(step)}");
+                    CurrentIteration = Iterations;
+                    EnterState(RunState.Cooldown);
+                    return;
+                }
+            }
+            else
+            {
+                q = Quest.Get(QuestID);
+                if (q == null)
+                {
+                    Fail($"no quest def cached for {QuestID} — open the quest UI once to populate Quest.Get()");
+                    return;
+                }
+
+                // Find the first incomplete objective. If none, we're ready to
+                // turn in. The quest def's Turnins are the source of truth here —
+                // we don't try to interpret them, just check completion per QOID.
+                nextObjective = NextIncompleteObjective(q);
+                if (nextObjective == null)
+                {
+                    StopAutoskills();
+                    Log("  all objectives complete; turning in");
+                    EnterState(RunState.TurningIn);
+                    return;
+                }
+
+                // Interact objectives (QOType 2): a map machine — a door, a lever,
+                // the DragonSlayer armor pieces — that the player CLICKS. Nothing
+                // to fight; walk to the machine and trigger it. RefArray holds the
+                // machine GameObject name(s) (exact or a prefix like "DSPiece"
+                // covering DSPiece1..6). Handled entirely apart from combat.
+                if (nextObjective.QOType == QuestObjectiveType.Interact)
+                {
+                    TickInteract(nextObjective);
+                    return;
+                }
+
+                // Apop objectives (QOType 4): "talk to <NPC>" — walk to the friendly
+                // NPC and click it. NPCButton.Interact() plays any pre-dialog (auto-
+                // skipped) then ShowApop() auto-sends openApopQO, which credits the
+                // objective. RefArray[0] is the apopID; the NPC is the one carrying
+                // that apop.
+                // Apop (4) and Talk (3) both resolve by going to the quest NPC and
+                // clicking it — same handler.
+                if (nextObjective.QOType == QuestObjectiveType.Apop
+                    || nextObjective.QOType == QuestObjectiveType.Talk)
+                {
+                    TickApop(nextObjective);
+                    return;
+                }
+
+                // Cutscene (5): "watch cutscene N" — e.g. "Find the Bones" clicks a
+                // prop that plays a cutscene. RefArray[0] is the cutscene/dialog id.
+                if (nextObjective.QOType == QuestObjectiveType.Cutscene)
+                {
+                    TickCutscene(nextObjective);
+                    return;
+                }
             }
 
-            // Find the first incomplete objective. If none, we're ready to
-            // turn in. The quest def's Turnins are the source of truth here —
-            // we don't try to interpret them, just check completion per QOID.
-            QuestTurninItem nextObjective = NextIncompleteObjective(q);
-            if (nextObjective == null)
-            {
-                StopAutoskills();
-                Log("  all objectives complete; turning in");
-                EnterState(RunState.TurningIn);
-                return;
-            }
-
-            // Interact objectives (QOType 2): a map machine — a door, a lever,
-            // the DragonSlayer armor pieces — that the player CLICKS. Nothing
-            // to fight; walk to the machine and trigger it. RefArray holds the
-            // machine GameObject name(s) (exact or a prefix like "DSPiece"
-            // covering DSPiece1..6). Handled entirely apart from combat.
-            if (nextObjective.QOType == QuestObjectiveType.Interact)
-            {
-                TickInteract(nextObjective);
-                return;
-            }
-
-            // Apop objectives (QOType 4): "talk to <NPC>" — walk to the friendly
-            // NPC and click it. NPCButton.Interact() plays any pre-dialog (auto-
-            // skipped) then ShowApop() auto-sends openApopQO, which credits the
-            // objective. RefArray[0] is the apopID; the NPC is the one carrying
-            // that apop.
-            // Apop (4) and Talk (3) both resolve by going to the quest NPC and
-            // clicking it — same handler.
-            if (nextObjective.QOType == QuestObjectiveType.Apop
-                || nextObjective.QOType == QuestObjectiveType.Talk)
-            {
-                TickApop(nextObjective);
-                return;
-            }
-
-            // Cutscene (5): "watch cutscene N" — e.g. "Find the Bones" clicks a
-            // prop that plays a cutscene. RefArray[0] is the cutscene/dialog id.
-            if (nextObjective.QOType == QuestObjectiveType.Cutscene)
-            {
-                TickCutscene(nextObjective);
-                return;
-            }
+            string huntFor = nextObjective?.Name ?? (step?.HasGoal == true ? step.goalItem : step?.MonText ?? "drops");
 
             // Kill detection: a watched target flipping to Dead is a kill —
             // that's hunt liveness even when the objective is a low-chance
@@ -740,22 +1337,35 @@ namespace BeyondAgent.Util
                 // straight there. Also recovers from a respawn that dropped us
                 // in the wrong room.
                 string here = Entity.mainPlayer?.Frame ?? "";
+                if (!string.Equals(_huntObservedFrame, here, StringComparison.OrdinalIgnoreCase))
+                {
+                    _huntObservedFrame = here;
+                    _huntFrameSeenAt = Time.time;
+                }
+                if (Time.time - _huntFrameSeenAt < 2f)
+                {
+                    StatusLine = $"waiting for monsters in {here} to load";
+                    return;
+                }
                 string targetFrame = FindHostileFrame(nextObjective);
+                // A known spawn is still a valid destination while its monster
+                // is dead. Sweeping away here can prevent its respawn/loading.
+                if (string.IsNullOrEmpty(targetFrame)) targetFrame = FindHostileFrame(nextObjective, includeDead: true);
                 if (!string.IsNullOrEmpty(targetFrame)
                     && !string.Equals(targetFrame, here, StringComparison.OrdinalIgnoreCase))
                 {
-                    GoToFrame(targetFrame, $"hunt '{nextObjective.Name}'");
+                    GoToFrame(targetFrame, $"hunt '{huntFor}'");
                     return;
                 }
                 if (string.IsNullOrEmpty(targetFrame))
                 {
                     // No matching hostile loaded anywhere — sweep cells (lazy
                     // maps) then fail with a hint if the map is genuinely dry.
-                    TickCellSweep(here, $"hostile for '{nextObjective.Name}'",
+                    TickCellSweep(here, $"hostile for '{huntFor}'",
                         () => PickBestHostile(nextObjective) != null || !string.IsNullOrEmpty(FindHostileFrame(nextObjective)));
                     return;
                 }
-                StatusLine = $"no hostile in {here} for '{nextObjective.Name}' — waiting to respawn";
+                StatusLine = $"no hostile in {here} for '{huntFor}' — waiting to respawn";
                 CheckHuntTimeout();
                 return;
             }
@@ -832,7 +1442,7 @@ namespace BeyondAgent.Util
 
             EnsureAutoskillsOn();
 
-            int progressSum = SumObjectiveProgress(q);
+            int progressSum = dropHunt ? ItemGoals.Count(step.goalItem) : SumObjectiveProgress(q);
             if (progressSum != _lastProgressSum)
             {
                 _lastProgressSum = progressSum;
@@ -858,7 +1468,8 @@ namespace BeyondAgent.Util
                 Fail($"no kills or objective progress in {HuntTimeoutNoProgress:0}s — quest likely needs a different zone, mob type, or interaction we don't handle yet");
                 return;
             }
-            if (Time.time - _lastProgressAt > HuntHardCapSec)
+            // Rare boss drops may legitimately take longer than a quest objective.
+            if (CurrentStep is not { isHunt: true } && Time.time - _lastProgressAt > HuntHardCapSec)
             {
                 Fail($"killing for {HuntHardCapSec / 60f:0} minutes with zero objective progress — these kills aren't credited (wrong mob or wrong zone)");
             }
@@ -1308,6 +1919,12 @@ namespace BeyondAgent.Util
                 StatusLine = "respawned — settling";
                 return;
             }
+            if (_beforeDeath is RunState.LoadingShop or RunState.Buying or RunState.DiscoveringSources)
+            {
+                if (_beforeDeath == RunState.DiscoveringSources) _discovery = MonsterFarmingCatalog.BeginDiscovery();
+                EnterState(_beforeDeath);
+                return;
+            }
             Log($"  respawned; resuming (travel check: {(NeedsCellHop() ? "yes" : "no")})");
             EnterState(NeedsCellHop() ? RunState.Traveling : RunState.Accepting);
         }
@@ -1406,6 +2023,7 @@ namespace BeyondAgent.Util
                 && RuntimeEvents.LastCompleteSuccess)
             {
                 Log($"  iter {CurrentIteration}: turn-in confirmed (QComp success)");
+                _farmFailures = 0;
                 // Always cool down briefly before the next action — the
                 // server's spam-detect window is short but firm. Cooldown
                 // state decides what comes next based on remaining work.
@@ -1534,7 +2152,19 @@ namespace BeyondAgent.Util
         // this is a pure lookup, no walking. Returns the current frame if a
         // match is already here, else the most-populated matching frame, else
         // "" when nothing in the whole map matches.
-        private string FindHostileFrame(QuestTurninItem obj)
+        // The quest DB's monster ids for this objective, or null when the DB
+        // doesn't know the quest/objective (then the older signals apply).
+        private List<int> ObjectiveMonsters(QuestTurninItem obj)
+        {
+            if (obj == null || !QuestDB.TryGet(QuestID, out QuestDB.QuestInfo q))
+            {
+                return null;
+            }
+            QuestDB.Objective o = q.Objectives.FirstOrDefault(x => x.QOID == obj.QOID);
+            return o is { IsKill: true, Monsters.Count: > 0 } ? o.Monsters : null;
+        }
+
+        private string FindHostileFrame(QuestTurninItem obj, bool includeDead = false)
         {
             if (Area.currentArea?.Monsters == null)
             {
@@ -1549,7 +2179,7 @@ namespace BeyondAgent.Util
                 {
                     if (m == null
                         || m.reactionType != Entity.ReactionType.Hostile
-                        || m.currentState == Entity.State.Dead
+                        || (!includeDead && m.currentState == Entity.State.Dead)
                         || !MatchesTarget(m, obj))
                     {
                         continue;
@@ -1643,6 +2273,17 @@ namespace BeyondAgent.Util
         // grinds the room and lets the server credit whatever it credits).
         private bool MatchesTarget(Monster m, QuestTurninItem obj)
         {
+            // Per-objective targets from the quest DB beat the entry-wide `mon`
+            // hint: a farm quest like "Manticore of Infinity" needs Infinity
+            // Manticores (R4) for one objective and Earth Elementals (R2/R3)
+            // for the other, and an entry-wide filter would keep killing the
+            // wrong one for whichever objective is current.
+            List<int> objectiveMons = ObjectiveMonsters(obj);
+            if (objectiveMons != null)
+            {
+                return objectiveMons.Contains(m.ID);
+            }
+
             bool hasSignal = false;
 
             if (TargetMons.Count > 0)
@@ -1742,7 +2383,9 @@ namespace BeyondAgent.Util
             {
                 _lastProgressAt = Time.time;
                 _lastKillAt = Time.time;
-                _lastProgressSum = SumObjectiveProgress(Quest.Get(QuestID));
+                _lastProgressSum = CurrentStep is { isHunt: true } hs
+                    ? ItemGoals.Count(hs.goalItem)
+                    : SumObjectiveProgress(Quest.Get(QuestID));
                 _watchedTarget = null;
                 _huntPathing = false;
                 _interactTarget = null;
@@ -1779,6 +2422,18 @@ namespace BeyondAgent.Util
             {
                 ChatUtils.SendChatAndLog("Chain Stopped", name: "System", channel: "Admin");
             }
+            if (!IsRunning)
+            {
+                IsPaused = false;
+                if (wasRunning)
+                {
+                    DropFilterEngine.SetRunnerKeep([]);
+                }
+            }
+            if (wasRunning != IsRunning)
+            {
+                OnProgressChanged?.Invoke();
+            }
         }
 
         private float StateAge()
@@ -1789,6 +2444,20 @@ namespace BeyondAgent.Util
         private void Fail(string why)
         {
             LastError = why;
+            if (IsFarming && State is not (RunState.Buying or RunState.LoadingShop or RunState.DiscoveringSources)
+                && _farmFailures < MaxFarmRetries)
+            {
+                // Restart the current farm entry from its travel step after a
+                // pause (the spam backoff gates every state, so reuse it).
+                _farmFailures++;
+                Log($"[farm] {why} — retrying in {FarmRetryDelaySec:0}s ({_farmFailures}/{MaxFarmRetries})");
+                StopAutoskills();
+                QuestChains.Entry cur = ChainEntries[ChainIndex];
+                BindEntry(cur.qid, cur.items, cur.area, cur.frame, cur.pad, cur.mons);
+                _spamBackoffUntil = Time.time + FarmRetryDelaySec;
+                EnterState(RunState.Traveling);
+                return;
+            }
             StatusLine = $"FAIL: {why}";
             Log($"[fail] {why}");
             StopAutoskills();

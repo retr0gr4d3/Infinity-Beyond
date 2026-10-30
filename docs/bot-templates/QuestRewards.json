@@ -1,0 +1,28 @@
+{
+  "Choose quest rewards": {
+    "template": "quest-rewards",
+    "description": "Independent quests: players choose which rewards to pursue.",
+    "options": [
+      {
+        "name": "First reward",
+        "farm": [
+          {
+            "qid": 1,
+            "area": "map",
+            "items": 1
+          }
+        ]
+      },
+      {
+        "name": "Second reward",
+        "farm": [
+          {
+            "qid": 2,
+            "area": "map",
+            "items": 1
+          }
+        ]
+      }
+    ]
+  }
+}

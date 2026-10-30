@@ -6,8 +6,9 @@ using System.Collections.ObjectModel;
 
 namespace Launcher.ViewModels
 {
-    // ChainEditorWindow (+ the chain runner in QuestRunnerWindow): build, run,
-    // import and export quest chains.
+    // ChainEditorWindow (+ the chain runner in QuestRunnerWindow, the Library's
+    // Start button and the control panel's Bot card): build, run, import and
+    // export quest chains, and track the running chain's progress.
     public partial class MainWindowViewModel
     {
         public ObservableCollection<string> ChainNames { get; } = [];
@@ -16,11 +17,19 @@ namespace Launcher.ViewModels
         // Chain name -> recommended class/skillset (from a script's object form).
         public System.Collections.Generic.Dictionary<string, string> ChainClasses { get; } = [];
 
+        // Chain name -> repeatable quests farmed after the chain (object form "farm").
+        public System.Collections.Generic.Dictionary<string, JArray> ChainFarms { get; } = [];
+
+        // Chain name -> "bootstrap" / "library" / "user" (which file won).
+        public System.Collections.Generic.Dictionary<string, string> ChainSources { get; } = [];
+
         // Picker shown on the chain tab: "(none)" + the user's saved skillset names.
         public const string NoChainClass = "(none)";
         public ObservableCollection<string> ChainSkillsetOptions { get; } = [NoChainClass];
 
-        [ObservableProperty] private string? _selectedChainName;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(SelectedChainSummary))]
+        private string? _selectedChainName;
 
         [ObservableProperty] private string? _selectedChainClass = NoChainClass;
 
@@ -48,6 +57,27 @@ namespace Launcher.ViewModels
             }
         }
 
+        // One-line description of the picked chain for the run controls.
+        public string SelectedChainSummary
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(SelectedChainName) || !ChainDetails.TryGetValue(SelectedChainName, out JArray? arr))
+                {
+                    return "";
+                }
+
+                int farm = ChainFarms.TryGetValue(SelectedChainName, out JArray? f) ? f.Count : 0;
+                string s = $"{arr.Count} quest{(arr.Count == 1 ? "" : "s")}";
+                s += farm > 0 ? $" · then farms {farm}" : " · no farm quests";
+                if (ChainSources.TryGetValue(SelectedChainName, out string? src) && src == "library")
+                {
+                    s += " · library";
+                }
+                return s;
+            }
+        }
+
         // Rebuild the skillset picker from SavedSkillsets (called when status updates).
         public void RefreshChainSkillsetOptions()
         {
@@ -64,6 +94,82 @@ namespace Launcher.ViewModels
             SelectedChainClass = (prev != null && ChainSkillsetOptions.Contains(prev)) ? prev : NoChainClass;
         }
 
+        // --- Farm options (per session, seeded from and saved to BotSettings) ---
+        [ObservableProperty] private bool _farmAfterChain = BotSettings.Current.FarmAfterChain;
+
+        // Farm passes after the chain; 0 / blank = until stopped.
+        [ObservableProperty] private string _farmLoops = BotSettings.Current.FarmLoops.ToString();
+
+        partial void OnFarmAfterChainChanged(bool value)
+        {
+            BotSettings.Current.FarmAfterChain = value;
+            BotSettings.Current.Save();
+        }
+
+        partial void OnFarmLoopsChanged(string value)
+        {
+            BotSettings.Current.FarmLoops = ParseFarmLoops();
+            BotSettings.Current.Save();
+        }
+
+        private int ParseFarmLoops()
+        {
+            return int.TryParse(FarmLoops, out int n) && n > 0 ? n : 0;
+        }
+
+        // --- Runner progress (from the agent's QuestRunnerState messages) ---
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ChainToggleText))]
+        private bool _isChainRunning;
+
+        [ObservableProperty] private string _chainRunStatus = "";
+
+        public string ChainToggleText => IsChainRunning ? "Stop" : "Start";
+
+        private void OnQuestRunnerStateReceived(JObject msg)
+        {
+            IsChainRunning = (bool?)msg["Running"] ?? false;
+            UpdateScriptStatus(msg);
+            string chain = (string?)msg["Chain"] ?? "";
+            int index = ((int?)msg["Index"] ?? 0) + 1;
+            int count = (int?)msg["Count"] ?? 0;
+
+            if (IsChainRunning)
+            {
+                if ((string?)msg["Phase"] is "shop" or "buy" or "discovery")
+                {
+                    ChainRunStatus = $"{chain} — {((string?)msg["Phase"] == "shop" ? "loading merge shop" : (string?)msg["Phase"] == "discovery" ? ((string?)msg["StatusLine"] ?? "discovering material sources") : "buying items")}";
+                }
+                else if (chain.Length == 0)
+                {
+                    ChainRunStatus = $"Running quest {(int?)msg["QuestID"]}";
+                }
+                else if ((bool?)msg["Farming"] == true)
+                {
+                    int pass = (int?)msg["FarmPass"] ?? 0;
+                    int loops = (int?)msg["FarmLoops"] ?? 0;
+                    ChainRunStatus = $"Farming {chain} — pass {pass}{(loops > 0 ? $"/{loops}" : "")}, target {index}/{count}";
+                }
+                else
+                {
+                    ChainRunStatus = $"Running {chain} — quest {index}/{count}";
+                }
+                string goal = (string?)msg["Goal"] ?? "";
+                if (goal.Length > 0 && (string?)msg["Phase"] is not ("shop" or "buy" or "discovery"))
+                {
+                    ChainRunStatus += $" — {goal}";
+                }
+                return;
+            }
+
+            ChainRunStatus = (string?)msg["State"] switch
+            {
+                "Done" => "Finished.",
+                "Failed" => $"Stopped: {(string?)msg["LastError"]}",
+                _ => ""
+            };
+        }
+
         [ObservableProperty] private string _chainEditorName = "NewChain";
         public ObservableCollection<ChainEntryViewModel> ChainEditorEntries { get; } = [];
 
@@ -72,15 +178,26 @@ namespace Launcher.ViewModels
         [RelayCommand]
         private void RunChain()
         {
-            if (!string.IsNullOrEmpty(SelectedChainName))
+            if (string.IsNullOrEmpty(SelectedChainName))
             {
-                JObject p = new() { ["Name"] = SelectedChainName };
-                if (!string.IsNullOrEmpty(SelectedChainClass) && SelectedChainClass != NoChainClass)
-                {
-                    p["Skillset"] = SelectedChainClass;
-                }
-                _connection.SendCommand("RunChain", p);
+                return;
             }
+
+            JObject p = new()
+            {
+                ["Name"] = SelectedChainName,
+                ["Farm"] = FarmAfterChain,
+                ["FarmLoops"] = ParseFarmLoops()
+            };
+            if (!string.IsNullOrEmpty(SelectedChainClass) && SelectedChainClass != NoChainClass)
+            {
+                p["Skillset"] = SelectedChainClass;
+            }
+            QuestRunnerLogs.Clear();
+            _connection.SendCommand("RunChain", p);
+
+            BotSettings.Current.LastChain = SelectedChainName;
+            BotSettings.Current.Save();
         }
 
         [RelayCommand]
@@ -90,23 +207,51 @@ namespace Launcher.ViewModels
             _connection.SendCommand("StopQuestRunner", null);
         }
 
+        // Single Start/Stop button (control panel Bot card).
+        [RelayCommand]
+        private void ToggleChain()
+        {
+            if (IsChainRunning)
+            {
+                StopChain();
+            }
+            else
+            {
+                RunChain();
+            }
+        }
+
         [RelayCommand]
         private void LoadChainForEditing()
         {
             if (!string.IsNullOrEmpty(SelectedChainName) && ChainDetails.TryGetValue(SelectedChainName, out JArray? arr))
             {
                 ChainEditorName = SelectedChainName;
-                ChainEditorEntries.Clear();
-                foreach (JToken t in arr)
+                ChainFarms.TryGetValue(SelectedChainName, out JArray? farm);
+                LoadEditorEntries(arr, farm);
+            }
+        }
+
+        // Story entries first, then the farm entries (flagged Farm).
+        private void LoadEditorEntries(JArray entries, JArray? farm)
+        {
+            ChainEditorEntries.Clear();
+            foreach (JToken t in entries)
+            {
+                ChainEditorEntries.Add(EntryFromJson(t, isFarm: false));
+            }
+            if (farm != null)
+            {
+                foreach (JToken t in farm)
                 {
-                    ChainEditorEntries.Add(EntryFromJson(t));
+                    ChainEditorEntries.Add(EntryFromJson(t, isFarm: true));
                 }
             }
         }
 
         // "mon" round-trip: stored as an array of name/id strings, edited as one
         // comma-joined text field.
-        private static ChainEntryViewModel EntryFromJson(JToken t)
+        private static ChainEntryViewModel EntryFromJson(JToken t, bool isFarm)
         {
             string mon = t["mon"] is JArray monArr
                 ? string.Join(", ", monArr.Values<string>())
@@ -118,7 +263,8 @@ namespace Launcher.ViewModels
                 Frame = (string?)t["frame"] ?? "",
                 Pad = (string?)t["pad"] ?? "Spawn",
                 Items = (int?)t["items"] ?? (int?)t["iters"] ?? 1,
-                Mon = mon
+                Mon = mon,
+                Farm = isFarm
             };
         }
 
@@ -141,6 +287,23 @@ namespace Launcher.ViewModels
             return o;
         }
 
+        // Editor rows -> (story entries, farm entries), skipping rows without a qid.
+        private (JArray Entries, JArray Farm) EditorEntriesToJson()
+        {
+            JArray entries = [];
+            JArray farm = [];
+            foreach (ChainEntryViewModel ent in ChainEditorEntries)
+            {
+                if (ent.Qid <= 0)
+                {
+                    continue;
+                }
+
+                (ent.Farm ? farm : entries).Add(EntryToJson(ent));
+            }
+            return (entries, farm);
+        }
+
         [RelayCommand]
         private void AddChainEditorEntry()
         {
@@ -161,21 +324,20 @@ namespace Launcher.ViewModels
                 return;
             }
 
-            JArray entries = [];
-            foreach (ChainEntryViewModel ent in ChainEditorEntries)
+            string name = ChainEditorName.Trim();
+            (JArray entries, JArray farm) = EditorEntriesToJson();
+            JObject save = new()
             {
-                if (ent.Qid <= 0)
-                {
-                    continue;
-                }
-
-                entries.Add(EntryToJson(ent));
+                ["Name"] = name,
+                ["Entries"] = entries,
+                ["Farm"] = farm
+            };
+            // Keep a library chain's recommended class when saving an edited copy.
+            if (ChainClasses.TryGetValue(name, out string? cls))
+            {
+                save["Class"] = cls;
             }
-            _connection.SendCommand("SaveChain", new JObject
-            {
-                ["Name"] = ChainEditorName.Trim(),
-                ["Entries"] = entries
-            });
+            _connection.SendCommand("SaveChain", save);
         }
 
         [RelayCommand]
@@ -197,19 +359,26 @@ namespace Launcher.ViewModels
                 return;
             }
 
-            JArray entries = [];
-            foreach (ChainEntryViewModel ent in ChainEditorEntries)
+            (JArray entries, JArray farm) = EditorEntriesToJson();
+            ChainClasses.TryGetValue(ChainEditorName, out string? cls);
+            JToken chain = entries;
+            if (farm.Count > 0 || !string.IsNullOrEmpty(cls))
             {
-                if (ent.Qid <= 0)
+                JObject form = [];
+                if (!string.IsNullOrEmpty(cls))
                 {
-                    continue;
+                    form["class"] = cls;
                 }
-
-                entries.Add(EntryToJson(ent));
+                form["entries"] = entries;
+                if (farm.Count > 0)
+                {
+                    form["farm"] = farm;
+                }
+                chain = form;
             }
             JObject obj = new()
             {
-                [ChainEditorName] = entries
+                [ChainEditorName] = chain
             };
             ChainImportExportText = obj.ToString(Newtonsoft.Json.Formatting.Indented);
         }
@@ -227,14 +396,13 @@ namespace Launcher.ViewModels
                 JObject obj = JObject.Parse(ChainImportExportText);
                 foreach (JProperty prop in obj.Properties())
                 {
-                    if (prop.Value is JArray arr)
+                    // Bare entries array, or the object form with entries/farm.
+                    JObject? form = prop.Value as JObject;
+                    JArray? entries = prop.Value as JArray ?? form?["entries"] as JArray;
+                    if (entries != null)
                     {
                         ChainEditorName = prop.Name;
-                        ChainEditorEntries.Clear();
-                        foreach (JToken t in arr)
-                        {
-                            ChainEditorEntries.Add(EntryFromJson(t));
-                        }
+                        LoadEditorEntries(entries, form?["farm"] as JArray);
                         break;
                     }
                 }
@@ -250,6 +418,8 @@ namespace Launcher.ViewModels
             ChainNames.Clear();
             ChainDetails.Clear();
             ChainClasses.Clear();
+            ChainFarms.Clear();
+            ChainSources.Clear();
             if (msg["Chains"] is JObject chains)
             {
                 foreach (JProperty prop in chains.Properties())
@@ -272,6 +442,23 @@ namespace Launcher.ViewModels
                     }
                 }
             }
+            if (msg["ChainFarms"] is JObject farms)
+            {
+                foreach (JProperty prop in farms.Properties())
+                {
+                    if (prop.Value is JArray arr && arr.Count > 0)
+                    {
+                        ChainFarms[prop.Name] = arr;
+                    }
+                }
+            }
+            if (msg["ChainSources"] is JObject sources)
+            {
+                foreach (JProperty prop in sources.Properties())
+                {
+                    ChainSources[prop.Name] = (string?)prop.Value ?? "";
+                }
+            }
 
             if (prevSelection != null && ChainNames.Contains(prevSelection))
             {
@@ -283,6 +470,13 @@ namespace Launcher.ViewModels
                 }
                 _isRefreshingChains = false;
             }
+            else if (ChainNames.Contains(BotSettings.Current.LastChain))
+            {
+                // First catalog of the session: preselect the last script run, so
+                // Start is the only click needed.
+                SelectedChainName = BotSettings.Current.LastChain;
+            }
+            OnPropertyChanged(nameof(SelectedChainSummary));
         }
     }
 }

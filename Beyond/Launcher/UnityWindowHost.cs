@@ -524,38 +524,15 @@ namespace Launcher
                     {
                         try
                         {
-                            // Copy BeyondAgent.dll and 0Harmony.dll from launcher directory to game's managed directory
-                            string launcherDir = AppDomain.CurrentDomain.BaseDirectory;
-                            string sourceAgent = Path.Combine(launcherDir, "BeyondAgent.dll");
-                            string sourceHarmony = Path.Combine(launcherDir, "0Harmony.dll");
-
-                            if (File.Exists(sourceAgent))
-                            {
-                                string destAgent = Path.Combine(managedDir, "BeyondAgent.dll");
-                                File.Copy(sourceAgent, destAgent, true);
-                                Trace.WriteLine($"[Launcher] Copied BeyondAgent.dll to {destAgent}");
-                            }
-                            else
-                            {
-                                Trace.WriteLine($"[Launcher] Warning: BeyondAgent.dll not found in launcher directory: {sourceAgent}");
-                            }
-
-                            if (File.Exists(sourceHarmony))
-                            {
-                                string destHarmony = Path.Combine(managedDir, "0Harmony.dll");
-                                File.Copy(sourceHarmony, destHarmony, true);
-                                Trace.WriteLine($"[Launcher] Copied 0Harmony.dll to {destHarmony}");
-                            }
-                            else
-                            {
-                                Trace.WriteLine($"[Launcher] Warning: 0Harmony.dll not found in launcher directory: {sourceHarmony}");
-                            }
+                            AgentDeployment.Install(AppDomain.CurrentDomain.BaseDirectory,
+                                gameDir ?? Path.GetDirectoryName(gameExe)!, managedDir);
 
                             AssemblyPatcher.Patch(managedDir);
                         }
                         catch (Exception ex)
                         {
-                            Trace.WriteLine($"[AssemblyPatcher] Failed to patch Assembly-CSharp.dll: {ex}");
+                            Trace.WriteLine($"[AssemblyPatcher] Failed to prepare game agent: {ex}");
+                            throw;
                         }
                     }
                     else
@@ -587,6 +564,7 @@ namespace Launcher
                     // Tell the agent which named pipe to serve for this session.
                     string pipeName = string.IsNullOrWhiteSpace(PipeName) ? "BeyondAgent" : PipeName;
                     psi.Environment[EnvPipeName] = pipeName;
+                    psi.Environment["BEYOND_BOTS"] = BotStorage.Prepare(gameDir);
                     // macOS overlay-follow: the agent floats the game window above
                     // the launcher, so it needs the launcher's pid to know when to
                     // hide (frontmost app is neither the game nor us).
