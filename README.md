@@ -57,6 +57,13 @@ back to the launcher so every tool window reflects live game state.
 - **Configurator** - store accounts (with nicknames) and the game directory.
 - **Auto-launch** - fills the login screen and advances the play screen straight to
   server select.
+- **Bot &amp; script library** - community scripts from
+  [Infinity-Files](https://github.com/retr0gr4d3/Infinity-Files) update automatically
+  on launch (toggle in the Library window) and are runnable as soon as they're
+  downloaded. Pick a script on the control panel's Bot card (or double-click it in
+  the Library) and press Start. Quests already completed are skipped without
+  travelling, and a script's optional `farm` list is looped once the chain is done
+  ("Farm after chain", with a pass count; 0 = until stopped).
 - **Tool windows** - Visual Spoofers &amp; Jukebox, Autoskills, Quest Loader, Quest
   Runner &amp; Chain Editor, Shop Loader, Fake Dev, Packet Sniffer / Interceptor /
   Sender / Receiver.
@@ -95,8 +102,9 @@ To build with the SDK directly, tell the mod build where the game is - either se
 dotnet build Beyond.sln -c Release -p:AqwiManagedDir="<game>\<name>_Data\Managed"
 ```
 
-Building `BeyondAgent` copies `BeyondAgent.dll` (and Harmony) into the game's
-`…_Data/Managed` folder. The launcher patches `Assembly-CSharp.dll` on first launch
+Building `BeyondAgent` stages `BeyondAgent.dll` and Harmony in `Beyond/build`.
+The launcher installs them into the game's `…_Data/Managed` folder before launch
+and synchronizes any existing game-root copies to prevent stale-agent shadowing. The launcher patches `Assembly-CSharp.dll` on first launch
 (making a `.dll.bak` backup; it skips patching if MelonLoader is detected).
 
 ## Run
@@ -111,3 +119,10 @@ Building `BeyondAgent` copies `BeyondAgent.dll` (and Harmony) into the game's
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how the code is organized and a full,
 worked walkthrough of adding a feature.
+
+
+## Bots
+
+The **Bot** panel supports quest chains, independent quest rewards, merge shops, and monster-drop farming. Use **Bot writer** to create or edit scripts with named quests and step explanations. Runnable scripts live in `bots/` beside the launcher. Merge bots can discover material sources from live drop lists on the loaded shop map.
+
+See [the bot guide](docs/BOTS.md) for running, authoring, migration, validation commands, and current limits. Reusable [template examples](docs/bot-templates/README.md) are packaged separately from runnable bots.

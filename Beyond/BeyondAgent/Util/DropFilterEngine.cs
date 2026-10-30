@@ -37,6 +37,9 @@ namespace BeyondAgent.Util
 
         private static List<Entry> _keep = [];
         private static List<Entry> _reject = [];
+        // Goal items of the running script (names / ids), looted on top of the
+        // user's own filter so a hunt never leaves its drops in the window.
+        private static List<Entry> _runnerKeep = [];
         private static bool _deleteOthers;
         private static readonly object _gate = new();
 
@@ -85,6 +88,17 @@ namespace BeyondAgent.Util
             Diag($"ApplyDropFilter keep={keep.Count} reject={reject.Count} deleteOthers={deleteOthers} keepRaw=[{keepRaw}] rejectRaw=[{rejectRaw}]");
         }
 
+        /// <summary>Set (or clear, with an empty list) the QuestRunner's auto-loot items.</summary>
+        public static void SetRunnerKeep(IEnumerable<string> items)
+        {
+            List<Entry> keep = ParseEntries(string.Join(",", items ?? []));
+            lock (_gate)
+            {
+                _runnerKeep = keep;
+                _sentLootIds.Clear();
+            }
+        }
+
         /// <summary>Clear the filter.</summary>
         public static void ClearFilter()
         {
@@ -117,7 +131,7 @@ namespace BeyondAgent.Util
         public static void Tick()
         {
             bool active;
-            lock (_gate) { active = _keep.Count > 0 || _reject.Count > 0 || _deleteOthers; }
+            lock (_gate) { active = _keep.Count > 0 || _reject.Count > 0 || _deleteOthers || _runnerKeep.Count > 0; }
             if (!active)
             {
                 return;
@@ -200,7 +214,7 @@ namespace BeyondAgent.Util
                 bool keep, reject;
                 lock (_gate)
                 {
-                    keep = MatchesAny(_keep, name, id, isGem, rarity, isAc);
+                    keep = MatchesAny(_keep, name, id, isGem, rarity, isAc) || MatchesAny(_runnerKeep, name, id, isGem, rarity, isAc);
                     if (keep)
                     {
                         reject = false;

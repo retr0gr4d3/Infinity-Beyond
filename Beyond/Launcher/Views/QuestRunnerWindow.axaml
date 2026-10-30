@@ -11,7 +11,7 @@
         ExtendClientAreaToDecorationsHint="True"
         ExtendClientAreaTitleBarHeightHint="30"
         WindowDecorations="BorderOnly"
-        Width="600" Height="580">
+        Width="640" Height="620">
 
     <DockPanel Classes="WindowRoot" LastChildFill="True">
         <v:TitleBar DockPanel.Dock="Top" Title="Quest Runner &amp; Automation"/>
@@ -65,8 +65,16 @@
                             <ComboBox ItemsSource="{Binding ChainSkillsetOptions}" SelectedItem="{Binding SelectedChainClass}" HorizontalAlignment="Stretch"/>
                         </StackPanel>
                     </Grid>
+                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                        <CheckBox Content="Farm after chain" IsChecked="{Binding FarmAfterChain}" FontSize="11" VerticalAlignment="Center"
+                                  ToolTip.Tip="When the chain is done (or already completed), keep looping its farm quests."/>
+                        <TextBlock Grid.Column="1" Text="{Binding SelectedChainSummary}" FontSize="10" Foreground="#8F909A" VerticalAlignment="Center" Margin="4,0,0,0"/>
+                        <TextBlock Grid.Column="2" Text="Passes (0 = forever)" FontSize="10" Foreground="#8F909A" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="3" Text="{Binding FarmLoops}" Width="60" IsEnabled="{Binding FarmAfterChain}"/>
+                    </Grid>
                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                        <Button Grid.Column="1" Content="Start" Command="{Binding RunChainCommand}" Classes="Accent" Width="95"/>
+                        <TextBlock Text="{Binding ChainRunStatus}" FontSize="10" Foreground="{DynamicResource BeyondAccentBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <Button Grid.Column="1" Content="Start" Command="{Binding RunChainCommand}" IsEnabled="{Binding !IsChainRunning}" Classes="Accent" Width="95"/>
                         <Button Grid.Column="2" Content="Stop" Command="{Binding StopChainCommand}" Width="95"/>
                         <Button Grid.Column="3" Content="Open Chain Editor" Command="{Binding OpenChainEditorWindowCommand}" Width="135"/>
                     </Grid>

@@ -1,0 +1,83 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Launcher.ViewModels"
+        xmlns:v="using:Launcher.Views"
+        x:Class="Launcher.Views.ScriptLoaderWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Load Script"
+        Background="#0F0F11"
+        FontFamily="Inter, Segoe UI, sans-serif"
+        WindowStartupLocation="CenterOwner"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="30"
+        WindowDecorations="BorderOnly"
+        Width="380" Height="560" MinWidth="340" MinHeight="420">
+
+    <DockPanel Classes="WindowRoot" LastChildFill="True">
+        <v:TitleBar DockPanel.Dock="Top" Title="Load Script"/>
+
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="8" Margin="12">
+            <!-- Status + loaded script -->
+            <StackPanel Grid.Row="0" Spacing="2" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding ScriptStatus, StringFormat='Status: {0}'}" FontSize="15" FontWeight="Bold" Foreground="#E2E4E9" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding LoadedScriptFileName}" FontSize="16" Foreground="{DynamicResource BeyondAccentBrush}" HorizontalAlignment="Center"
+                           IsVisible="{Binding HasLoadedScript}" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="{Binding LoadedScriptSummary}" FontSize="10" Foreground="#8F909A" HorizontalAlignment="Center"
+                           IsVisible="{Binding HasLoadedScript}"/>
+                <TextBlock Text="{Binding ChainRunStatus}" FontSize="10" Foreground="#A6A8B2" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                           IsVisible="{Binding ChainRunStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+
+            <!-- File actions -->
+            <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                <Button Grid.Row="0" Grid.Column="0" Content="Load Script" Command="{Binding LoadScriptCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                <Button Grid.Row="0" Grid.Column="1" Content="Open Folder" Command="{Binding OpenScriptsFolderCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                <Button Grid.Row="1" Grid.Column="0" Content="Edit Script" Command="{Binding EditScriptCommand}" IsEnabled="{Binding HasLoadedScript}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                <Button Grid.Row="1" Grid.Column="1" Content="Search Scripts" Command="{Binding OpenLibraryWindowCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                <Button Grid.Row="2" Grid.Column="0" Content="Farm monster drops" Command="{Binding FarmDropsCommand}" HorizontalAlignment="Stretch" Height="30"/>
+                <Button Grid.Row="2" Grid.Column="1" Content="Bot writer" Command="{Binding OpenBotWriterCommand}" HorizontalAlignment="Stretch" Height="30"/>
+            </Grid>
+
+            <!-- Options -->
+            <StackPanel Grid.Row="2" Spacing="8">
+                <Button Content="Edit Script Options" Command="{Binding ToggleScriptOptionsCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                <Border IsVisible="{Binding ShowScriptOptions}" Background="#1C1D24" BorderBrush="#2A2A32" BorderThickness="1" CornerRadius="6" Padding="10">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding UsesStoryOptions}">
+                            <CheckBox Content="Farm after chain" IsChecked="{Binding FarmAfterChain}" FontSize="11"
+                                      ToolTip.Tip="When the chain is done (or already completed), keep looping the script's farm quests."/>
+                            <TextBlock Grid.Column="1" Text="Passes" FontSize="10" Foreground="#8F909A" VerticalAlignment="Center"/>
+                            <TextBox Grid.Column="2" Text="{Binding FarmLoops}" Width="55" IsEnabled="{Binding FarmAfterChain}"
+                                     ToolTip.Tip="How many times to loop the farm quests. 0 = until stopped."/>
+                        </Grid>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <TextBlock Text="Class / Skillset" FontSize="10" Foreground="#8F909A" VerticalAlignment="Center"/>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding ChainSkillsetOptions}" SelectedItem="{Binding SelectedChainClass}" HorizontalAlignment="Stretch"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Run controls -->
+            <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Content="{Binding ScriptToggleText}" Command="{Binding ToggleScriptCommand}" Classes="Accent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="32"/>
+                <Button Grid.Column="1" Content="{Binding PauseScriptText}" Command="{Binding PauseScriptCommand}" IsEnabled="{Binding IsChainRunning}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="32"/>
+            </Grid>
+
+            <!-- Log -->
+            <ListBox Grid.Row="4" Background="#16161A" BorderThickness="1" BorderBrush="#202026" CornerRadius="4" ItemsSource="{Binding QuestRunnerLogs}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="x:String">
+                        <TextBlock Text="{Binding}" Foreground="#E2E4E9" FontSize="11" TextWrapping="Wrap" Margin="2,1" FontFamily="Consolas, monospace"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Grid Grid.Row="5" ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button Content="Clear" Command="{Binding ClearScriptLogCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                <Button Grid.Column="1" Content="Copy" Command="{Binding CopyScriptLogCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+                <Button Grid.Column="2" Content="Save" Command="{Binding SaveScriptLogCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Height="30"/>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

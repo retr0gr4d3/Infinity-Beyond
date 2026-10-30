@@ -73,6 +73,7 @@ namespace Launcher.ViewModels
 
         private void OnQuestRunnerLogReceived(string message)
         {
+            System.Diagnostics.Trace.WriteLine($"[QuestRunner] {message}");
             QuestRunnerLogs.Add(message);
             if (QuestRunnerLogs.Count > 200)
             {

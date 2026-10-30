@@ -28,6 +28,10 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <EmbeddedResource Include="..\BeyondAgent\Data\quests.json" LogicalName="Launcher.QuestNames.json" />
+    <Content Include="..\..\bots\*.json" Link="bots\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\docs\bot-templates\README.md" Link="FarmingTemplates\README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\docs\bot-templates\*.json" Link="FarmingTemplates\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
