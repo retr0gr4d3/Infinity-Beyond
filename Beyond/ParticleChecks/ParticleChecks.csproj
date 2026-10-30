@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Exercises the patch against local stand-ins for NodeParticle and ParticleSystem. -->
+    <Compile Include="..\BeyondAgent\Patches\ParticleSpeedCompatibilityPatch.cs" Link="ParticleSpeedCompatibilityPatch.cs" />
+    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
+  </ItemGroup>
+</Project>
