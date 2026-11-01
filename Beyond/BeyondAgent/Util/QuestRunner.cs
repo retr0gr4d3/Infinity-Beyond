@@ -1210,6 +1210,7 @@ namespace BeyondAgent.Util
         // whether PathWalker is currently closing distance to a target.
         private Monster _watchedTarget;
         private float _lastKillAt;
+        private int _watchedHp;
         private bool _huntPathing;
 
         // Update the moving/stopped signal every tick. Local position moves in
@@ -1317,7 +1318,7 @@ namespace BeyondAgent.Util
             // Kill detection: a watched target flipping to Dead is a kill —
             // that's hunt liveness even when the objective is a low-chance
             // drop that takes a dozen kills to advance.
-            if (_watchedTarget != null && _watchedTarget.currentState == Entity.State.Dead)
+            if (_watchedTarget != null && (_watchedTarget.currentState == Entity.State.Dead || _watchedTarget.HP <= 0))
             {
                 _lastKillAt = Time.time;
                 _watchedTarget = null;
@@ -1368,6 +1369,17 @@ namespace BeyondAgent.Util
                 StatusLine = $"no hostile in {here} for '{huntFor}' — waiting to respawn";
                 CheckHuntTimeout();
                 return;
+            }
+            // Damage dealt is liveness too. Monsters are reused on respawn, so
+            // a kill can be missed between ticks; a falling HP bar can't.
+            if (tgt != _watchedTarget)
+            {
+                _watchedHp = tgt.HP;
+            }
+            else if (tgt.HP < _watchedHp)
+            {
+                _watchedHp = tgt.HP;
+                _lastKillAt = Time.time;
             }
             _watchedTarget = tgt;
 
@@ -1465,7 +1477,9 @@ namespace BeyondAgent.Util
             float lastActivity = Mathf.Max(_lastProgressAt, _lastKillAt);
             if (Time.time - lastActivity > HuntTimeoutNoProgress)
             {
-                Fail($"no kills or objective progress in {HuntTimeoutNoProgress:0}s — quest likely needs a different zone, mob type, or interaction we don't handle yet");
+                Fail(CurrentStep is { isHunt: true }
+                    ? $"no fighting for {HuntTimeoutNoProgress:0}s — couldn't reach or attack '{CurrentStep.MonText}' here"
+                    : $"no kills or objective progress in {HuntTimeoutNoProgress:0}s — quest likely needs a different zone, mob type, or interaction we don't handle yet");
                 return;
             }
             // Rare boss drops may legitimately take longer than a quest objective.
