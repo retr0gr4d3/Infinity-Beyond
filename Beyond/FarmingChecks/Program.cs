@@ -124,7 +124,15 @@ static class Program
         Field<ComboBox>("_activities").SelectedItem = "Second";
         var document = Field<JObject>("_document");
         Assert((string?)document["First"]!["entries"]![0]!["frame"] == "R7" && (string?)document["_doc"] == "keep" && document["Second"] != null, "switching activities must retain edits and sibling data");
-        Console.WriteLine("PASS: GUI import, step editing, hidden settings and multi-activity preservation");
+        var only = BotScriptDraft.FromJson(JObject.Parse("{Keys:{template:'quest-chain',entries:[{qid:5,mon:['Undead Archer']},{qid:6}]}}"));
+        Assert(only.Steps[0].Monster == "Undead Archer" && only.Steps[1].Monster == "", "quest steps must load their monster filter");
+        only.Steps[1].Monster = "4012";
+        var onlyJson = only.ToJson();
+        Assert((string?)onlyJson["Keys"]!["entries"]![0]!["mon"]![0] == "Undead Archer" && (string?)onlyJson["Keys"]!["entries"]![1]!["mon"]![0] == "4012" && onlyJson["Keys"]!["entries"]![0]!["hunt"] == null,
+            "quest steps must save a monster filter without turning into drop hunts");
+        only.Steps[0].Monster = "";
+        Assert(only.ToJson()["Keys"]!["entries"]![0]!["mon"] == null, "clearing the monster must remove the filter");
+        Console.WriteLine("PASS: GUI import, step editing, hidden settings and multi-activity preservation, quest monster filters");
     }
     static void WriterChecks()
     {
