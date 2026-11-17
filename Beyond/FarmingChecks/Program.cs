@@ -124,7 +124,15 @@ static class Program
         Field<ComboBox>("_activities").SelectedItem = "Second";
         var document = Field<JObject>("_document");
         Assert((string?)document["First"]!["entries"]![0]!["frame"] == "R7" && (string?)document["_doc"] == "keep" && document["Second"] != null, "switching activities must retain edits and sibling data");
-        Console.WriteLine("PASS: GUI import, step editing, hidden settings and multi-activity preservation");
+        var only = BotScriptDraft.FromJson(JObject.Parse("{Keys:{template:'quest-chain',entries:[{qid:5,mon:['Undead Archer']},{qid:6}]}}"));
+        Assert(only.Steps[0].Monster == "Undead Archer" && only.Steps[1].Monster == "", "quest steps must load their monster filter");
+        only.Steps[1].Monster = "4012";
+        var onlyJson = only.ToJson();
+        Assert((string?)onlyJson["Keys"]!["entries"]![0]!["mon"]![0] == "Undead Archer" && (string?)onlyJson["Keys"]!["entries"]![1]!["mon"]![0] == "4012" && onlyJson["Keys"]!["entries"]![0]!["hunt"] == null,
+            "quest steps must save a monster filter without turning into drop hunts");
+        only.Steps[0].Monster = "";
+        Assert(only.ToJson()["Keys"]!["entries"]![0]!["mon"] == null, "clearing the monster must remove the filter");
+        Console.WriteLine("PASS: GUI import, step editing, hidden settings and multi-activity preservation, quest monster filters");
     }
     static void WriterChecks()
     {
@@ -198,7 +206,20 @@ static class Program
         Assert((string?)farm[0]!["area"] == "mystcroft" && (string?)farm[0]!["frame"] == "R12" && (string?)farm[0]!["hunt"]![0] == "534", "map, room, monster and item IDs must resolve automatically");
         picker.SelectedIndex = 1;
         Assert(rows.Children.Count == 0 && Plan() == null, "changing monster must clear prior selections");
-        Console.WriteLine("PASS: live-list selection, stale reply filtering, empty selection, automatic route/IDs, quantities and monster switching");
+        void Queue() => typeof(DropFarmWindow).GetMethod("AddToQueue", flags)!.Invoke(window, null);
+        picker.SelectedIndex = 0;
+        Receive("OnDrops", JObject.Parse("{MonsterId:534,Items:[{Id:104739,Name:'Corn',Owned:20,StackSize:9999}]}"));
+        ((CheckBox)((Grid)rows.Children[0]).Children[0]).IsChecked = true; ((NumericUpDown)((Grid)rows.Children[0]).Children[1]).Value = 50;
+        Queue();
+        picker.SelectedIndex = 1;
+        Receive("OnDrops", JObject.Parse("{MonsterId:545,Items:[{Id:77,Name:'Bone',Owned:0,StackSize:10}]}"));
+        ((CheckBox)((Grid)rows.Children[0]).Children[0]).IsChecked = true;
+        var queued = (JArray)Plan()!["Farm"]!;
+        Assert(queued.Count == 2 && (string?)queued[0]!["frame"] == "R12" && (int?)queued[0]!["qty"] == 50 && (string?)queued[1]!["frame"] == "R10" && (string?)queued[1]!["hunt"]![0] == "545",
+            "queued drops from several monsters must run in order, each with its own room");
+        Queue(); ((CheckBox)((Grid)rows.Children[0]).Children[0]).IsChecked = true; Queue();
+        Assert(((JArray)Plan()!["Farm"]!).Count == 2, "re-queuing a drop must not farm it twice");
+        Console.WriteLine("PASS: live-list selection, stale reply filtering, empty selection, automatic route/IDs, quantities, monster switching and multi-monster queues");
     }
     static void Assert(bool test, string why) { if (!test) throw new Exception(why); }
     static void Checks()

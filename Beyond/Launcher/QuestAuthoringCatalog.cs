@@ -53,6 +53,7 @@ public sealed class QuestAuthoringCatalog
         {
             var q = Get(step.QuestId);
             string text = $"{travel} Accept '{Name(step.QuestId)}', complete its objectives, then turn it in.";
+            if (!string.IsNullOrWhiteSpace(step.Monster)) text += $" Only fight {step.Monster} for item objectives.";
             if (template == BotScriptDraft.QuestChain) text += " Skip this step if the quest is already completed.";
             if (template == BotScriptDraft.MergeShop) text += $" Repeat for {step.Item} until the selected shop rewards have enough materials.";
             if (!string.IsNullOrWhiteSpace(q?.Objectives)) text += "\nObjectives: " + q.Objectives;

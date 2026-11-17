@@ -70,7 +70,7 @@ public sealed class BotWriterWindow : Window
             var row = new StackPanel { Spacing = 4, Margin = new Thickness(6) };
             string name = step.QuestId > 0 ? _catalog.Name(step.QuestId) : !string.IsNullOrWhiteSpace(step.Label) ? step.Label : step.Item;
             row.Children.Add(new TextBlock { Text = $"{_steps.IndexOf(step) + 1}. {name}", FontSize = 14, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
-            row.Children.Add(new TextBlock { Text = step.QuestId > 0 ? "Complete quest" + (string.IsNullOrWhiteSpace(step.Area) ? "" : $" in /{step.Area}") : $"Farm from {step.Monster}", FontSize = 11, Foreground = new SolidColorBrush(Color.Parse("#A2AAB8")), TextWrapping = TextWrapping.Wrap }); return row;
+            row.Children.Add(new TextBlock { Text = step.QuestId > 0 ? "Complete quest" + (string.IsNullOrWhiteSpace(step.Area) ? "" : $" in /{step.Area}") + (string.IsNullOrWhiteSpace(step.Monster) ? "" : $", fighting only {step.Monster}") : $"Farm from {step.Monster}", FontSize = 11, Foreground = new SolidColorBrush(Color.Parse("#A2AAB8")), TextWrapping = TextWrapping.Wrap }); return row;
         });
         _list.ItemsSource = _steps; left.Children.Add(_list); body.Children.Add(left);
         var editor = new StackPanel { Spacing = 8 };
@@ -219,7 +219,10 @@ public sealed class BotWriterWindow : Window
     {
         int type = _type.SelectedIndex;
         _overview.Text = _steps.Count == 0 ? "No steps yet. Choose a quest or drop on the right, then add it to the plan." : $"{_steps.Count} steps. " + (type == 0 ? "Runs from top to bottom, then stops." : type is 1 or 3 ? "Players choose which targets to run when starting." : "Farm routes supply the rewards selected when starting.");
-        _shopFields.IsVisible = type == 2; _questField.IsVisible = type != 3; _monsterField.IsVisible = type >= 2; _itemField.IsVisible = type >= 2; _quantityField.IsVisible = type == 3; _labelField.IsVisible = type is 1 or 3;
+        // Quest steps get an optional monster: item objectives (a key that
+        // drops from one mob) don't say which monster to fight.
+        ((TextBlock)((StackPanel)_monsterField).Children[0]).Text = type < 2 ? "Only fight this monster (optional: name or ID, for item drops)" : "Monster name or ID";
+        _shopFields.IsVisible = type == 2; _questField.IsVisible = type != 3; _monsterField.IsVisible = true; _itemField.IsVisible = type >= 2; _quantityField.IsVisible = type == 3; _labelField.IsVisible = type is 1 or 3;
         _help.Text = type switch { 0 => "Steps run in order. Already-completed story quests are skipped.", 1 => "Each step becomes a separate reward toggle. Players choose which quests to run.", 2 => "Players choose shop rewards. The bot discovers their materials from live monster drop lists on the shop map. Optional steps below provide fallback material routes.", _ => "Each drop becomes a selectable target. Players choose the drops and desired totals before farming." };
     }
     private void FillEditor(BotStepDraft? step)

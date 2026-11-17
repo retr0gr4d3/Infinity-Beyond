@@ -50,7 +50,9 @@ public sealed class BotScriptDraft
                 if (obj["farm"] is not JArray farm || farm.Count != 1 || farm[0] is not JObject step) throw new ArgumentException("The writer currently supports one step per selectable reward. The file has not been changed.");
                 entry = step;
             }
-            var hunt = entry["hunt"];
+            // Drop hunts name their monster in "hunt"; quest steps may narrow
+            // their fighting with "mon".
+            var hunt = entry["hunt"] ?? entry["mon"];
             var goal = entry["until"] as JObject;
             draft.Steps.Add(new BotStepDraft
             {
@@ -90,11 +92,15 @@ public sealed class BotScriptDraft
             {
                 entry.Remove("hunt");
                 entry["qid"] = step.QuestId;
+                var only = step.Monster.Split(',').Select(m => m.Trim()).Where(m => m.Length > 0).ToArray();
+                if (only.Length > 0) entry["mon"] = new JArray(only);
+                else entry.Remove("mon");
             }
             else
             {
                 entry.Remove("qid");
                 entry.Remove("until");
+                entry.Remove("mon");
                 var monsters = step.Monster.Split(',').Select(m => m.Trim()).Where(m => m.Length > 0).ToArray();
                 if (monsters.Length == 0) throw new ArgumentException("Choose at least one monster.");
                 entry["hunt"] = new JArray(monsters);
