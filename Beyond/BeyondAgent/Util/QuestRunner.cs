@@ -1270,10 +1270,26 @@ namespace BeyondAgent.Util
                 // Find the first incomplete objective. If none, we're ready to
                 // turn in. The quest def's Turnins are the source of truth here —
                 // we don't try to interpret them, just check completion per QOID.
-                nextObjective = NextIncompleteObjective(q);
+                //
+                // A quest listed again in the next entry is split across maps
+                // (pirates q289: fish and chickens on seaside, wyverns on
+                // pirates). This entry hunts only the kill objectives whose
+                // monsters it can pick out on this map, then leaves the rest
+                // and the turn-in to the next entry.
+                List<QuestChains.Entry> entries = IsFarming ? FarmEntries : ChainEntries;
+                bool continuesInNextEntry = entries != null
+                    && ChainIndex + 1 < entries.Count
+                    && entries[ChainIndex + 1].qid == QuestID;
+                nextObjective = continuesInNextEntry ? NextObjectiveHere(q) : NextIncompleteObjective(q);
                 if (nextObjective == null)
                 {
                     StopAutoskills();
+                    if (continuesInNextEntry)
+                    {
+                        Log($"  nothing more for quest {QuestID} on this map; the next entry continues it");
+                        AdvanceChainOrFinish();
+                        return;
+                    }
                     Log("  all objectives complete; turning in");
                     EnterState(RunState.TurningIn);
                     return;
@@ -2138,6 +2154,27 @@ namespace BeyondAgent.Util
             return null;
         }
 
+        // The first incomplete kill objective whose own monsters this map
+        // holds (see ObjectiveFocus), for an entry that hands its quest on to
+        // the next one. Objectives it can't place are left for that entry.
+        private QuestTurninItem NextObjectiveHere(Quest q)
+        {
+            PlayerQuestData pq = Entity.mainPlayer?.Quests;
+            if (q?.Turnins == null || pq == null)
+            {
+                return null;
+            }
+
+            foreach (QuestTurninItem t in q.Turnins)
+            {
+                if (!pq.IsObjectiveComplete(t.QOID) && ObjectiveFocus(t) != null)
+                {
+                    return t;
+                }
+            }
+            return null;
+        }
+
         private int SumObjectiveProgress(Quest q)
         {
             if (q?.Turnins == null)
@@ -2285,6 +2322,9 @@ namespace BeyondAgent.Util
         // A mob matching EITHER counts. Only when NO signal exists at all do we
         // fall back to "any hostile" (so an unmapped collect objective still
         // grinds the room and lets the server credit whatever it credits).
+        // The quest DB's per-objective monsters win when the server ships it;
+        // otherwise ObjectiveFocus narrows the union to the objective's own
+        // monsters when it can tell which those are.
         private bool MatchesTarget(Monster m, QuestTurninItem obj)
         {
             // Per-objective targets from the quest DB beat the entry-wide `mon`
@@ -2298,22 +2338,167 @@ namespace BeyondAgent.Util
                 return objectiveMons.Contains(m.ID);
             }
 
+            // Without the quest DB (live AE), narrow the union per objective.
+            HashSet<int> focus = ObjectiveFocus(obj);
+            return focus != null ? focus.Contains(m.ID) : MatchesAnySignal(m, obj);
+        }
+
+        // The entry's `mon` list covers the whole quest, so on a quest with
+        // two kill objectives the union keeps farming whichever mob shares
+        // our cell long after its own objective is done, and never walks to
+        // the other one's cell (aranx: Infinity Manticore in R4, Earth
+        // Elementals in R2/R3). Narrow it per objective, most specific first:
+        //   1. an "objective=monster" token in `mon` ("Egg=447");
+        //   2. the objective's own RefArray MonIDs, when any are on this map;
+        //   3. among monsters the entry's `mon` hint already accepts, those
+        //      whose name best matches the objective's ("Space Zards" →
+        //      Space Zard, "Wyvern pacified" → Wyvern).
+        // null = no narrowing; use the union. Memoized per frame since
+        // MatchesTarget runs once per monster per tick.
+        private HashSet<int> ObjectiveFocus(QuestTurninItem obj)
+        {
+            if (obj == null || obj.QOType != QuestObjectiveType.Killcount)
+            {
+                return null;
+            }
+            if (_focusAt != Time.frameCount || _focusQoid != obj.QOID)
+            {
+                _focusAt = Time.frameCount;
+                _focusQoid = obj.QOID;
+                _focus = ResolveFocus(obj);
+            }
+            return _focus;
+        }
+
+        private HashSet<int> ResolveFocus(QuestTurninItem obj)
+        {
+            if (Area.currentArea?.Monsters == null)
+            {
+                return null;
+            }
+
+            HashSet<int> refs = [];
+            foreach (string r in obj.RefArray ?? [])
+            {
+                if (int.TryParse(r, out int id))
+                {
+                    refs.Add(id);
+                }
+            }
+
+            // An explicit hint in the entry's `mon` list wins: "Egg=447" sends
+            // the objective whose name contains "Egg" to monster 447. It covers
+            // objectives no monster name gives away (pirates q296's Lucky
+            // Gonden Egg drops from Seaside Chickens).
+            List<string> hinted = [];
+            foreach (string tok in TargetMons)
+            {
+                int eq = tok.IndexOf('=');
+                string objPart = eq > 0 ? tok[..eq].Trim() : "";
+                if (objPart.Length > 0 && (obj.Name ?? "").IndexOf(objPart, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    hinted.Add(tok[(eq + 1)..].Trim());
+                }
+            }
+
+            // Best name score per hostile MonID the union accepts. One MonID
+            // can carry several display names (asteroid's "Stamper" is a
+            // Space Sneevil), so keep the best.
+            HashSet<string> want = NameWords(obj.Name);
+            Dictionary<int, int> scores = [];
+            HashSet<int> hintedHere = [];
+            bool refsHere = false;
+            try
+            {
+                foreach (Monster m in Area.currentArea.Monsters.Values)
+                {
+                    if (m == null || m.reactionType != Entity.ReactionType.Hostile)
+                    {
+                        continue;
+                    }
+                    if (hinted.Any(h => TokenMatches(m, h)))
+                    {
+                        hintedHere.Add(m.ID);
+                    }
+                    refsHere |= refs.Contains(m.ID);
+                    if (TargetMons.Count == 0 || !MatchesAnySignal(m, obj))
+                    {
+                        continue;
+                    }
+                    int score = NameWords(m.Name).Count(want.Contains);
+                    scores[m.ID] = scores.TryGetValue(m.ID, out int prev) ? Math.Max(prev, score) : score;
+                }
+            }
+            catch { }
+
+            if (hintedHere.Count > 0)
+            {
+                return hintedHere;
+            }
+            if (refsHere)
+            {
+                return refs;
+            }
+            // Name matching only narrows an explicit `mon` hint (scores is
+            // empty without one): with no hint, "any hostile" stays the rule
+            // rather than a guess from names alone.
+            int best = scores.Count == 0 ? 0 : scores.Values.Max();
+            if (best == 0)
+            {
+                return null;   // no candidate shares a word with the objective
+            }
+            return [.. scores.Where(kv => kv.Value == best).Select(kv => kv.Key)];
+        }
+
+        // Lower-case words of 3+ letters with a plural/possessive "s"
+        // dropped, so "Zardman's Fish" and "Space Zards" line up with
+        // "Zardman Fisherman" and "Space Zard".
+        private static HashSet<string> NameWords(string name)
+        {
+            name ??= "";
+            if (!_nameWords.TryGetValue(name, out HashSet<string> words))
+            {
+                words = [];
+                foreach (string raw in System.Text.RegularExpressions.Regex.Split(name.ToLowerInvariant(), "[^a-z]+"))
+                {
+                    string w = raw.Length > 3 && raw.EndsWith("s") ? raw[..^1] : raw;
+                    if (w.Length >= 3)
+                    {
+                        words.Add(w);
+                    }
+                }
+                _nameWords[name] = words;
+            }
+            return words;
+        }
+
+        private static readonly Dictionary<string, HashSet<string>> _nameWords = [];
+        private HashSet<int> _focus;
+        private int _focusAt = -1;
+        private int _focusQoid = -1;
+
+        // A `mon` token: a catalog id ("447") or a name substring ("Chicken").
+        private static bool TokenMatches(Monster m, string tok)
+        {
+            if (int.TryParse(tok, out int id))
+            {
+                return m.ID == id;
+            }
+            return tok.Length > 0 && (m.Name ?? "").IndexOf(tok, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private bool MatchesAnySignal(Monster m, QuestTurninItem obj)
+        {
             bool hasSignal = false;
 
             if (TargetMons.Count > 0)
             {
                 hasSignal = true;
-                string name = m.Name ?? "";
                 foreach (string tok in TargetMons)
                 {
-                    if (int.TryParse(tok, out int id))
-                    {
-                        if (m.ID == id)
-                        {
-                            return true;
-                        }
-                    }
-                    else if (name.IndexOf(tok, StringComparison.OrdinalIgnoreCase) >= 0)
+                    // An "objective=monster" hint's monster joins the union too.
+                    int eq = tok.IndexOf('=');
+                    if (TokenMatches(m, eq >= 0 ? tok[(eq + 1)..].Trim() : tok))
                     {
                         return true;
                     }
