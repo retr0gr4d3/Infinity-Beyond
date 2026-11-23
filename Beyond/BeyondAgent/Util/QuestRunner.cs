@@ -2022,6 +2022,7 @@ namespace BeyondAgent.Util
                 && RuntimeEvents.LastCompleteTime > _turnInSentAt
                 && RuntimeEvents.LastCompleteSuccess)
             {
+                RuntimeEvents.LastCompleteQid = -1;
                 Log($"  iter {CurrentIteration}: turn-in confirmed (QComp success)");
                 _farmFailures = 0;
                 // Always cool down briefly before the next action — the
@@ -2029,6 +2030,31 @@ namespace BeyondAgent.Util
                 // state decides what comes next based on remaining work.
                 EnterState(RunState.Cooldown);
                 return;
+            }
+            // Fallback: the quest left the accepted list after we sent the
+            // turn-in — the server completed it even though we didn't see
+            // (or didn't see in time) the QComp signal. Covers dialog-
+            // triggered completions, same-frame QComps whose timestamp
+            // equals _turnInSentAt, and patches that fail to fire.
+            // Only trust this when quest data is positively available — a
+            // null player, null quest list, or a thrown exception is
+            // inconclusive, not evidence of completion.
+            {
+                PlayerQuestData pq = Entity.mainPlayer?.Quests;
+                if (pq != null)
+                {
+                    bool gone;
+                    try { gone = pq.GetQuest(QuestID) == null; }
+                    catch { gone = false; }
+                    if (gone)
+                    {
+                        RuntimeEvents.LastCompleteQid = -1;
+                        Log($"  iter {CurrentIteration}: quest no longer accepted — treating as complete");
+                        _farmFailures = 0;
+                        EnterState(RunState.Cooldown);
+                        return;
+                    }
+                }
             }
             // Watch for an rNotify error after our send. The server uses
             // these for rate-limiting ("Spam Detected") and for quest-side
