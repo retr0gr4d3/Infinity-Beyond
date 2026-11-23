@@ -3,10 +3,10 @@ namespace BeyondAgent.Util
     /// <summary>
     /// Loads + plays an arbitrary soundtrack by ID. Mirrors what
     /// Area.loadBGM does for the current map, but driven on demand:
-    ///   1. If BGMusicManager already has the track cached, just PlayMusic.
-    ///   2. Otherwise spin up a SoundtrackLoader → fetches
+    ///   1. If Music already has the track cached, just play it.
+    ///   2. Otherwise Music.Load spins up a SoundtrackLoader → fetches
     ///      data/getsoundtracks?ids=&lt;id&gt; → downloads the bundle →
-    ///      OnAssetLoaded fires with the AudioClip → register + play.
+    ///      registers the track → we play it.
     /// </summary>
     public static class Jukebox
     {
@@ -17,39 +17,37 @@ namespace BeyondAgent.Util
                 BeyondLog.Warning($"[Jukebox] invalid id {id}");
                 return;
             }
-            BGMusicManager bgm = BGMusicManager.Instance;
-            if (bgm == null)
+            Music music = Music.Instance;
+            if (music == null)
             {
-                BeyondLog.Warning("[Jukebox] no BGMusicManager (no map loaded?)");
+                BeyondLog.Warning("[Jukebox] no Music instance (no map loaded?)");
                 return;
             }
 
             // Fast path — already loaded this track at some point.
-            if (bgm.CustomBGMTracks != null && bgm.CustomBGMTracks.ContainsKey(id))
+            if (music.Tracks.TryGetValue(id, out Music.Track cached) && cached != null && cached.IsReady)
             {
-                bgm.PlayMusic(id, delay: false);
-                BeyondLog.Msg($"[Jukebox] playing cached track {id} ({bgm.GetMusicNameFromID(id)})");
+                music.PlayTrack(id, withDelay: false);
+                BeyondLog.Msg($"[Jukebox] playing cached track {id} ({music.GetTrackName(id)})");
                 return;
             }
 
             try
             {
-                SoundtrackLoader ldr = new();
-                ldr.OnAssetLoaded += (prefabName, clip) =>
-                {
-                    try
+                music.Load(id, id,
+                    track =>
                     {
-                        BGMusicManager.AddTrack(id, 0, KeepAlive: false, clip, prefabName, id, ldr);
-                        BGMusicManager.Instance?.PlayMusic(id, delay: false);
-                        BeyondLog.Msg($"[Jukebox] loaded + playing track {id} ({prefabName})");
-                    }
-                    catch (System.Exception ex)
-                    {
-                        BeyondLog.Error($"[Jukebox] add/play failed: {ex.Message}");
-                    }
-                };
-                ldr.LoadFailed += err => BeyondLog.Warning($"[Jukebox] load failed: {err}");
-                ldr.LoadSountrackByID(id);
+                        try
+                        {
+                            Music.Instance?.PlayTrack(id, withDelay: false);
+                            BeyondLog.Msg($"[Jukebox] loaded + playing track {id} ({track?.name})");
+                        }
+                        catch (System.Exception ex)
+                        {
+                            BeyondLog.Error($"[Jukebox] play failed: {ex.Message}");
+                        }
+                    },
+                    err => BeyondLog.Warning($"[Jukebox] load failed: {err}"));
                 BeyondLog.Msg($"[Jukebox] fetching track {id}…");
             }
             catch (System.Exception ex)
@@ -60,13 +58,13 @@ namespace BeyondAgent.Util
 
         public static void Stop()
         {
-            try { BGMusicManager.Instance?.StopMusic(); }
+            try { Music.Stop(); }
             catch (System.Exception ex) { BeyondLog.Error($"[Jukebox] stop: {ex.Message}"); }
         }
 
         public static void RestoreAreaBGM()
         {
-            try { BGMusicManager.Instance?.RestoreAreaBGM(); }
+            try { Area.currentArea?.EnableBGM(); }
             catch (System.Exception ex) { BeyondLog.Error($"[Jukebox] restore: {ex.Message}"); }
         }
     }

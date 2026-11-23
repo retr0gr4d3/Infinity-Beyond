@@ -99,7 +99,7 @@ namespace BeyondAgent
 
         // Jukebox: play any soundtrack by ID (typically 1..318). Dropdown is
         // populated passively by MusicHarvestPatch — every track the game
-        // registers with BGMusicManager (area BGM, cutscene stings, our own
+        // registers with Music (area BGM, cutscene stings, our own
         // loads) lands in MusicCatalog and shows up here.
         private static string jukeboxInput = "";
         private static int jukeboxSelectedId = 0;
@@ -2797,7 +2797,7 @@ namespace BeyondAgent
                 ref monTransformInput, monTransformActive,
                 ApplyMonTransformSpoof, ClearMonTransformSpoof);
 
-            // Jukebox — play any soundtrack by ID. Loads via SoundtrackLoader
+            // Jukebox — play any soundtrack by ID. Loads via Music.Load
             // (data/getsoundtracks?ids=<id>) on first request, cached after.
             // Known tracks come from MusicCatalog (harvested passively).
             int namedCount = MusicCatalog.Tracks.Values.Count(t => !string.IsNullOrEmpty(t.name));

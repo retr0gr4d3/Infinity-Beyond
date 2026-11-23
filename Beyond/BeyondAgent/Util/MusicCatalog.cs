@@ -9,7 +9,7 @@ namespace BeyondAgent.Util
 {
     /// <summary>
     /// Passive catalog of music tracks the game has loaded. Fed by
-    /// MusicHarvestPatch (postfix on BGMusicManager.AddTrack), which fires
+    /// MusicHarvestPatch (postfix on Music.AddTrack), which fires
     /// for every track the game registers — area BGM, cutscene stings, our
     /// own Jukebox loads. Persisted to UserData/Beyond/music.json.
     /// Keyed by track ID. Each entry carries name + length so the Jukebox
