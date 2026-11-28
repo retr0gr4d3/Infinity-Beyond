@@ -362,7 +362,10 @@ namespace Launcher
         private int _lastWidth = -1;
         private int _lastHeight = -1;
         private bool _gameSynced;
-        private bool _pendingGameResize;
+        private int _targetGameWidth;
+        private int _targetGameHeight;
+        private int _pendingTicks;
+        private const int MaxPendingTicks = 5;
 
         // Cross-process keyboard routing: the embedded game window lives on its
         // own thread, so the launcher UI thread's input queue must be attached
@@ -618,6 +621,36 @@ namespace Launcher
             return unityHwnd;
         }
 
+        private bool RequestLauncherResize(Window topWindow, double dxDips, double dyDips)
+        {
+            if (topWindow.WindowState == WindowState.Maximized)
+            {
+                return false;
+            }
+
+            double newW = topWindow.Bounds.Width + dxDips;
+            double newH = topWindow.Bounds.Height + dyDips;
+
+            Screen? screen = topWindow.Screens?.ScreenFromVisual(topWindow);
+            if (screen != null)
+            {
+                double s = screen.Scaling > 0 ? screen.Scaling : 1.0;
+                double areaW = screen.WorkingArea.Width / s;
+                double areaH = screen.WorkingArea.Height / s;
+                newW = Math.Min(newW, areaW);
+                newH = Math.Min(newH, areaH);
+            }
+
+            if (newW < 200 || newH < 200)
+            {
+                return false;
+            }
+
+            topWindow.Width = newW;
+            topWindow.Height = newH;
+            return true;
+        }
+
         private void ResizeUnityWindow()
         {
             if (_childHwnd == IntPtr.Zero)
@@ -632,10 +665,30 @@ namespace Launcher
                 return;
             }
 
+            double scale = 1.0;
+            if (TopLevel.GetTopLevel(this) is Window topWindow)
+            {
+                scale = topWindow.RenderScaling > 0 ? topWindow.RenderScaling : 1.0;
+            }
+            else
+            {
+                topWindow = null!;
+            }
+
+            bool pending = _targetGameWidth > 0;
+
             bool panelChanged = w != _lastWidth || h != _lastHeight;
             if (panelChanged)
             {
-                _pendingGameResize = false;
+                if (pending
+                    && Math.Abs(w - (int)(_targetGameWidth / scale)) <= 1
+                    && Math.Abs(h - (int)(_targetGameHeight / scale)) <= 1)
+                {
+                    _targetGameWidth = 0;
+                    _targetGameHeight = 0;
+                    _pendingTicks = 0;
+                }
+
                 MoveWindow(_childHwnd, 0, 0, w, h, true);
                 _lastWidth = w;
                 _lastHeight = h;
@@ -649,28 +702,58 @@ namespace Launcher
 
             if (GetWindowRect(unityHwnd, out RECT rect))
             {
-                int gw = rect.Right - rect.Left;
-                int gh = rect.Bottom - rect.Top;
+                int gwNative = rect.Right - rect.Left;
+                int ghNative = rect.Bottom - rect.Top;
+                int gwDips = (int)(gwNative / scale);
+                int ghDips = (int)(ghNative / scale);
 
-                if (gw == w && gh == h)
+                if (gwDips == w && ghDips == h)
                 {
                     _gameSynced = true;
                 }
-                else if (_pendingGameResize)
+                else if (pending)
                 {
-                    // Already requested launcher resize — wait for it to take effect
+                    if (gwNative != _targetGameWidth || ghNative != _targetGameHeight)
+                    {
+                        _targetGameWidth = gwNative;
+                        _targetGameHeight = ghNative;
+                        _pendingTicks = 0;
+
+                        if (topWindow != null! && IsEffectivelyVisible)
+                        {
+                            double dxDips = (gwNative - w * scale) / scale;
+                            double dyDips = (ghNative - h * scale) / scale;
+                            RequestLauncherResize(topWindow, dxDips, dyDips);
+                        }
+                    }
+
+                    _pendingTicks++;
+                    if (_pendingTicks > MaxPendingTicks)
+                    {
+                        _targetGameWidth = 0;
+                        _targetGameHeight = 0;
+                        _pendingTicks = 0;
+                        MoveWindow(unityHwnd, 0, 0, w, h, true);
+                    }
                 }
-                else if (_gameSynced && !panelChanged && gw > 0 && gh > 0)
+                else if (_gameSynced && !panelChanged && gwDips > 0 && ghDips > 0
+                         && IsEffectivelyVisible)
                 {
-                    // Game changed its own resolution — resize the launcher window
-                    // so the panel matches the game's new size instead of snapping back.
-                    if (TopLevel.GetTopLevel(this) is Window topWindow
-                        && topWindow.WindowState != WindowState.Maximized)
+                    if (topWindow != null!)
                     {
                         _gameSynced = false;
-                        _pendingGameResize = true;
-                        topWindow.Width = topWindow.Bounds.Width + (gw - w);
-                        topWindow.Height = topWindow.Bounds.Height + (gh - h);
+                        _targetGameWidth = gwNative;
+                        _targetGameHeight = ghNative;
+                        _pendingTicks = 0;
+
+                        double dxDips = (gwNative - w * scale) / scale;
+                        double dyDips = (ghNative - h * scale) / scale;
+                        if (!RequestLauncherResize(topWindow, dxDips, dyDips))
+                        {
+                            _targetGameWidth = 0;
+                            _targetGameHeight = 0;
+                            MoveWindow(unityHwnd, 0, 0, w, h, true);
+                        }
                     }
                     else
                     {
