@@ -361,6 +361,8 @@ namespace Launcher
         private DispatcherTimer? _resizeTimer;
         private int _lastWidth = -1;
         private int _lastHeight = -1;
+        private bool _gameSynced;
+        private bool _pendingGameResize;
 
         // Cross-process keyboard routing: the embedded game window lives on its
         // own thread, so the launcher UI thread's input queue must be attached
@@ -618,41 +620,71 @@ namespace Launcher
 
         private void ResizeUnityWindow()
         {
-            if (_childHwnd != IntPtr.Zero)
+            if (_childHwnd == IntPtr.Zero)
             {
-                int w = (int)Bounds.Width;
-                int h = (int)Bounds.Height;
-                if (w > 0 && h > 0)
-                {
-                    if (w != _lastWidth || h != _lastHeight)
-                    {
-                        MoveWindow(_childHwnd, 0, 0, w, h, true);
-                        _lastWidth = w;
-                        _lastHeight = h;
-                    }
-                    IntPtr unityHwnd = GetUnityHwnd();
-                    if (unityHwnd != IntPtr.Zero)
-                    {
-                        bool needsResize = true;
-                        if (GetWindowRect(unityHwnd, out RECT rect))
-                        {
-                            int actualWidth = rect.Right - rect.Left;
-                            int actualHeight = rect.Bottom - rect.Top;
-                            if (actualWidth == w && actualHeight == h)
-                            {
-                                needsResize = false;
-                            }
-                        }
+                return;
+            }
 
-                        if (needsResize)
-                        {
-                            MoveWindow(unityHwnd, 0, 0, w, h, true);
-                        }
-                        EnsureInputAttached(unityHwnd);
-                        KeepUnityFocus(unityHwnd);
+            int w = (int)Bounds.Width;
+            int h = (int)Bounds.Height;
+            if (w <= 0 || h <= 0)
+            {
+                return;
+            }
+
+            bool panelChanged = w != _lastWidth || h != _lastHeight;
+            if (panelChanged)
+            {
+                _pendingGameResize = false;
+                MoveWindow(_childHwnd, 0, 0, w, h, true);
+                _lastWidth = w;
+                _lastHeight = h;
+            }
+
+            IntPtr unityHwnd = GetUnityHwnd();
+            if (unityHwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            if (GetWindowRect(unityHwnd, out RECT rect))
+            {
+                int gw = rect.Right - rect.Left;
+                int gh = rect.Bottom - rect.Top;
+
+                if (gw == w && gh == h)
+                {
+                    _gameSynced = true;
+                }
+                else if (_pendingGameResize)
+                {
+                    // Already requested launcher resize — wait for it to take effect
+                }
+                else if (_gameSynced && !panelChanged && gw > 0 && gh > 0)
+                {
+                    // Game changed its own resolution — resize the launcher window
+                    // so the panel matches the game's new size instead of snapping back.
+                    if (TopLevel.GetTopLevel(this) is Window topWindow
+                        && topWindow.WindowState != WindowState.Maximized)
+                    {
+                        _gameSynced = false;
+                        _pendingGameResize = true;
+                        topWindow.Width = topWindow.Bounds.Width + (gw - w);
+                        topWindow.Height = topWindow.Bounds.Height + (gh - h);
+                    }
+                    else
+                    {
+                        MoveWindow(unityHwnd, 0, 0, w, h, true);
                     }
                 }
+                else
+                {
+                    MoveWindow(unityHwnd, 0, 0, w, h, true);
+                }
             }
+
+            EnsureInputAttached(unityHwnd);
+            KeepUnityFocus(unityHwnd);
         }
 
         private void KeepUnityFocus(IntPtr unityHwnd)
